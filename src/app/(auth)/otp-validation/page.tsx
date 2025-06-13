@@ -1,8 +1,9 @@
+import OTPForm from '@/components/forms/otp-form'
 
 const OTPPage = () => {
   return (
     <div>
-    OTPPage
+      <OTPForm />
     </div>
   )
 }
