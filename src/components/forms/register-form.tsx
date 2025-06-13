@@ -1,40 +1,37 @@
 'use client'
-import { loginSchema } from '@/utils/validations'
+import { registerSchema } from '@/utils/validations'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import * as z from 'zod'
 import { Button } from '../ui/button'
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
 } from '../ui/form'
 import { Input } from '../ui/input'
-const LoginForm = () => {
-  const [showPassword, setShowPassword] = useState(true)
-  const router = useRouter()
-  type LoginFormValues = z.infer<typeof loginSchema>
 
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+const RegisterForm = () => {
+  const router = useRouter()
+  type RegisterFormValues = z.infer<typeof registerSchema>
+
+  const form = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
     defaultValues: {
+      name: '',
       email: '',
-      password: '',
     },
   })
 
-  const onSubmit = (values: LoginFormValues) => {
-    console.log('Login data:', values)
-    router.push('/otp-validation')
+  const onSubmit = (values: RegisterFormValues) => {
+    console.log('Register data:', values)
+    router.push('/password')
   }
-
   const handleGoogleLogin = () => {
     console.log('Google login clicked')
   }
@@ -42,6 +39,22 @@ const LoginForm = () => {
     <div>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-5">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-secondary text-sm">
+                  Enter your Name
+                </FormLabel>
+                <FormControl>
+                  <Input type="text" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <FormField
             control={form.control}
             name="email"
@@ -61,43 +74,6 @@ const LoginForm = () => {
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-secondary text-sm">
-                  Enter your Password
-                </FormLabel>
-                <FormControl>
-                  <div className="relative">
-                    <Input
-                      type={showPassword ? 'password' : 'text'}
-                      className="pr-10"
-                      {...field}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute top-1/2 right-5 -translate-y-1/2 transform"
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-5 w-5 text-gray-500" />
-                      ) : (
-                        <Eye className="text-primary h-5 w-5" />
-                      )}
-                    </button>
-                  </div>
-                </FormControl>
-                <FormMessage />
-                <Link href="/forgot-password">
-                  <p className="cursor-pointer text-xs text-gray-500">
-                    Forgot Password?
-                  </p>
-                </Link>
-              </FormItem>
-            )}
-          />
           <div className="text-secondary text-center text-sm font-light">
             By continuing, you agree to the{' '}
             <span className="cursor-pointer underline">Terms of Use</span> and{' '}
@@ -109,7 +85,7 @@ const LoginForm = () => {
             className="bg-primary text-md h-13 w-full py-3 hover:bg-[#4E4F54]"
             disabled={form.formState.isSubmitting}
           >
-            {form.formState.isSubmitting ? 'Logging in...' : 'Log In'}
+            {form.formState.isSubmitting ? 'Signing up...' : 'Sign Up'}
           </Button>
 
           <div className="flex items-center justify-center gap-3">
@@ -120,7 +96,7 @@ const LoginForm = () => {
         </form>
       </Form>
 
-       <Button variant="outline" className="w-full py-3 h-13 mt-4" onClick={handleGoogleLogin}>
+      <Button variant="outline" className="w-full py-3 h-13 mt-4" onClick={handleGoogleLogin}>
         <svg className="w-6 h-6 mr-2" viewBox="0 0 24 24">
           <path
             fill="#4285F4"
@@ -139,15 +115,15 @@ const LoginForm = () => {
             d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
           />
         </svg>
-        Log in with Google
+        Sign up with Google
       </Button>
 
       {/* Sign Up Link */}
       <div className="text-center pt-6">
         <span className="text-sm font-bold text-secondary">
-          {"Don't have an Account? "}
-          <Link href="/register" className="text-primary">
-            Sign Up
+          {"Have an Account? "}
+          <Link href="/login" className="text-primary">
+            Log In
           </Link>
         </span>
       </div>
@@ -155,4 +131,4 @@ const LoginForm = () => {
   )
 }
 
-export default LoginForm
+export default RegisterForm
