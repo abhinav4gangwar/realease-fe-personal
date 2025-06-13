@@ -1,8 +1,9 @@
+import PasswordForm from "@/components/forms/password-form"
 
 const PasswordPage = () => {
   return (
     <div>
-      PasswordPage
+      <PasswordForm />
     </div>
   )
 }
