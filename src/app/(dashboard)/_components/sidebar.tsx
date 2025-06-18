@@ -1,0 +1,102 @@
+'use client'
+import { Button } from '@/components/ui/button'
+import { navigationItems, navigationItemSection } from '@/lib/constants'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import Image from 'next/image'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+
+interface SidebarProps {
+  collapsed: boolean
+  onToggle: () => void
+}
+
+export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+  const pathname = usePathname()
+  return (
+    <div
+      className={`bg-secondary text-white transition-all duration-300 ${collapsed ? 'w-18' : 'w-56'} flex flex-col`}
+    >
+      {/* Logo and Toggle */}
+      <div className="flex flex-col items-center gap-5 p-3">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onToggle}
+          className="bg-[#ececec86]"
+        >
+          {collapsed ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
+            <ChevronLeft className="h-4 w-4" />
+          )}
+        </Button>
+        {!collapsed && (
+          <div className="flex items-center space-x-2">
+            <Image
+              src="/assets/logo-white.png"
+              alt="logo"
+              width={140}
+              height={40}
+            />
+          </div>
+        )}
+        {collapsed && (
+          <div className="flex items-center space-x-2 p-2">
+            <Image
+              src="/assets/logo-short.png"
+              alt="logo"
+              width={40}
+              height={40}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 space-y-4 px-2 py-4">
+        {navigationItems.map((item, index) => {
+          const isActive = pathname === item.href
+
+          return (
+            <Link
+              key={index}
+              href={item.href}
+              className={`flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                isActive
+                  ? 'text-primary bg-white'
+                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+              }`}
+            >
+              <item.icon className="h-6 w-6 flex-shrink-0 text-center" />
+              {!collapsed && <span className="ml-3">{item.label}</span>}
+            </Link>
+          )
+        })}
+
+        <div className="flex justify-center">
+          <div className="mx-1.5 h-[2px] w-full bg-[#4F4F4F]"></div>
+        </div>
+
+        {navigationItemSection.map((item, index) => {
+          const isActive = pathname === item.href
+
+          return (
+            <Link
+              key={index}
+              href={item.href}
+              className={`flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                isActive
+                  ? 'text-primary bg-white'
+                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+              }`}
+            >
+              <item.icon className="h-6 w-6 flex-shrink-0 text-center" />
+              {!collapsed && <span className="ml-3">{item.label}</span>}
+            </Link>
+          )
+        })}
+      </nav>
+    </div>
+  )
+}

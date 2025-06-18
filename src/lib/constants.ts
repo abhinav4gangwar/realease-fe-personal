@@ -1,3 +1,12 @@
+import {
+  BarChart3,
+  FileText,
+  Home,
+  LogOut,
+  MapPin,
+  Settings,
+} from 'lucide-react'
+
 export const APP_CONFIG = {
   name: 'RealEase',
   description: 'Modern real estate management platform',
@@ -70,5 +79,17 @@ export const PROPERTY_STATUS = [
   'off-market',
 ] as const
 
+export const navigationItems = [
+  { icon: Home, label: 'Dashboard', href: '/' },
+  { icon: MapPin, label: 'Properties', href: '/properties' },
+  { icon: BarChart3, label: 'Analytics', href: '/analytics' },
+  { icon: FileText, label: 'Documents', href: '/documents' },
+]
+
+export const navigationItemSection = [
+  { icon: Settings, label: 'Settings', href: '/settings' },
+  { icon: LogOut, label: 'Log Out', href: '/logout' },
+]
+
 export type PropertyType = (typeof PROPERTY_TYPES)[number]
-export type PropertyStatus = (typeof PROPERTY_STATUS)[number] 
+export type PropertyStatus = (typeof PROPERTY_STATUS)[number]
