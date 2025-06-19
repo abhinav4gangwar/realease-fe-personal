@@ -78,3 +78,9 @@ export interface Client {
   createdAt: string
   updatedAt: string
 } 
+
+export interface QuickAction {
+  id: string
+  label: string
+  value: string
+}

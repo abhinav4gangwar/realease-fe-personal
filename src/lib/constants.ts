@@ -1,3 +1,4 @@
+import { QuickAction } from '@/types'
 import {
   BarChart3,
   FileText,
@@ -89,6 +90,14 @@ export const navigationItems = [
 export const navigationItemSection = [
   { icon: Settings, label: 'Settings', href: '/settings' },
   { icon: LogOut, label: 'Log Out', href: '/logout' },
+]
+
+export const QUICK_ACTIONS: QuickAction[] = [
+  { id: '1', label: 'Bulk Upload', value: 'bulk_upload' },
+  { id: '2', label: 'Share Docs', value: 'share_docs' },
+  { id: '3', label: 'Add Members', value: 'add_members' },
+  { id: '4', label: 'Access Controls', value: 'access_controls' },
+  { id: '5', label: 'Create Report', value: 'create_report' },
 ]
 
 export type PropertyType = (typeof PROPERTY_TYPES)[number]

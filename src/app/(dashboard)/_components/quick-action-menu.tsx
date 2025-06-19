@@ -1,4 +1,4 @@
-"use client"
+'use client'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -6,11 +6,22 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { QUICK_ACTIONS } from '@/lib/constants'
+import { QuickAction } from '@/types'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useState } from 'react'
 
 const QuickActionMenu = () => {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState<boolean>(false)
+  const [selectedAction, setSelectedAction] = useState<QuickAction | null>(null)
+
+  const handleActionSelect = (action: QuickAction): void => {
+    setSelectedAction(action)
+    setOpen(false)
+
+    console.log('Selected action:', selectedAction)
+  }
+
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -30,10 +41,16 @@ const QuickActionMenu = () => {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem>Create Property</DropdownMenuItem>
-        <DropdownMenuItem>Add Document</DropdownMenuItem>
-        <DropdownMenuItem>Generate Report</DropdownMenuItem>
+      <DropdownMenuContent align="center" className="border-none">
+        {QUICK_ACTIONS.map((action) => (
+          <DropdownMenuItem
+            key={action.id}
+            onClick={() => handleActionSelect(action)}
+            className={`cursor-pointer hover:bg-[#A2CFE33D] ${(action.id === selectedAction?.id)? "text-primary": "text-secondary"}`}
+          >
+            {action.label}
+          </DropdownMenuItem>
+        ))}
       </DropdownMenuContent>
     </DropdownMenu>
   )
