@@ -46,7 +46,7 @@ const QuickActionMenu = () => {
           <DropdownMenuItem
             key={action.id}
             onClick={() => handleActionSelect(action)}
-            className={`cursor-pointer hover:bg-[#A2CFE33D] ${(action.id === selectedAction?.id)? "text-primary": "text-secondary"}`}
+            className={`cursor-pointer hover:bg-[#A2CFE33D] font-semibold ${(action.id === selectedAction?.id)? "text-primary": "text-secondary"}`}
           >
             {action.label}
           </DropdownMenuItem>
