@@ -20,7 +20,7 @@ export function Header() {
         </div>
 
         {/* Header Actions */}
-        <div className="flex items-center space-x-6">
+        <div className="flex items-center space-x-6 pr-8">
           
             <Bell className="h-7 w-7" />
          
