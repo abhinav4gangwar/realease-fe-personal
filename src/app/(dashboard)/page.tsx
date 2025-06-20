@@ -10,6 +10,7 @@ import { HearingDateWidget } from './_components/widgets/hearing-date-widget'
 import { MiniMapWidget } from './_components/widgets/mini-map-widget'
 import RecentACtivityWidget from './_components/widgets/recent-activity-widget'
 import { RecentCommentWidget } from './_components/widgets/recent-comments-widget'
+import { TotalAssetsWidget } from './_components/widgets/total-assets-widget'
 
 export interface Widget {
   id: string
@@ -110,7 +111,7 @@ export default function Home() {
       case 'asset-value':
         return (
           <WidgetWrapper key={widget.id}>
-            <AssetsAnalyticsWidget />
+            <TotalAssetsWidget />
           </WidgetWrapper>
         )
       case 'litigation':
