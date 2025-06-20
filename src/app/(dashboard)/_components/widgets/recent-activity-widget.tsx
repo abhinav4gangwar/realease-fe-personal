@@ -72,7 +72,7 @@ const RecentACtivityWidget = () => {
   ]
 
   return (
-    <Card className="w-full max-w-xl border-none">
+    <Card className="w-full border-none">
       <CardHeader>
         <CardTitle className="text-lg font-semibold h-2 text-secondary">
           Recent Activity Feed
