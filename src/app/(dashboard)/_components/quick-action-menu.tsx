@@ -6,19 +6,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { QUICK_ACTIONS } from '@/lib/constants'
 import { QuickAction } from '@/types'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useState } from 'react'
 
-const QuickActionMenu = () => {
+const QuickActionMenu = ({ quickActionOptions }: { quickActionOptions: QuickAction[] }) => {
   const [open, setOpen] = useState<boolean>(false)
   const [selectedAction, setSelectedAction] = useState<QuickAction | null>(null)
 
   const handleActionSelect = (action: QuickAction): void => {
     setSelectedAction(action)
     setOpen(false)
-
     console.log('Selected action:', selectedAction)
   }
 
@@ -42,7 +40,7 @@ const QuickActionMenu = () => {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="center" className="border-none">
-        {QUICK_ACTIONS.map((action) => (
+        {quickActionOptions.map((action) => (
           <DropdownMenuItem
             key={action.id}
             onClick={() => handleActionSelect(action)}

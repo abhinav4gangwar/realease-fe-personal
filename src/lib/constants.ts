@@ -92,12 +92,17 @@ export const navigationItemSection = [
   { icon: LogOut, label: 'Log Out', href: '/logout' },
 ]
 
-export const QUICK_ACTIONS: QuickAction[] = [
+export const QUICK_ACTIONS_HOME: QuickAction[] = [
   { id: '1', label: 'Bulk Upload', value: 'bulk_upload' },
   { id: '2', label: 'Share Docs', value: 'share_docs' },
   { id: '3', label: 'Add Members', value: 'add_members' },
   { id: '4', label: 'Access Controls', value: 'access_controls' },
   { id: '5', label: 'Create Report', value: 'create_report' },
+]
+
+export const QUICK_ACTIONS_DOCS: QuickAction[] = [
+  { id: '1', label: 'Add Docs', value: 'add_docs' },
+  { id: '2', label: 'Share Docs', value: 'share_docs' },
 ]
 
 export type PropertyType = (typeof PROPERTY_TYPES)[number]
