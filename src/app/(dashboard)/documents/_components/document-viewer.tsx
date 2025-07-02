@@ -14,6 +14,7 @@ import { DocumentDetailModal } from './document-detail-modal'
 import { DocumentGridView } from './document-grid-view'
 import { DocumentListView } from './document-list-view'
 import { FilterButton } from './filter-button'
+import { FilterModal } from './filter-modal'
 import { SortButton } from './sort-button'
 import { ViewModeToggle } from './viewmode-toggle'
 
@@ -174,14 +175,6 @@ export function DocumentViewer({
     setAllFilesPage(1)
   }
 
-  const clearFilters = () => {
-    setFilterState({
-      type: 'none',
-      selectedProperties: [],
-      selectedTypes: [],
-    })
-    setAllFilesPage(1)
-  }
 
   const paginatedRecentlyAccessed = processedRecentlyAccessed.slice(
     0,
@@ -291,6 +284,15 @@ export function DocumentViewer({
         </div>
         {/* Document Detail Modal */}
         <DocumentDetailModal document={selectedDocument} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+
+          <FilterModal
+          isOpen={isFilterModalOpen}
+          onClose={() => setIsFilterModalOpen(false)}
+          filterType={filterModalType}
+          documents={allFiles}
+          selectedItems={filterModalType === "property" ? filterState.selectedProperties : filterState.selectedTypes}
+          onApply={handleFilterApply}
+        />
       </div>
     </div>
   )
