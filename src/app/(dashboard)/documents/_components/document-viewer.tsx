@@ -10,6 +10,7 @@ import {
 } from '@/types/document.types'
 import { useMemo, useState } from 'react'
 import QuickActionMenu from '../../_components/quick-action-menu'
+import { DocumentDetailModal } from './document-detail-modal'
 import { DocumentGridView } from './document-grid-view'
 import { DocumentListView } from './document-list-view'
 import { FilterButton } from './filter-button'
@@ -191,7 +192,7 @@ export function DocumentViewer({
 
   return (
     <div
-      className={`transition-all duration-300 ${isModalOpen ? 'mr-[400px]' : ''}`}
+      className={`transition-all duration-300 ${isModalOpen ? 'mr-[350px]' : ''}`}
     >
       <div className="flex justify-between pb-4">
         <div className="text-secondary text-2xl font-semibold lg:text-3xl">
@@ -288,6 +289,8 @@ export function DocumentViewer({
             )
           })}
         </div>
+        {/* Document Detail Modal */}
+        <DocumentDetailModal document={selectedDocument} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
       </div>
     </div>
   )
