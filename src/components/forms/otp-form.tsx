@@ -3,13 +3,30 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { apiClient } from "@/utils/api"
+import { useRouter } from "next/navigation"
 import type React from "react"
 import { useEffect, useRef, useState } from "react"
+import { toast } from "sonner"
 
 const OTPForm = () => {
   const [otp, setOtp] = useState(["", "", "", "", "", ""])
   const [countdown, setCountdown] = useState(59)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isResending, setIsResending] = useState(false)
+  const [userEmail, setUserEmail] = useState("")
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
+  const router = useRouter()
+
+  useEffect(() => {
+    // Get email from localStorage
+    const email = localStorage.getItem('signupEmail')
+    if (!email) {
+      router.push('/signup')
+      return
+    }
+    setUserEmail(email)
+  }, [router])
 
   useEffect(() => {
     if (countdown > 0) {
@@ -60,22 +77,70 @@ const OTPForm = () => {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
   }
 
-  const handleRequestOTP = () => {
-    setCountdown(59)
-    setOtp(["", "", "", "", "", ""])
-    inputRefs.current[0]?.focus()
+  const handleRequestOTP = async () => {
+    setIsResending(true)
+    try {
+      // const captchaToken = await getCaptchaToken('RESEND_OTP')
+      
+      await apiClient.post('/signup', {
+        name: localStorage.getItem('signupName'),
+        email: userEmail,
+        captchaToken: "",
+      })
+
+      setCountdown(59)
+      setOtp(["", "", "", "", "", ""])
+      inputRefs.current[0]?.focus()
+      toast.success('OTP sent successfully!')
+    } catch (error: any) {
+      console.error('Resend OTP error:', error)
+      const errorMessage = error.response?.data?.message || 'Failed to resend OTP. Please try again.'
+      toast.error(errorMessage)
+    } finally {
+      setIsResending(false)
+    }
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const otpValue = otp.join("")
-    console.log(otpValue)
+    if (otpValue.length !== 6) {
+      toast.error('Please enter complete OTP')
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      // const captchaToken = await getCaptchaToken('VERIFY_OTP')
+      
+      const response = await apiClient.post('/auth/verify-otp', {
+        email: userEmail,
+        otp: otpValue,
+        captchaToken: "",
+      })
+
+      if (response.data.message) {
+        toast.success(response.data.message)
+        router.push('/password')
+      }
+    } catch (error: any) {
+      console.error('OTP verification error:', error)
+      const errorMessage = error.response?.data?.message || 'OTP verification failed. Please try again.'
+      toast.error(errorMessage)
+      // Clear OTP on error
+      setOtp(["", "", "", "", "", ""])
+      inputRefs.current[0]?.focus()
+    } finally {
+      setIsLoading(false)
+    }
   }
+
+  const maskedEmail = userEmail.replace(/(.{2})(.*)(@.*)/, '$1****$3')
 
   return (
     <div className="space-y-4 pt-5">
       <div className="text-center">
         <p className="text-sm text-secondary mb-8">
-          OTP has been sent to <span className="font-medium">9*******9</span>
+          OTP has been sent to <span className="font-medium">{maskedEmail}</span>
         </p>
       </div>
 
@@ -100,13 +165,12 @@ const OTPForm = () => {
         </div>
       </div>
 
-
       <Button
         onClick={handleSubmit}
         className="bg-primary text-md h-13 w-full py-3 hover:bg-[#4E4F54]"
-        disabled={otp.some((digit) => digit === "")}
+        disabled={otp.some((digit) => digit === "") || isLoading}
       >
-        Verify
+        {isLoading ? 'Verifying...' : 'Verify'}
       </Button>
 
       <div className="text-center">
@@ -115,8 +179,12 @@ const OTPForm = () => {
             Request OTP again in <span className="text-primary font-medium">{formatTime(countdown)}</span>
           </p>
         ) : (
-          <Button onClick={handleRequestOTP} className="w-full h-13 bg-secondary hover:bg-[#4E4F54] cursor-pointer">
-            Resend OTP
+          <Button 
+            onClick={handleRequestOTP} 
+            className="w-full h-13 bg-secondary hover:bg-[#4E4F54] cursor-pointer"
+            disabled={isResending}
+          >
+            {isResending ? 'Sending...' : 'Resend OTP'}
           </Button>
         )}
       </div>
