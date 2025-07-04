@@ -1,4 +1,5 @@
 "use client"
+import { useAuth } from "@/hooks/useAuth"
 import { useState } from "react"
 import { Header } from "./_components/header"
 import { Sidebar } from "./_components/sidebar"
@@ -9,6 +10,14 @@ export default function DashboardLayout({
   children: React.ReactNode
 }>) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
+  const { isAuthenticated } = useAuth()
+  if (isAuthenticated == false) {
+    return(
+      <div>
+        Loading.....
+      </div>
+    )
+  }
   return (
     <div className="flex h-screen bg-gray-100">
       <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />

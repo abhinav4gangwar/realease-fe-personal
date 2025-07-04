@@ -1,10 +1,18 @@
+"use client"
+import { useAuth } from '@/hooks/useAuth'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 
 const AuthLayout = ({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) => {
+  const { isAuthenticated } = useAuth()
+  const router = useRouter()
+  if (isAuthenticated == true) {
+   router.push("/")
+  }
   return (
     <div className="flex min-h-screen">
       {/* Left side - Auth Form */}

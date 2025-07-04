@@ -3,9 +3,8 @@ import {
   BarChart3,
   FileText,
   Home,
-  LogOut,
   MapPin,
-  Settings,
+  Settings
 } from 'lucide-react'
 
 export const APP_CONFIG = {
@@ -89,7 +88,6 @@ export const navigationItems = [
 
 export const navigationItemSection = [
   { icon: Settings, label: 'Settings', href: '/settings' },
-  { icon: LogOut, label: 'Log Out', href: '/logout' },
 ]
 
 export const QUICK_ACTIONS_HOME: QuickAction[] = [
