@@ -1,7 +1,8 @@
 'use client'
 import { Button } from '@/components/ui/button'
 import { navigationItems, navigationItemSection } from '@/lib/constants'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useLogout } from '@/utils/logout'
+import { ChevronLeft, ChevronRight, LogOut } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -13,6 +14,7 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
+  const logout = useLogout()
   return (
     <div
       className={`bg-secondary text-white transition-all duration-300 ${collapsed ? 'w-18' : 'w-56'} flex flex-col`}
@@ -96,6 +98,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             </Link>
           )
         })}
+        <div
+          className="flex cursor-pointer items-center rounded-md px-3 py-2 text-sm font-medium text-gray-300 transition-colors hover:bg-gray-700 hover:text-white"
+          onClick={logout}
+        >
+          <LogOut className="h-6 w-6 flex-shrink-0 text-center" />{' '}
+          {!collapsed && <span className="ml-3">Log Out</span>}
+        </div>
       </nav>
     </div>
   )

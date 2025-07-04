@@ -1,4 +1,5 @@
 'use client'
+import { apiClient } from '@/utils/api'
 import { loginSchema } from '@/utils/validations'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Eye, EyeOff } from 'lucide-react'
@@ -6,6 +7,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { toast } from 'sonner'
 import * as z from 'zod'
 import { Button } from '../ui/button'
 import {
@@ -17,9 +19,12 @@ import {
   FormMessage,
 } from '../ui/form'
 import { Input } from '../ui/input'
+
 const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+
   type LoginFormValues = z.infer<typeof loginSchema>
 
   const form = useForm<LoginFormValues>({
@@ -30,14 +35,47 @@ const LoginForm = () => {
     },
   })
 
-  const onSubmit = (values: LoginFormValues) => {
-    console.log('Login data:', values)
-    router.push('/otp-validation')
+  const onSubmit = async (values: LoginFormValues) => {
+    setIsLoading(true)
+    try {
+      // const captchaToken = await getCaptchaToken('LOGIN')
+
+      const response = await apiClient.post('/auth/login', {
+        email: values.email,
+        password: values.password,
+        captchaToken: '',
+      })
+
+      if (response.data.message) {
+        toast.success(response.data.message)
+
+        if (response.data.token) {
+          localStorage.setItem('token', response.data.token)
+        }
+
+        localStorage.setItem('loginEmail', values.email)
+
+        if (response.data.redirectTo === '/dashboard') {
+          router.push('/')
+        } else {
+          router.push('/otp-validation')
+        }
+      }
+    } catch (error: any) {
+      console.error('Login error:', error)
+      const errorMessage =
+        error.response?.data?.message || 'Login failed. Please try again.'
+      toast.error(errorMessage)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleGoogleLogin = () => {
     console.log('Google login clicked')
+    // TODO: Implement Google login
   }
+
   return (
     <div>
       <Form {...form}>
@@ -51,10 +89,7 @@ const LoginForm = () => {
                   Enter your Email
                 </FormLabel>
                 <FormControl>
-                  <Input
-                    type="email"
-                    {...field}
-                  />
+                  <Input type="email" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -107,9 +142,9 @@ const LoginForm = () => {
           <Button
             type="submit"
             className="bg-primary text-md h-13 w-full py-3 hover:bg-[#4E4F54]"
-            disabled={form.formState.isSubmitting}
+            disabled={isLoading}
           >
-            {form.formState.isSubmitting ? 'Logging in...' : 'Log In'}
+            {isLoading ? 'Logging in...' : 'Log In'}
           </Button>
 
           <div className="flex items-center justify-center gap-3">
@@ -120,8 +155,12 @@ const LoginForm = () => {
         </form>
       </Form>
 
-       <Button variant="outline" className="w-full py-3 h-13 mt-4" onClick={handleGoogleLogin}>
-        <svg className="w-6 h-6 mr-2" viewBox="0 0 24 24">
+      <Button
+        variant="outline"
+        className="mt-4 h-13 w-full py-3"
+        onClick={handleGoogleLogin}
+      >
+        <svg className="mr-2 h-6 w-6" viewBox="0 0 24 24">
           <path
             fill="#4285F4"
             d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -143,8 +182,8 @@ const LoginForm = () => {
       </Button>
 
       {/* Sign Up Link */}
-      <div className="text-center pt-6">
-        <span className="text-sm font-bold text-secondary">
+      <div className="pt-6 text-center">
+        <span className="text-secondary text-sm font-bold">
           {"Don't have an Account? "}
           <Link href="/register" className="text-primary">
             Sign Up

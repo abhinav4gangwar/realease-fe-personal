@@ -1,23 +1,27 @@
 'use client'
+import { apiClient } from '@/utils/api'
 import { registerSchema } from '@/utils/validations'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { toast } from 'sonner'
 import * as z from 'zod'
 import { Button } from '../ui/button'
 import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
 } from '../ui/form'
 import { Input } from '../ui/input'
 
 const RegisterForm = () => {
   const router = useRouter()
+  const [isLoading, setIsLoading] = useState(false)
   type RegisterFormValues = z.infer<typeof registerSchema>
 
   const form = useForm<RegisterFormValues>({
@@ -28,9 +32,29 @@ const RegisterForm = () => {
     },
   })
 
-  const onSubmit = (values: RegisterFormValues) => {
-    console.log('Register data:', values)
-    router.push('/password')
+  const onSubmit = async (values: RegisterFormValues) => {
+    setIsLoading(true)
+    try {
+      // const captchaToken = await getCaptchaToken('SIGNUP')
+
+      const response = await apiClient.post('/auth/signup', {
+        name: values.name,
+        email: values.email,
+        captchaToken: "",
+      })
+      if (response.data.message) {
+        toast.success(response.data.message)
+        localStorage.setItem('signupEmail', values.email)
+        localStorage.setItem('signupName', values.name)
+        router.push('/otp-validation')
+      }
+    } catch (error: any) {
+      console.error('Signup error:', error)
+      const errorMessage = error.response?.data?.message || 'Signup failed. Please try again.'
+      toast.error(errorMessage)
+    } finally {
+      setIsLoading(false)
+    }
   }
   const handleGoogleLogin = () => {
     console.log('Google login clicked')
@@ -83,9 +107,9 @@ const RegisterForm = () => {
           <Button
             type="submit"
             className="bg-primary text-md h-13 w-full py-3 hover:bg-[#4E4F54]"
-            disabled={form.formState.isSubmitting}
+            disabled={isLoading}
           >
-            {form.formState.isSubmitting ? 'Signing up...' : 'Sign Up'}
+            {isLoading ? 'Signing up...' : 'Sign Up'}
           </Button>
 
           <div className="flex items-center justify-center gap-3">

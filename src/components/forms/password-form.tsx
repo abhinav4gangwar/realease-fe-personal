@@ -1,9 +1,12 @@
 'use client'
+import { apiClient } from '@/utils/api'
 import { passwordConfirmationSchema } from '@/utils/validations'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Eye, EyeOff } from 'lucide-react'
-import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { toast } from 'sonner'
 import * as z from 'zod'
 import { Button } from '../ui/button'
 import {
@@ -19,6 +22,9 @@ import { Input } from '../ui/input'
 const PasswordForm = () => {
   const [showPassword, setShowPassword] = useState(true)
   const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
+  const [userEmail, setUserEmail] = useState("")
+  const router = useRouter()
 
   type PasswordFormValues = z.infer<typeof passwordConfirmationSchema>
 
@@ -30,8 +36,47 @@ const PasswordForm = () => {
     },
   })
 
-  const onSubmit = (values: PasswordFormValues) => {
-    console.log('Login data:', values)
+  useEffect(() => {
+    const email = localStorage.getItem('signupEmail')
+    if (!email) {
+      router.push('/signup')
+      return
+    }
+    setUserEmail(email)
+  }, [router])
+
+  const onSubmit = async (values: PasswordFormValues) => {
+    setIsLoading(true)
+    try {
+      // const captchaToken = await getCaptchaToken('SET_PASSWORD')
+      
+      const response = await apiClient.post('/auth/set-password', {
+        email: userEmail,
+        password: values.password,
+        confirmPassword: values.confirmPassword,
+        captchaToken: "",
+      })
+
+      if (response.data.token) {
+        toast.success(response.data.message || 'Password set successfully!')
+        
+        // Store the JWT token
+        localStorage.setItem('token', response.data.token)
+        
+        // Clear signup data
+        localStorage.removeItem('signupEmail')
+        localStorage.removeItem('signupName')
+        
+        // Redirect to dashboard
+        router.push('/')
+      }
+    } catch (error: any) {
+      console.error('Set password error:', error)
+      const errorMessage = error.response?.data?.message || 'Failed to set password. Please try again.'
+      toast.error(errorMessage)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -86,7 +131,7 @@ const PasswordForm = () => {
               <FormControl>
                 <div className="relative">
                   <Input
-                    type={showPassword ? 'password' : 'text'}
+                    type={showPasswordConfirmation ? 'password' : 'text'}
                     className="pr-10"
                     {...field}
                   />
@@ -97,7 +142,7 @@ const PasswordForm = () => {
                     }
                     className="absolute top-1/2 right-5 -translate-y-1/2 transform"
                   >
-                    {showPassword ? (
+                    {showPasswordConfirmation ? (
                       <EyeOff className="h-5 w-5 text-gray-500" />
                     ) : (
                       <Eye className="text-primary h-5 w-5" />
@@ -113,9 +158,9 @@ const PasswordForm = () => {
         <Button
           type="submit"
           className="bg-primary text-md h-13 w-full py-3 hover:bg-[#4E4F54]"
-          disabled={form.formState.isSubmitting}
+          disabled={isLoading}
         >
-          {form.formState.isSubmitting ? 'Signing Up...' : 'Sign Up'}
+          {isLoading ? 'Setting Password...' : 'Set Password'}
         </Button>
       </form>
     </Form>
