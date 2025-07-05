@@ -41,5 +41,5 @@ export const passwordConfirmationSchema = z.object({
 })
 
 export const forgetPasswordSchema = z.object({
-  value: z.string()
+  value: z.string().email('Please enter a valid email address'),
 })
