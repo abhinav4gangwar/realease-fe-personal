@@ -1,5 +1,6 @@
 "use client"
 import { Button } from '@/components/ui/button'
+import { QUICK_ACTIONS_HOME } from '@/lib/constants'
 import { X } from 'lucide-react'
 import { useState } from 'react'
 import AddWidgetButton from './_components/add-widget-menu'
@@ -134,7 +135,7 @@ export default function Home() {
 
         <div className="flex gap-6">
           <AddWidgetButton onAddWidget={addWidget} />
-          <QuickActionMenu />
+          <QuickActionMenu quickActionOptions={QUICK_ACTIONS_HOME} />
         </div>
       </div>
 
