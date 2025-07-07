@@ -22,12 +22,12 @@ import {
 import { Input } from '../ui/input'
 
 const LoginForm = () => {
-  const [showPassword, setShowPassword] = useState(true)
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-    const [useGoogleButton, setUseGoogleButton] = useState(false)
-     const googleButtonRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
+  const [showPassword, setShowPassword] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  const [useGoogleButton, setUseGoogleButton] = useState(false)
+  const googleButtonRef = useRef<HTMLDivElement>(null)
 
   type LoginFormValues = z.infer<typeof loginSchema>
 
@@ -39,50 +39,69 @@ const LoginForm = () => {
     },
   })
 
-  // Check for popup blockers on component mount
-    useEffect(() => {
-      const hasPopupBlocker = checkPopupBlocker()
-      if (hasPopupBlocker) {
-        console.log('Popup blocker detected, using button approach')
-        setUseGoogleButton(true)
+  useEffect(() => {
+    const hasPopupBlocker = checkPopupBlocker()
+    if (hasPopupBlocker) {
+      console.log('Popup blocker detected, using button approach')
+      setUseGoogleButton(true)
+    }
+  }, [])
+
+  // Handle Google login success
+  const handleGoogleLoginSuccess = (response: any) => {
+    if (response.success) {
+      toast.success(response.message || 'Google login successful!')
+      
+      // Store token if provided
+      if (response.token) {
+        localStorage.setItem('token', response.token)
       }
-    }, [])
-  
-    // Initialize Google button when switching to button approach
-    useEffect(() => {
-      if (useGoogleButton && googleButtonRef.current && !isGoogleLoading) {
-        renderGoogleButton(
-          googleButtonRef.current,
-          'signup',
-          (response) => {
-            if (response.success) {
-              toast.success(response.message || 'Google signup successful!')
-              
-              // Handle redirect based on backend response
-              if (response.redirectTo) {
-                if (response.redirectTo.includes('/password')) {
-                  router.push('/password')
-                } else {
-                  router.push('/')
-                }
-              } else {
-                router.push('/')
-              }
-            }
-          },
-          (error) => {
-            console.error('Google signup error:', error)
-            toast.error(error.message || 'Google signup failed. Please try again.')
+      
+      // Handle redirect based on backend response
+      if (response.redirectTo) {
+        if (response.redirectTo.includes('/password')) {
+          // Store additional context for password form
+          if (response.userEmail) {
+            localStorage.setItem('googleUserEmail', response.userEmail)
           }
-        )
+          router.push('/password')
+        } else if (response.redirectTo === '/dashboard') {
+          router.push('/')
+        } else {
+          router.push(response.redirectTo)
+        }
+      } else {
+        router.push('/')
       }
-    }, [useGoogleButton, isGoogleLoading, router])
+    }
+  }
+
+  // Handle Google login error
+  const handleGoogleLoginError = (error: Error) => {
+    console.error('Google login error:', error)
+    
+    if (error.message.includes('blocked') || error.message.includes('not displayed')) {
+      toast.error('Popup blocked. Please use the Google button below.')
+      setUseGoogleButton(true)
+    } else {
+      toast.error(error.message || 'Google login failed. Please try again.')
+    }
+  }
+
+  useEffect(() => {
+    if (useGoogleButton && googleButtonRef.current && !isGoogleLoading) {
+      renderGoogleButton(
+        googleButtonRef.current,
+        'login', 
+        handleGoogleLoginSuccess,
+        handleGoogleLoginError
+      )
+    }
+  }, [useGoogleButton, isGoogleLoading, router])
 
   const onSubmit = async (values: LoginFormValues) => {
     setIsLoading(true)
     try {
-      // const captchaToken = await getCaptchaToken('LOGIN')
-
       const response = await apiClient.post('/auth/login', {
         email: values.email,
         password: values.password,
@@ -115,38 +134,16 @@ const LoginForm = () => {
   }
 
   const handleGoogleLogin = async () => {
-      setIsGoogleLoading(true)
-      try {
-        const response = await handleGoogleAuth('login')
-        
-        if (response.success) {
-          toast.success(response.message || 'Google signup successful!')
-          
-          // Handle redirect based on backend response
-          if (response.redirectTo) {
-            if (response.redirectTo.includes('/password')) {
-              router.push('/password')
-            } else {
-              router.push('/')
-            }
-          } else {
-            router.push('/')
-          }
-        }
-      } catch (error: any) {
-        console.error('Google signup error:', error)
-        
-        // If popup was blocked, switch to button approach
-        if (error.message.includes('blocked') || error.message.includes('not displayed')) {
-          toast.error('Popup blocked. Please use the Google button below.')
-          setUseGoogleButton(true)
-        } else {
-          toast.error(error.message || 'Google signup failed. Please try again.')
-        }
-      } finally {
-        setIsGoogleLoading(false)
-      }
+    setIsGoogleLoading(true)
+    try {
+      const response = await handleGoogleAuth('login')
+      handleGoogleLoginSuccess(response)
+    } catch (error: any) {
+      handleGoogleLoginError(error)
+    } finally {
+      setIsGoogleLoading(false)
     }
+  }
 
   return (
     <div>
@@ -205,6 +202,7 @@ const LoginForm = () => {
               </FormItem>
             )}
           />
+          
           <div className="text-secondary text-center text-sm font-light">
             By continuing, you agree to the{' '}
             <span className="cursor-pointer underline">Terms of Use</span> and{' '}
@@ -214,7 +212,7 @@ const LoginForm = () => {
           <Button
             type="submit"
             className="bg-primary text-md h-13 w-full py-3 hover:bg-[#4E4F54]"
-            disabled={isLoading}
+            disabled={isLoading || isGoogleLoading}
           >
             {isLoading ? 'Logging in...' : 'Log In'}
           </Button>
@@ -230,7 +228,7 @@ const LoginForm = () => {
       {/* Google Sign-In Button */}
       {useGoogleButton ? (
         <div className="w-full mt-4">
-          <div ref={googleButtonRef} className="w-full"></div>
+          <div ref={googleButtonRef} className="w-full py-3 h-13 mt-4"></div>
         </div>
       ) : (
         <Button 
@@ -242,7 +240,7 @@ const LoginForm = () => {
           {isGoogleLoading ? (
             <div className="flex items-center">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
-              Loging in with Google...
+              Logging in with Google...
             </div>
           ) : (
             <>

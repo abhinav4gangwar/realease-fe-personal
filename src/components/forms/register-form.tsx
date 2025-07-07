@@ -1,8 +1,7 @@
 'use client'
+import { checkPopupBlocker, handleGoogleAuth, renderGoogleButton } from '@/lib/googleAuth'
 import { apiClient } from '@/utils/api'
 import { registerSchema } from '@/utils/validations'
-
-import { checkPopupBlocker, handleGoogleAuth, renderGoogleButton } from '@/lib/googleAuth'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -38,7 +37,6 @@ const RegisterForm = () => {
     },
   })
 
-  // Check for popup blockers on component mount
   useEffect(() => {
     const hasPopupBlocker = checkPopupBlocker()
     if (hasPopupBlocker) {
@@ -47,33 +45,47 @@ const RegisterForm = () => {
     }
   }, [])
 
-  // Initialize Google button when switching to button approach
+  // Handle Google signup success
+  const handleGoogleSignupSuccess = (response: any) => {
+    if (response.success) {
+      toast.success(response.message || 'Google signup successful!')
+      
+      // Handle redirect based on backend response
+      if (response.redirectTo) {
+        if (response.redirectTo.includes('/password')) {
+          // Store additional context for password form
+          if (response.userEmail) {
+            localStorage.setItem('googleUserEmail', response.userEmail)
+          }
+          router.push('/password')
+        } else {
+          router.push('/')
+        }
+      } else {
+        router.push('/')
+      }
+    }
+  }
+
+  // Handle Google signup error
+  const handleGoogleSignupError = (error: Error) => {
+    console.error('Google signup error:', error)
+    
+    if (error.message.includes('blocked') || error.message.includes('not displayed')) {
+      toast.error('Popup blocked. Please use the Google button below.')
+      setUseGoogleButton(true)
+    } else {
+      toast.error(error.message || 'Google signup failed. Please try again.')
+    }
+  }
+
   useEffect(() => {
     if (useGoogleButton && googleButtonRef.current && !isGoogleLoading) {
       renderGoogleButton(
         googleButtonRef.current,
         'signup',
-        (response) => {
-          if (response.success) {
-            toast.success(response.message || 'Google signup successful!')
-            
-            // Handle redirect based on backend response
-            if (response.redirectTo) {
-              if (response.redirectTo.includes('/password')) {
-                router.push('/password')
-              } 
-               else {
-                router.push('/')
-              }
-            } else {
-              router.push('/')
-            }
-          }
-        },
-        (error) => {
-          console.error('Google signup error:', error)
-          toast.error(error.message || 'Google signup failed. Please try again.')
-        }
+        handleGoogleSignupSuccess,
+        handleGoogleSignupError
       )
     }
   }, [useGoogleButton, isGoogleLoading, router])
@@ -105,31 +117,9 @@ const RegisterForm = () => {
     setIsGoogleLoading(true)
     try {
       const response = await handleGoogleAuth('signup')
-      
-      if (response.success) {
-        toast.success(response.message || 'Google signup successful!')
-        
-        // Handle redirect based on backend response
-        if (response.redirectTo) {
-          if (response.redirectTo.includes('/password')) {
-            router.push('/password')
-          } else {
-            router.push('/')
-          }
-        } else {
-          router.push('/')
-        }
-      }
+      handleGoogleSignupSuccess(response)
     } catch (error: any) {
-      console.error('Google signup error:', error)
-      
-      // If popup was blocked, switch to button approach
-      if (error.message.includes('blocked') || error.message.includes('not displayed')) {
-        toast.error('Popup blocked. Please use the Google button below.')
-        setUseGoogleButton(true)
-      } else {
-        toast.error(error.message || 'Google signup failed. Please try again.')
-      }
+      handleGoogleSignupError(error)
     } finally {
       setIsGoogleLoading(false)
     }
@@ -164,10 +154,7 @@ const RegisterForm = () => {
                   Enter your Email
                 </FormLabel>
                 <FormControl>
-                  <Input
-                    type="email"
-                    {...field}
-                  />
+                  <Input type="email" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -239,7 +226,6 @@ const RegisterForm = () => {
         </Button>
       )}
 
-      {/* Sign Up Link */}
       <div className="text-center pt-6">
         <span className="text-sm font-bold text-secondary">
           {"Have an Account? "}
