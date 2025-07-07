@@ -58,8 +58,10 @@ const RegisterForm = () => {
             localStorage.setItem('googleUserEmail', response.userEmail)
           }
           router.push('/password')
-        } else {
+        } else if (response.redirectTo === '/dashboard') {
           router.push('/')
+        } else {
+          router.push(response.redirectTo)
         }
       } else {
         router.push('/')
