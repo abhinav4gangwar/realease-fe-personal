@@ -159,7 +159,7 @@ const OTPForm = () => {
               onChange={(e) => handleOtpChange(index, e.target.value.replace(/\D/g, ""))}
               onKeyDown={(e) => handleKeyDown(index, e)}
               onPaste={handlePaste}
-              className="w-20 h-22 text-center text-lg font-semibold"
+              className="w-14 h-18 lg:w-22 lg:h-22 text-center text-lg font-semibold"
             />
           ))}
         </div>
