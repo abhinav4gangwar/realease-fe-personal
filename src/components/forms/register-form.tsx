@@ -60,14 +60,13 @@ const RegisterForm = () => {
             // Handle redirect based on backend response
             if (response.redirectTo) {
               if (response.redirectTo.includes('/dashboard')) {
-                router.push('/')
-              } else if (response.redirectTo.includes('/auth/verify-otp')) {
-                router.push(response.redirectTo)
-              } else {
-                router.push('/') // Default redirect
+                router.push('/password')
+              } 
+               else {
+                router.push('/password')
               }
             } else {
-              router.push('/')
+              router.push('/password')
             }
           }
         },
@@ -113,14 +112,12 @@ const RegisterForm = () => {
         // Handle redirect based on backend response
         if (response.redirectTo) {
           if (response.redirectTo.includes('/dashboard')) {
-            router.push('/')
-          } else if (response.redirectTo.includes('/auth/verify-otp')) {
-            router.push(response.redirectTo)
+            router.push('/password')
           } else {
-            router.push('/') // Default redirect
+            router.push('/password')
           }
         } else {
-          router.push('/')
+          router.push('/password')
         }
       }
     } catch (error: any) {
