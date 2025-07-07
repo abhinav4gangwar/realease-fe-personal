@@ -59,14 +59,14 @@ const RegisterForm = () => {
             
             // Handle redirect based on backend response
             if (response.redirectTo) {
-              if (response.redirectTo.includes('/dashboard')) {
+              if (response.redirectTo.includes('/password')) {
                 router.push('/password')
               } 
                else {
-                router.push('/password')
+                router.push('/')
               }
             } else {
-              router.push('/password')
+              router.push('/')
             }
           }
         },
@@ -111,13 +111,13 @@ const RegisterForm = () => {
         
         // Handle redirect based on backend response
         if (response.redirectTo) {
-          if (response.redirectTo.includes('/dashboard')) {
+          if (response.redirectTo.includes('/password')) {
             router.push('/password')
           } else {
-            router.push('/password')
+            router.push('/')
           }
         } else {
-          router.push('/password')
+          router.push('/')
         }
       }
     } catch (error: any) {
@@ -199,7 +199,7 @@ const RegisterForm = () => {
       {/* Google Sign-In Button */}
       {useGoogleButton ? (
         <div className="w-full mt-4">
-          <div ref={googleButtonRef} className="w-full"></div>
+          <div ref={googleButtonRef} className="w-full py-3 h-13 mt-4"></div>
         </div>
       ) : (
         <Button 

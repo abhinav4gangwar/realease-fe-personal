@@ -60,15 +60,13 @@ const LoginForm = () => {
               
               // Handle redirect based on backend response
               if (response.redirectTo) {
-                if (response.redirectTo.includes('/dashboard')) {
+                if (response.redirectTo.includes('/password')) {
                   router.push('/password')
-                } else if (response.redirectTo.includes('/auth/verify-otp')) {
-                  router.push(response.redirectTo)
                 } else {
-                  router.push('/password')
+                  router.push('/')
                 }
               } else {
-                router.push('/password')
+                router.push('/')
               }
             }
           },
@@ -126,13 +124,13 @@ const LoginForm = () => {
           
           // Handle redirect based on backend response
           if (response.redirectTo) {
-            if (response.redirectTo.includes('/dashboard')) {
+            if (response.redirectTo.includes('/password')) {
               router.push('/password')
             } else {
-              router.push('/password')
+              router.push('/')
             }
           } else {
-            router.push('/password')
+            router.push('/')
           }
         }
       } catch (error: any) {

@@ -39,7 +39,7 @@ const PasswordForm = () => {
   useEffect(() => {
     const email = localStorage.getItem('signupEmail')
     if (!email) {
-      router.push('/signup')
+      router.push('/register')
       return
     }
     setUserEmail(email)
