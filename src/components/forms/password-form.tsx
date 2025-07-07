@@ -23,7 +23,8 @@ const PasswordForm = () => {
   const [showPassword, setShowPassword] = useState(true)
   const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
-  const [userEmail, setUserEmail] = useState("")
+  const [userEmail, setUserEmail] = useState('')
+  const [isGoogleSignup, setIsGoogleSignup] = useState(false)
   const router = useRouter()
 
   type PasswordFormValues = z.infer<typeof passwordConfirmationSchema>
@@ -37,42 +38,52 @@ const PasswordForm = () => {
   })
 
   useEffect(() => {
-    const email = localStorage.getItem('signupEmail')
-    if (!email) {
-      router.push('/signup')
-      return
+    // Check if user came from Google signup
+    const googleSignupFlag = localStorage.getItem('isGoogleSignup')
+    const signupEmail = localStorage.getItem('signupEmail')
+
+    if (signupEmail) {
+      setUserEmail(signupEmail)
+      setIsGoogleSignup(googleSignupFlag === 'true')
+    } else {
+      // No email found, redirect to register
+      router.push('/register')
     }
-    setUserEmail(email)
   }, [router])
 
   const onSubmit = async (values: PasswordFormValues) => {
     setIsLoading(true)
     try {
-      // const captchaToken = await getCaptchaToken('SET_PASSWORD')
-      
-      const response = await apiClient.post('/auth/set-password', {
+      const endpoint = isGoogleSignup
+        ? '/auth/set-password'
+        : '/auth/set-password'
+
+      const response = await apiClient.post(endpoint, {
         email: userEmail,
         password: values.password,
         confirmPassword: values.confirmPassword,
-        captchaToken: "",
+        captchaToken: '',
       })
 
       if (response.data.token) {
         toast.success(response.data.message || 'Password set successfully!')
-        
+
         // Store the JWT token
-        localStorage.setItem('token', response.data.token)
-        
-        // Clear signup data
+        localStorage.setItem('authToken', response.data.token)
+
+        // Clear all signup-related data
         localStorage.removeItem('signupEmail')
         localStorage.removeItem('signupName')
-        
+        localStorage.removeItem('isGoogleSignup')
+
         // Redirect to dashboard
         router.push('/')
       }
     } catch (error: any) {
       console.error('Set password error:', error)
-      const errorMessage = error.response?.data?.message || 'Failed to set password. Please try again.'
+      const errorMessage =
+        error.response?.data?.message ||
+        'Failed to set password. Please try again.'
       toast.error(errorMessage)
     } finally {
       setIsLoading(false)
@@ -80,90 +91,99 @@ const PasswordForm = () => {
   }
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-5">
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-secondary text-sm">
-                Enter your Password
-              </FormLabel>
-              <FormControl>
-                <div className="relative">
-                  <Input
-                    type={showPassword ? 'password' : 'text'}
-                    className="pr-10"
-                    {...field}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute top-1/2 right-5 -translate-y-1/2 transform"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-500" />
-                    ) : (
-                      <Eye className="text-primary h-5 w-5" />
-                    )}
-                  </button>
-                </div>
-              </FormControl>
-              <FormMessage />
+    <div>
+      {isGoogleSignup && (
+        <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3">
+          <p className="text-sm text-blue-800">
+            Complete your Google signup by setting a password for your account.
+          </p>
+        </div>
+      )}
 
-              <p className="cursor-pointer text-xs text-gray-500">
-                Should contain atleast a number, uppercase, lowercase and a
-                symbol
-              </p>
-            </FormItem>
-          )}
-        />
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-5">
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-secondary text-sm">
+                  Enter your Password
+                </FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? 'password' : 'text'}
+                      className="pr-10"
+                      {...field}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute top-1/2 right-5 -translate-y-1/2 transform"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5 text-gray-500" />
+                      ) : (
+                        <Eye className="text-primary h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+                <p className="cursor-pointer text-xs text-gray-500">
+                  Should contain atleast a number, uppercase, lowercase and a
+                  symbol
+                </p>
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="confirmPassword"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-secondary text-sm">
-                Enter your Password again
-              </FormLabel>
-              <FormControl>
-                <div className="relative">
-                  <Input
-                    type={showPasswordConfirmation ? 'password' : 'text'}
-                    className="pr-10"
-                    {...field}
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowPasswordConfirmation(!showPasswordConfirmation)
-                    }
-                    className="absolute top-1/2 right-5 -translate-y-1/2 transform"
-                  >
-                    {showPasswordConfirmation ? (
-                      <EyeOff className="h-5 w-5 text-gray-500" />
-                    ) : (
-                      <Eye className="text-primary h-5 w-5" />
-                    )}
-                  </button>
-                </div>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={form.control}
+            name="confirmPassword"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-secondary text-sm">
+                  Enter your Password again
+                </FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input
+                      type={showPasswordConfirmation ? 'password' : 'text'}
+                      className="pr-10"
+                      {...field}
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowPasswordConfirmation(!showPasswordConfirmation)
+                      }
+                      className="absolute top-1/2 right-5 -translate-y-1/2 transform"
+                    >
+                      {showPasswordConfirmation ? (
+                        <EyeOff className="h-5 w-5 text-gray-500" />
+                      ) : (
+                        <Eye className="text-primary h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <Button
-          type="submit"
-          className="bg-primary text-md h-13 w-full py-3 hover:bg-[#4E4F54]"
-          disabled={isLoading}
-        >
-          {isLoading ? 'Setting Password...' : 'Set Password'}
-        </Button>
-      </form>
-    </Form>
+          <Button
+            type="submit"
+            className="bg-primary text-md h-13 w-full py-3 hover:bg-[#4E4F54]"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Setting Password...' : 'Set Password'}
+          </Button>
+        </form>
+      </Form>
+    </div>
   )
 }
 

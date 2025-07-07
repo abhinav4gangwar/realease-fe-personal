@@ -1,4 +1,3 @@
-// utils/googleAuth.ts
 import { apiClient } from '@/utils/api'
 
 interface GoogleAuthResponse {
@@ -6,6 +5,7 @@ interface GoogleAuthResponse {
   message?: string
   token?: string
   redirectTo?: string
+  email?: string // Changed from userEmail to email to match API response
 }
 
 interface GoogleAuthConfig {
@@ -17,20 +17,17 @@ interface GoogleAuthConfig {
 
 export const initializeGoogleAuth = (): Promise<void> => {
   return new Promise((resolve, reject) => {
-    // Check if Google Identity Services script is already loaded
     if (window.google && window.google.accounts) {
       resolve()
       return
     }
 
-    // Load Google Identity Services script
     const script = document.createElement('script')
     script.src = 'https://accounts.google.com/gsi/client'
     script.async = true
     script.defer = true
 
     script.onload = () => {
-      // Wait a bit for Google services to be fully available
       setTimeout(() => {
         if (window.google && window.google.accounts) {
           resolve()
@@ -52,10 +49,8 @@ export const handleGoogleAuth = async (
   action: 'signup' | 'login' = 'signup'
 ): Promise<GoogleAuthResponse> => {
   try {
-    // Ensure Google Auth is initialized
     await initializeGoogleAuth()
 
-    // Check if Google services are available
     if (!window.google || !window.google.accounts) {
       throw new Error('Google services not available')
     }
@@ -63,7 +58,6 @@ export const handleGoogleAuth = async (
     return new Promise((resolve, reject) => {
       let authResolved = false
 
-      // Configure the callback for this specific auth action
       const config: GoogleAuthConfig = {
         client_id: '931672701469-ie95emkb17s93p6u4s1j6e1b741j64bu.apps.googleusercontent.com',
         callback: async (response: any) => {
@@ -71,7 +65,6 @@ export const handleGoogleAuth = async (
           authResolved = true
 
           try {
-            // Send the credential (ID token) to backend
             const apiResponse = await apiClient.post('/auth/google-signin', {
               token: response.credential,
             })
@@ -82,11 +75,18 @@ export const handleGoogleAuth = async (
                 localStorage.setItem('authToken', apiResponse.data.token)
               }
 
+              // Store user email for password form if redirecting to password
+              if (apiResponse.data.redirectTo?.includes('/password') && apiResponse.data.email) {
+                localStorage.setItem('signupEmail', apiResponse.data.email) // Use same key as normal signup
+                localStorage.setItem('isGoogleSignup', 'true') // Flag to identify Google signup
+              }
+
               resolve({
                 success: true,
                 message: apiResponse.data.message,
                 token: apiResponse.data.token,
                 redirectTo: apiResponse.data.redirectTo,
+                email: apiResponse.data.email,
               })
             } else {
               reject(new Error('No response data received'))
@@ -106,15 +106,13 @@ export const handleGoogleAuth = async (
 
       window.google.accounts.id.initialize(config)
 
-      // Add a timeout to handle cases where prompt doesn't show
       const timeout = setTimeout(() => {
         if (!authResolved) {
           authResolved = true
           reject(new Error('Google sign-in timeout - popup may have been blocked'))
         }
-      }, 30000) // 30 second timeout
+      }, 30000)
 
-      // Trigger the Google Sign-In popup with better error handling
       try {
         window.google.accounts.id.prompt((notification: any) => {
           clearTimeout(timeout)
@@ -145,7 +143,6 @@ export const handleGoogleAuth = async (
   }
 }
 
-// Enhanced button rendering with better error handling
 export const renderGoogleButton = (
   element: HTMLElement,
   action: 'signup' | 'login' = 'signup',
@@ -170,11 +167,18 @@ export const renderGoogleButton = (
               localStorage.setItem('authToken', apiResponse.data.token)
             }
 
+            // Store user email for password form if needed
+            if (apiResponse.data.redirectTo?.includes('/password') && apiResponse.data.email) {
+              localStorage.setItem('signupEmail', apiResponse.data.email) // Use same key as normal signup
+              localStorage.setItem('isGoogleSignup', 'true') // Flag to identify Google signup
+            }
+
             onSuccess({
               success: true,
               message: apiResponse.data.message,
               token: apiResponse.data.token,
               redirectTo: apiResponse.data.redirectTo,
+              email: apiResponse.data.email,
             })
           } catch (error: any) {
             onError(
@@ -188,11 +192,8 @@ export const renderGoogleButton = (
       }
 
       window.google.accounts.id.initialize(config)
-
-      // Clear the element first
       element.innerHTML = ''
 
-      // Render the Google Sign-In button
       window.google.accounts.id.renderButton(element, {
         theme: 'outline',
         size: 'large',
@@ -205,7 +206,6 @@ export const renderGoogleButton = (
     .catch(onError)
 }
 
-// Utility function to check if popup blockers are likely active
 export const checkPopupBlocker = (): boolean => {
   try {
     const popup = window.open('', '_blank', 'width=1,height=1')
@@ -219,7 +219,6 @@ export const checkPopupBlocker = (): boolean => {
   }
 }
 
-// Alternative method using the button approach (more reliable)
 export const handleGoogleAuthViaButton = async (
   buttonElement: HTMLElement,
   action: 'signup' | 'login' = 'signup'
@@ -234,7 +233,6 @@ export const handleGoogleAuthViaButton = async (
   })
 }
 
-// Type declarations for Google Identity Services
 declare global {
   interface Window {
     google: {
