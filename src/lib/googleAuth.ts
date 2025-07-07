@@ -5,7 +5,7 @@ interface GoogleAuthResponse {
   message?: string
   token?: string
   redirectTo?: string
-  userEmail?: string // Add this for password form
+  email?: string // Changed from userEmail to email to match API response
 }
 
 interface GoogleAuthConfig {
@@ -76,8 +76,9 @@ export const handleGoogleAuth = async (
               }
 
               // Store user email for password form if redirecting to password
-              if (apiResponse.data.redirectTo?.includes('/password') && apiResponse.data.userEmail) {
-                localStorage.setItem('googleUserEmail', apiResponse.data.userEmail)
+              if (apiResponse.data.redirectTo?.includes('/password') && apiResponse.data.email) {
+                localStorage.setItem('signupEmail', apiResponse.data.email) // Use same key as normal signup
+                localStorage.setItem('isGoogleSignup', 'true') // Flag to identify Google signup
               }
 
               resolve({
@@ -85,7 +86,7 @@ export const handleGoogleAuth = async (
                 message: apiResponse.data.message,
                 token: apiResponse.data.token,
                 redirectTo: apiResponse.data.redirectTo,
-                userEmail: apiResponse.data.userEmail,
+                email: apiResponse.data.email,
               })
             } else {
               reject(new Error('No response data received'))
@@ -167,8 +168,9 @@ export const renderGoogleButton = (
             }
 
             // Store user email for password form if needed
-            if (apiResponse.data.redirectTo?.includes('/password') && apiResponse.data.userEmail) {
-              localStorage.setItem('googleUserEmail', apiResponse.data.userEmail)
+            if (apiResponse.data.redirectTo?.includes('/password') && apiResponse.data.email) {
+              localStorage.setItem('signupEmail', apiResponse.data.email) // Use same key as normal signup
+              localStorage.setItem('isGoogleSignup', 'true') // Flag to identify Google signup
             }
 
             onSuccess({
@@ -176,7 +178,7 @@ export const renderGoogleButton = (
               message: apiResponse.data.message,
               token: apiResponse.data.token,
               redirectTo: apiResponse.data.redirectTo,
-              userEmail: apiResponse.data.userEmail,
+              email: apiResponse.data.email,
             })
           } catch (error: any) {
             onError(
