@@ -52,18 +52,9 @@ const LoginForm = () => {
     if (response.success) {
       toast.success(response.message || 'Google login successful!')
       
-      // Store token if provided
-      if (response.token) {
-        localStorage.setItem('token', response.token)
-      }
-      
       // Handle redirect based on backend response
       if (response.redirectTo) {
         if (response.redirectTo.includes('/password')) {
-          // Store additional context for password form
-          if (response.userEmail) {
-            localStorage.setItem('googleUserEmail', response.userEmail)
-          }
           router.push('/password')
         } else if (response.redirectTo === '/dashboard') {
           router.push('/')
@@ -71,6 +62,7 @@ const LoginForm = () => {
           router.push(response.redirectTo)
         }
       } else {
+        // If no specific redirect, go to dashboard
         router.push('/')
       }
     }
@@ -111,12 +103,15 @@ const LoginForm = () => {
       if (response.data.message) {
         toast.success(response.data.message)
 
+        // Store token with consistent key
         if (response.data.token) {
-          localStorage.setItem('token', response.data.token)
+          localStorage.setItem('authToken', response.data.token)
         }
 
+        // Store email for potential OTP validation
         localStorage.setItem('loginEmail', values.email)
 
+        // Handle redirect based on backend response
         if (response.data.redirectTo === '/dashboard') {
           router.push('/')
         } else {

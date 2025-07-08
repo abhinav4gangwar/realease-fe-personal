@@ -8,7 +8,8 @@ export function useAuth() {
   const router = useRouter()
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
+    // Check for token in localStorage (consistent key usage)
+    const token = localStorage.getItem('authToken')
     const auth = !!token
     setIsAuthenticated(auth)
 

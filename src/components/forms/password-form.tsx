@@ -54,11 +54,7 @@ const PasswordForm = () => {
   const onSubmit = async (values: PasswordFormValues) => {
     setIsLoading(true)
     try {
-      const endpoint = isGoogleSignup
-        ? '/auth/set-password'
-        : '/auth/set-password'
-
-      const response = await apiClient.post(endpoint, {
+      const response = await apiClient.post('/auth/set-password', {
         email: userEmail,
         password: values.password,
         confirmPassword: values.confirmPassword,
@@ -68,13 +64,14 @@ const PasswordForm = () => {
       if (response.data.token) {
         toast.success(response.data.message || 'Password set successfully!')
 
-        // Store the JWT token
+        // Store the JWT token with consistent key
         localStorage.setItem('authToken', response.data.token)
 
         // Clear all signup-related data
         localStorage.removeItem('signupEmail')
         localStorage.removeItem('signupName')
         localStorage.removeItem('isGoogleSignup')
+        localStorage.removeItem('loginEmail') // Clear any login email as well
 
         // Redirect to dashboard
         router.push('/')
