@@ -5,7 +5,7 @@ interface GoogleAuthResponse {
   message?: string
   token?: string
   redirectTo?: string
-  email?: string // Changed from userEmail to email to match API response
+  email?: string
 }
 
 interface GoogleAuthConfig {
@@ -70,15 +70,15 @@ export const handleGoogleAuth = async (
             })
 
             if (apiResponse.data) {
-              // Store JWT token if provided
+              // Store JWT token if provided - use consistent key
               if (apiResponse.data.token) {
                 localStorage.setItem('authToken', apiResponse.data.token)
               }
 
               // Store user email for password form if redirecting to password
               if (apiResponse.data.redirectTo?.includes('/password') && apiResponse.data.email) {
-                localStorage.setItem('signupEmail', apiResponse.data.email) // Use same key as normal signup
-                localStorage.setItem('isGoogleSignup', 'true') // Flag to identify Google signup
+                localStorage.setItem('signupEmail', apiResponse.data.email)
+                localStorage.setItem('isGoogleSignup', 'true')
               }
 
               resolve({
@@ -163,14 +163,15 @@ export const renderGoogleButton = (
               token: response.credential,
             })
 
+            // Store JWT token if provided - use consistent key
             if (apiResponse.data.token) {
               localStorage.setItem('authToken', apiResponse.data.token)
             }
 
             // Store user email for password form if needed
             if (apiResponse.data.redirectTo?.includes('/password') && apiResponse.data.email) {
-              localStorage.setItem('signupEmail', apiResponse.data.email) // Use same key as normal signup
-              localStorage.setItem('isGoogleSignup', 'true') // Flag to identify Google signup
+              localStorage.setItem('signupEmail', apiResponse.data.email)
+              localStorage.setItem('isGoogleSignup', 'true')
             }
 
             onSuccess({
