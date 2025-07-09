@@ -22,7 +22,7 @@ const OTPForm = () => {
     // Get email from localStorage
     const email = localStorage.getItem('signupEmail')
     if (!email) {
-      router.push('/signup')
+      router.push('/register')
       return
     }
     setUserEmail(email)
@@ -159,7 +159,7 @@ const OTPForm = () => {
               onChange={(e) => handleOtpChange(index, e.target.value.replace(/\D/g, ""))}
               onKeyDown={(e) => handleKeyDown(index, e)}
               onPaste={handlePaste}
-              className="w-14 h-18 lg:w-22 lg:h-22 text-center text-lg font-semibold"
+              className="w-11 h-13 lg:w-22 lg:h-22 text-center text-lg font-semibold"
             />
           ))}
         </div>
