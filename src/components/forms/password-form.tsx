@@ -1,6 +1,7 @@
 'use client'
 import { apiClient } from '@/utils/api'
 import { passwordConfirmationSchema } from '@/utils/validations'
+import { getCaptchaToken } from '@/utils/recaptcha'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Eye, EyeOff } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -54,11 +55,12 @@ const PasswordForm = () => {
   const onSubmit = async (values: PasswordFormValues) => {
     setIsLoading(true)
     try {
+      const captchaToken = await getCaptchaToken('PASSWORD')
       const response = await apiClient.post('/auth/set-password', {
         email: userEmail,
         password: values.password,
         confirmPassword: values.confirmPassword,
-        captchaToken: '',
+        captchaToken,
       })
 
       if (response.data.token) {

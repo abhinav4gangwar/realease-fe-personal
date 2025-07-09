@@ -1,6 +1,7 @@
 'use client'
 import { apiClient } from '@/utils/api'
 import { forgetPasswordSchema } from '@/utils/validations'
+import { getCaptchaToken } from '@/utils/recaptcha'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -33,11 +34,11 @@ const ForgetPasswordForm = () => {
   const onSubmit = async (values: ForgetPasswordFormValues) => {
     setIsLoading(true)
     try {
-      // const captchaToken = await getCaptchaToken('SIGNUP')
+      const captchaToken = await getCaptchaToken('SIGNUP')
 
       const response = await apiClient.post('/auth/forgot-password', {
         email: values.value,
-        captchaToken: '',
+        captchaToken,
       })
       if (response.data.message) {
         toast.success(response.data.message)

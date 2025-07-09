@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { apiClient } from "@/utils/api"
+import { getCaptchaToken } from '@/utils/recaptcha'
 import { useRouter } from "next/navigation"
 import type React from "react"
 import { useEffect, useRef, useState } from "react"
@@ -80,12 +81,12 @@ const OTPForm = () => {
   const handleRequestOTP = async () => {
     setIsResending(true)
     try {
-      // const captchaToken = await getCaptchaToken('RESEND_OTP')
+      const captchaToken = await getCaptchaToken('RESEND_OTP')
       
       await apiClient.post('/signup', {
         name: localStorage.getItem('signupName'),
         email: userEmail,
-        captchaToken: "",
+        captchaToken,
       })
 
       setCountdown(59)

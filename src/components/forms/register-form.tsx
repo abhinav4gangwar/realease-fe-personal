@@ -6,6 +6,7 @@ import {
 } from '@/lib/googleAuth'
 import { apiClient } from '@/utils/api'
 import { registerSchema } from '@/utils/validations'
+import { getCaptchaToken } from '@/utils/recaptcha'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -100,10 +101,11 @@ const RegisterForm = () => {
   const onSubmit = async (values: RegisterFormValues) => {
     setIsLoading(true)
     try {
+      const captchaToken = await getCaptchaToken('SIGNUP')
       const response = await apiClient.post('/auth/signup', {
         name: values.name,
         email: values.email,
-        captchaToken: '',
+        captchaToken,
       })
       if (response.data.message) {
         toast.success(response.data.message)

@@ -2,6 +2,7 @@
 import { checkPopupBlocker, handleGoogleAuth, renderGoogleButton } from '@/lib/googleAuth'
 import { apiClient } from '@/utils/api'
 import { loginSchema } from '@/utils/validations'
+import { getCaptchaToken } from '@/utils/recaptcha'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
@@ -94,10 +95,11 @@ const LoginForm = () => {
   const onSubmit = async (values: LoginFormValues) => {
     setIsLoading(true)
     try {
+      const captchaToken = await getCaptchaToken('LOGIN')
       const response = await apiClient.post('/auth/login', {
         email: values.email,
         password: values.password,
-        captchaToken: '',
+        captchaToken,
       })
 
       if (response.data.message) {
