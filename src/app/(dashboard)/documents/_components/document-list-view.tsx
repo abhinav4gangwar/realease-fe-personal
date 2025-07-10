@@ -2,22 +2,36 @@
 
 import { Button } from '@/components/ui/button'
 import { Document } from '@/types/document.types'
-import { Info } from 'lucide-react'
+import { Download, Edit, Info, Move, Share } from 'lucide-react'
+import { useState } from 'react'
 import { FileIcon } from './file-icon'
 
 interface DocumentListViewProps {
   documents: Document[]
   onDocumentInfo: (document: Document) => void
+  onFolderClick?: (document: Document) => void
+  selectedDocumentId?: string
 }
 
 export function DocumentListView({
   documents,
   onDocumentInfo,
+  onFolderClick,
+  selectedDocumentId,
 }: DocumentListViewProps) {
+  const [hoveredRow, setHoveredRow] = useState<string | null>(null)
+
+  const handleRowClick = (document: Document) => {
+    if (document.isFolder && onFolderClick) {
+      onFolderClick(document)
+    } else {
+      onDocumentInfo(document)
+    }
+  }
   return (
     <div className="space-y-1">
       {/* Header */}
-      <div className="grid grid-cols-12 gap-4 px-4 py-2 text-md font-semibold text-secondary">
+      <div className="text-md text-secondary grid grid-cols-12 gap-4 px-4 py-2 font-semibold">
         <div className="col-span-4">Name</div>
         <div className="col-span-3">Linked Property</div>
         <div className="col-span-3">Date Added</div>
@@ -28,7 +42,14 @@ export function DocumentListView({
       {documents.map((document) => (
         <div
           key={document.id}
-          className="grid grid-cols-12 items-center gapp-4 px-4 py-3 hover:bg-[#A2CFE333] hover:rounded-md"
+          className={`gapp-4 grid grid-cols-12 items-center px-4 py-3 hover:rounded-md hover:bg-[#A2CFE333] ${
+            selectedDocumentId === document.id
+              ? 'border-blue-200 bg-blue-50'
+              : ''
+          }`}
+          onMouseEnter={() => setHoveredRow(document.id)}
+          onMouseLeave={() => setHoveredRow(null)}
+          onClick={() => handleRowClick(document)}
         >
           <div className="col-span-4 flex items-center gap-3">
             <FileIcon type={document.icon} />
@@ -43,17 +64,39 @@ export function DocumentListView({
             {document.dateAdded}
           </div>
           <div className="col-span-1 truncate text-sm text-[#9B9B9D]">
-            {document.tags}
+            {hoveredRow === document.id && !document.isFolder ? (
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Edit className="h-3 w-3" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Move className="h-3 w-3" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Share className="h-3 w-3" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Download className="h-3 w-3" />
+                </Button>
+              </div>
+            ) : (
+              document.tags
+            )}
           </div>
           <div className="col-span-1 flex justify-end">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 hover:text-primary cursor-pointer"
-              onClick={() => onDocumentInfo(document)}
-            >
-              <Info className="h-6 w-6  font-semibold text-[#9B9B9D]" />
-            </Button>
+            {!document.isFolder && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hover:text-primary h-7 w-7 cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDocumentInfo(document)
+                }}
+              >
+                <Info className="h-6 w-6 font-semibold text-[#9B9B9D]" />
+              </Button>
+            )}
           </div>
         </div>
       ))}

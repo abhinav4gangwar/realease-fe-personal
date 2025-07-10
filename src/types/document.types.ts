@@ -9,6 +9,8 @@ export interface Document {
   fileType: string
   category: "documents" | "files"
   icon: string
+  isFolder?: boolean
+  children?: Document[]
 }
 
 export type ViewMode = "list" | "grid"
@@ -21,4 +23,9 @@ export interface FilterState {
   type: FilterType
   selectedProperties: string[]
   selectedTypes: string[]
+}
+
+export interface BreadcrumbItem {
+  name: string
+  id?: string
 }

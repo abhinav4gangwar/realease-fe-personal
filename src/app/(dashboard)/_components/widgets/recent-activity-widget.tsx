@@ -1,5 +1,4 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus } from 'lucide-react'
 
 const RecentACtivityWidget = () => {
   const recentActivities = [
@@ -73,10 +72,7 @@ const RecentACtivityWidget = () => {
   ]
 
   return (
-    <Card className="w-full border-none relative group">
-      <div className="absolute inset-0 z-10 hidden items-center justify-center bg-[#5C9FAD]/25 text-[#5C9FAD] transition-opacity group-hover:flex">
-        <Plus className="h-8 w-8 text-primary" />
-      </div>
+    <Card className="w-full border-none">
       <CardHeader>
         <CardTitle className="text-lg font-semibold h-2 text-secondary">
           Recent Activity Feed

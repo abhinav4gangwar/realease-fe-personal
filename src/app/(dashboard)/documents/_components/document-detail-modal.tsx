@@ -3,9 +3,10 @@
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Document } from "@/types/document.types"
-import { Download, Pencil, Save, Share2, X } from "lucide-react"
+import { Check, Download, Edit, MoreVertical, Move, Share, X } from "lucide-react"
 import { FileIcon } from "./file-icon"
 
 interface DocumentDetailModalProps {
@@ -33,11 +34,11 @@ export function DocumentDetailModal({ document, isOpen, onClose }: DocumentDetai
     setIsEditing(false)
   }
 
-  // const handleCancel = () => {
-  //   setIsEditing(false)
-  //   setEditedName("")
-  //   setEditedLinkedProperty("")
-  // }
+  const handleCancel = () => {
+    setIsEditing(false)
+    setEditedName("")
+    setEditedLinkedProperty("")
+  }
 
   return (
     <div className="fixed right-0 top-0 h-full w-[400px] bg-white border-l shadow-lg flex flex-col border-none">
@@ -58,24 +59,46 @@ export function DocumentDetailModal({ document, isOpen, onClose }: DocumentDetai
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           {isEditing ? (
-            <Button variant="ghost" size="icon" className="h-8 w-8 cursor-pointer" onClick={handleSave}>
-              <Save className="w-4 h-4" />
-            </Button>
+            <>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleSave}>
+                <Check className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCancel}>
+                <X className="w-4 h-4" />
+              </Button>
+            </>
           ) : (
-            <Button variant="ghost" size="icon" className="h-8 w-8 cursor-pointer" onClick={handleEdit}>
-              <Pencil className="w-4 h-4" />
-            </Button>
+            <>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreVertical className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleEdit}>
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Share className="w-4 h-4 mr-2" />
+                    Share
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Download className="w-4 h-4 mr-2" />
+                    Download
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Move className="w-4 h-4 mr-2" />
+                    Move Doc
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
+                <X className="w-4 h-4" />
+              </Button>
+            </>
           )}
-          <Button variant="ghost" size="icon" className="h-8 w-8 cursor-pointer">
-            <Download className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 cursor-pointer">
-            <Share2 className="w-4 h-4" />
-          </Button>
-          
-          <Button variant="ghost" size="icon" className="h-8 w-8 cursor-pointer text-gray-500" onClick={onClose}>
-            <X className="w-4 h-4" />
-          </Button>
         </div>
       </div>
 

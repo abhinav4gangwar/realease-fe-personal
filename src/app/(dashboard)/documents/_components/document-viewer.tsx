@@ -1,6 +1,7 @@
 'use client'
 import { QUICK_ACTIONS_DOCS } from '@/lib/constants'
 import {
+  BreadcrumbItem,
   Document,
   FilterState,
   FilterType,
@@ -10,6 +11,7 @@ import {
 } from '@/types/document.types'
 import { useMemo, useState } from 'react'
 import QuickActionMenu from '../../_components/quick-action-menu'
+import { BreadcrumbNavigation } from './breadcrumb-navigation'
 import { DocumentDetailModal } from './document-detail-modal'
 import { DocumentGridView } from './document-grid-view'
 import { DocumentListView } from './document-list-view'
@@ -45,12 +47,47 @@ export function DocumentViewer({
   const [filterModalType, setFilterModalType] = useState<'property' | 'type'>(
     'property'
   )
+  const [currentFolder, setCurrentFolder] = useState<Document | null>(null)
+  const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([
+    { name: 'Documents' },
+  ])
 
   const itemsPerPage = 15
 
   const handleDocumentInfo = (document: Document) => {
     setSelectedDocument(document)
     setIsModalOpen(true)
+  }
+
+  const handleFolderClick = (folder: Document) => {
+    setCurrentFolder(folder)
+    setBreadcrumbs((prev) => [
+      ...prev,
+      { name: `${folder.name} (${getFolderCounts(folder)})`, id: folder.id },
+    ])
+  }
+
+  const handleBreadcrumbNavigate = (index: number) => {
+    if (index === 0) {
+      setCurrentFolder(null)
+      setBreadcrumbs([{ name: 'Documents' }])
+    } else {
+      // Navigate to specific folder level
+      setBreadcrumbs((prev) => prev.slice(0, index + 1))
+    }
+  }
+
+  const getFolderCounts = (folder: Document) => {
+    if (!folder.children) return '0 Files'
+    const folders = folder.children.filter((child) => child.isFolder).length
+    const files = folder.children.filter((child) => !child.isFolder).length
+    return `${folders} Folders & ${files} Files`
+  }
+
+  const getFileCounts = (documents: Document[]) => {
+    const folders = documents.filter((doc) => doc.isFolder).length
+    const files = documents.filter((doc) => !doc.isFolder).length
+    return `${folders} Folders & ${files} Files`
   }
 
   const handleViewModeChange = (mode: ViewMode) => {
@@ -111,7 +148,7 @@ export function DocumentViewer({
 
   const groupDocuments = (documents: Document[]) => {
     if (filterState.type === 'none') {
-      return { 'All Files': documents }
+      return { [`Files & Folders (${getFileCounts(documents)})`]: documents }
     }
 
     if (filterState.type === 'property') {
@@ -145,11 +182,15 @@ export function DocumentViewer({
     return sortDocuments([...recentlyAccessed])
   }, [recentlyAccessed, sortField, sortOrder])
 
+  const currentDocuments = currentFolder
+    ? currentFolder.children || []
+    : allFiles
+
   const processedAllFiles = useMemo(() => {
-    const filtered = filterDocuments(allFiles)
+    const filtered = filterDocuments(currentDocuments)
     const sorted = sortDocuments(filtered)
     return groupDocuments(sorted)
-  }, [allFiles, filterState, sortField, sortOrder])
+  }, [currentDocuments, filterState, sortField, sortOrder])
 
   const handleFilterSelect = (filterType: FilterType) => {
     if (filterType === 'property' || filterType === 'type') {
@@ -174,7 +215,6 @@ export function DocumentViewer({
     }))
     setAllFilesPage(1)
   }
-
 
   const paginatedRecentlyAccessed = processedRecentlyAccessed.slice(
     0,
@@ -202,41 +242,52 @@ export function DocumentViewer({
           <QuickActionMenu quickActionOptions={QUICK_ACTIONS_DOCS} />
         </div>
       </div>
-
+      {currentFolder && (
+        <div className="mb-6">
+          <BreadcrumbNavigation
+            items={breadcrumbs}
+            onNavigate={handleBreadcrumbNavigate}
+          />
+        </div>
+      )}
       <div>
         {/* Recently Accessed Section */}
-        <div className="mb-8">
-          <h2 className="text-secondary text-lg font-semibold lg:text-xl">
-            Recently Accessed
-          </h2>
-          <div
-            className={`${viewMode === 'list' ? 'mt-5 rounded-lg bg-white p-6' : 'mt-6'}`}
-          >
-            {viewMode === 'list' ? (
-              <DocumentListView
-                documents={paginatedRecentlyAccessed}
-                onDocumentInfo={handleDocumentInfo}
-              />
-            ) : (
-              <div>
-                <DocumentGridView
+        {!currentFolder && (
+          <div className="mb-8">
+            <h2 className="text-secondary text-lg font-semibold lg:text-xl">
+              Recently Accessed
+            </h2>
+            <div
+              className={`${viewMode === 'list' ? 'mt-5 rounded-lg bg-white p-6' : 'mt-6'}`}
+            >
+              {viewMode === 'list' ? (
+                <DocumentListView
                   documents={paginatedRecentlyAccessed}
                   onDocumentInfo={handleDocumentInfo}
+                  selectedDocumentId={selectedDocument?.id}
                 />
-              </div>
-            )}
-            {hasMoreRecent && (
-              <div className="px-4 pt-4">
-                <div
-                  onClick={() => setAllFilesPage((prev) => prev + 1)}
-                  className="hover:text-primary w-full cursor-pointer text-sm font-light text-[#9B9B9D]"
-                >
-                  View More
+              ) : (
+                <div>
+                  <DocumentGridView
+                    documents={paginatedRecentlyAccessed}
+                    onDocumentInfo={handleDocumentInfo}
+                    selectedDocumentId={selectedDocument?.id}
+                  />
                 </div>
-              </div>
-            )}
+              )}
+              {hasMoreRecent && (
+                <div className="px-4 pt-4">
+                  <div
+                    onClick={() => setAllFilesPage((prev) => prev + 1)}
+                    className="hover:text-primary w-full cursor-pointer text-sm font-light text-[#9B9B9D]"
+                  >
+                    View More
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="space-y-8">
           {Object.entries(processedAllFiles).map(([groupName, documents]) => {
@@ -249,7 +300,7 @@ export function DocumentViewer({
             return (
               <div key={groupName}>
                 <h2 className="text-secondary text-lg font-semibold lg:text-xl">
-                  Files
+                  {groupName}
                 </h2>
                 <div
                   className={`${viewMode === 'list' ? 'mt-5 rounded-lg bg-white p-6' : 'mt-4'}`}
@@ -258,12 +309,16 @@ export function DocumentViewer({
                     <DocumentListView
                       documents={paginatedDocuments}
                       onDocumentInfo={handleDocumentInfo}
+                      onFolderClick={handleFolderClick}
+                      selectedDocumentId={selectedDocument?.id}
                     />
                   ) : (
                     <div>
                       <DocumentGridView
                         documents={paginatedDocuments}
                         onDocumentInfo={handleDocumentInfo}
+                        onFolderClick={handleFolderClick}
+                        selectedDocumentId={selectedDocument?.id}
                       />
                     </div>
                   )}
@@ -283,14 +338,22 @@ export function DocumentViewer({
           })}
         </div>
         {/* Document Detail Modal */}
-        <DocumentDetailModal document={selectedDocument} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+        <DocumentDetailModal
+          document={selectedDocument}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+        />
 
-          <FilterModal
+        <FilterModal
           isOpen={isFilterModalOpen}
           onClose={() => setIsFilterModalOpen(false)}
           filterType={filterModalType}
-          documents={allFiles}
-          selectedItems={filterModalType === "property" ? filterState.selectedProperties : filterState.selectedTypes}
+          documents={currentDocuments}
+          selectedItems={
+            filterModalType === 'property'
+              ? filterState.selectedProperties
+              : filterState.selectedTypes
+          }
           onApply={handleFilterApply}
         />
       </div>

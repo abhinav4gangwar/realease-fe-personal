@@ -2,7 +2,7 @@ import documentsData from "@/lib/documents.dummy.json"
 import { DocumentViewer } from "./_components/document-viewer"
 
 
-const Propertiespage = () => {
+const Documentspage = () => {
   return (
     <div>
       <DocumentViewer recentlyAccessed={documentsData.recentlyAccessed} allFiles={documentsData.allFiles} />
@@ -10,4 +10,4 @@ const Propertiespage = () => {
   )
 }
 
-export default Propertiespage
+export default Documentspage
