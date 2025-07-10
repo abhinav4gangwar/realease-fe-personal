@@ -70,7 +70,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   : 'text-gray-300 hover:bg-gray-700 hover:text-white'
               }`}
             >
-              <item.icon className="h-6 w-6 flex-shrink-0 text-center" />
+              <item.icon className="h-6 w-6 flex-shrink-0 text-center ml-0.5" />
               {!collapsed && <span className="ml-3">{item.label}</span>}
             </Link>
           )

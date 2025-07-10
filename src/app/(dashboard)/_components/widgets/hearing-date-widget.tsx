@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Plus } from "lucide-react"
 
 const hearingData = {
   hearings: [
@@ -96,7 +97,10 @@ export const HearingDateWidget = () => {
 
 export const PreviewHearingDateWidget = () => {
   return (
-    <Card className="w-full border-gray-200">
+    <Card className="w-full border-gray-200 group relative">
+      <div className="absolute inset-0 z-10 hidden items-center justify-center bg-[#5C9FAD]/25 text-[#5C9FAD] transition-opacity group-hover:flex">
+        <Plus className="h-8 w-8 text-primary" />
+      </div>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 ">
         <CardTitle className="text-secondary h-2 pb-3 text-lg font-semibold mb-2">Upcoming Hearing Dates</CardTitle>
       </CardHeader>

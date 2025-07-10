@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Plus } from 'lucide-react'
 
 const recentComment = [
   {
@@ -97,15 +98,20 @@ export const RecentCommentWidget = () => {
 
 export const PreviewRecentCommentWidget = () => {
   return (
-    <Card className="w-full border-gray-300">
+    <Card className="group relative w-full border-gray-300 overflow-hidden">
+      <div className="absolute inset-0 z-10 hidden items-center justify-center bg-[#5C9FAD]/25 text-[#5C9FAD] transition-opacity group-hover:flex">
+        <Plus className="h-8 w-8 text-primary" />
+      </div>
+
       <CardHeader>
         <CardTitle className="text-secondary h-2 text-sm font-semibold">
           Recent Comments
         </CardTitle>
       </CardHeader>
+
       <CardContent className="h-20 space-y-1 overflow-y-auto">
         {recentComment.map((activity, index) => (
-          <div key={index} className=" text-[12px] text-gray-600">
+          <div key={index} className="text-[12px] text-gray-600">
             <span className="font-medium">{activity.user}</span>
             <span> {activity.action} </span>
             {activity.item ? (

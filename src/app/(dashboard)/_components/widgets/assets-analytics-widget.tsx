@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Plus } from 'lucide-react'
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts'
 
 const assetData = [
@@ -88,7 +89,10 @@ export const AssetsAnalyticsWidget = () => {
 
 export const PreviewAssetsAnalyticsWidget = () => {
   return (
-    <Card className="w-full border-gray-200">
+    <Card className="w-full border-gray-200 group relative">
+      <div className="absolute inset-0 z-10 hidden items-center justify-center bg-[#5C9FAD]/25 text-[#5C9FAD] transition-opacity group-hover:flex">
+        <Plus className="h-8 w-8 text-primary" />
+      </div>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-6">
         <CardTitle className="text-secondary h-2 pb-3 text-sm
         font-semibold mb-4">

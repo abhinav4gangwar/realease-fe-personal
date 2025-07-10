@@ -1,3 +1,4 @@
+import { Plus } from "lucide-react"
 
 export const TotalAssetsWidget = () => {
   return (
@@ -16,7 +17,10 @@ export const TotalAssetsWidget = () => {
 
 export const PreviewTotalAssetsWidget = () => {
   return (
-    <div className="bg-white p-4 rounded-md border-gray-200 border shadow-md">
+    <div className="bg-white p-4 group relative rounded-md border-gray-200 border shadow-md">
+      <div className="absolute inset-0 z-10 hidden items-center justify-center bg-[#5C9FAD]/25 text-[#5C9FAD] transition-opacity group-hover:flex">
+        <Plus className="h-8 w-8 text-primary" />
+      </div>
       <div className="flex flex-col  gap-3">
        <h1 className="text-secondary h-2 pb-3 text-sm
         font-semibold mb-4">Total Asset Value</h1>
