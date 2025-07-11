@@ -1,4 +1,5 @@
 'use client'
+import { Button } from '@/components/ui/button'
 import { QUICK_ACTIONS_DOCS } from '@/lib/constants'
 import {
   BreadcrumbItem,
@@ -12,11 +13,15 @@ import {
 import { useMemo, useState } from 'react'
 import QuickActionMenu from '../../_components/quick-action-menu'
 import { BreadcrumbNavigation } from './breadcrumb-navigation'
+import { CancelShareModal } from './cancel-share-modal'
 import { DocumentDetailModal } from './document-detail-modal'
 import { DocumentGridView } from './document-grid-view'
 import { DocumentListView } from './document-list-view'
 import { FilterButton } from './filter-button'
 import { FilterModal } from './filter-modal'
+import { ScrollToTopButton } from './scroll-to-top-button'
+import { SelectedDocsModal } from './selected-docs-modal'
+import { ShareEmailModal } from './share-email-modal'
 import { SortButton } from './sort-button'
 import { ViewModeToggle } from './viewmode-toggle'
 
@@ -51,11 +56,18 @@ export function DocumentViewer({
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([
     { name: 'Documents' },
   ])
+  const [isShareMode, setIsShareMode] = useState(false)
+  const [selectedDocuments, setSelectedDocuments] = useState<string[]>([])
+  const [isShareEmailModalOpen, setIsShareEmailModalOpen] = useState(false)
+  const [isCancelShareModalOpen, setIsCancelShareModalOpen] = useState(false)
+  const [isSelectedDocsModalOpen, setIsSelectedDocsModalOpen] = useState(false)
+  const [openModalInEditMode, setOpenModalInEditMode] = useState(false)
 
   const itemsPerPage = 15
 
   const handleDocumentInfo = (document: Document) => {
     setSelectedDocument(document)
+    setOpenModalInEditMode(false)
     setIsModalOpen(true)
   }
 
@@ -216,6 +228,81 @@ export function DocumentViewer({
     setAllFilesPage(1)
   }
 
+  const handleEditClick = (document: Document) => {
+    setSelectedDocument(document)
+    setOpenModalInEditMode(true)
+    setIsModalOpen(true)
+  }
+
+  const handleShareDocsClick = () => {
+    setIsShareMode(true)
+    setSelectedDocuments([])
+    setViewMode('list') // Force list view for sharing
+  }
+
+  const handleConfirmShare = () => {
+    if (selectedDocuments.length > 0) {
+      setIsSelectedDocsModalOpen(true)
+    }
+  }
+
+  const handleDocumentSelect = (documentId: string) => {
+    setSelectedDocuments((prev) =>
+      prev.includes(documentId)
+        ? prev.filter((id) => id !== documentId)
+        : [...prev, documentId]
+    )
+  }
+
+  const handleRemoveSelectedDocument = (documentId: string) => {
+    setSelectedDocuments((prev) => prev.filter((id) => id !== documentId))
+  }
+
+  const resetShareMode = () => {
+    setIsShareMode(false)
+    setSelectedDocuments([])
+    setIsSelectedDocsModalOpen(false)
+    setIsShareEmailModalOpen(false)
+    setIsCancelShareModalOpen(false)
+  }
+
+  const handleCancelShare = () => {
+    if (selectedDocuments.length > 0) {
+      setIsCancelShareModalOpen(true)
+    } else {
+      resetShareMode()
+    }
+  }
+
+  const confirmCancelShare = () => {
+    resetShareMode()
+  }
+
+  const handleCancelFromModal = () => {
+    setIsSelectedDocsModalOpen(false)
+    setIsShareEmailModalOpen(false)
+    setIsCancelShareModalOpen(true)
+  }
+
+  const handleModalClose = () => {
+    setIsSelectedDocsModalOpen(false)
+    setIsShareEmailModalOpen(false)
+  }
+
+  const getSelectedDocumentObjects = () => {
+    const allDocs = [...recentlyAccessed, ...allFiles]
+    const allDocsWithChildren: Document[] = []
+    allDocs.forEach((doc) => {
+      allDocsWithChildren.push(doc)
+      if (doc.children) {
+        allDocsWithChildren.push(...doc.children)
+      }
+    })
+    return selectedDocuments
+      .map((id) => allDocsWithChildren.find((doc) => doc.id === id))
+      .filter(Boolean) as Document[]
+  }
+
   const paginatedRecentlyAccessed = processedRecentlyAccessed.slice(
     0,
     recentPage * itemsPerPage
@@ -239,6 +326,22 @@ export function DocumentViewer({
           />
           <FilterButton onFilterSelect={handleFilterSelect} />
           <SortButton onSortChange={handleSortChange} />
+          {isShareMode ? (
+            <Button
+              className="h-8 bg-green-500 hover:bg-green-600"
+              onClick={handleConfirmShare}
+              disabled={selectedDocuments.length === 0}
+            >
+              Confirm
+            </Button>
+          ) : (
+            <Button
+              className="h-8 bg-blue-500 hover:bg-blue-600"
+              onClick={handleShareDocsClick}
+            >
+              Share Docs
+            </Button>
+          )}
           <QuickActionMenu quickActionOptions={QUICK_ACTIONS_DOCS} />
         </div>
       </div>
@@ -265,6 +368,10 @@ export function DocumentViewer({
                   documents={paginatedRecentlyAccessed}
                   onDocumentInfo={handleDocumentInfo}
                   selectedDocumentId={selectedDocument?.id}
+                  isShareMode={isShareMode}
+                  selectedDocuments={selectedDocuments}
+                  onDocumentSelect={handleDocumentSelect}
+                  onEditClick={handleEditClick}
                 />
               ) : (
                 <div>
@@ -272,6 +379,10 @@ export function DocumentViewer({
                     documents={paginatedRecentlyAccessed}
                     onDocumentInfo={handleDocumentInfo}
                     selectedDocumentId={selectedDocument?.id}
+                    isShareMode={isShareMode}
+                    selectedDocuments={selectedDocuments}
+                    onDocumentSelect={handleDocumentSelect}
+                    onEditClick={handleEditClick}
                   />
                 </div>
               )}
@@ -311,6 +422,10 @@ export function DocumentViewer({
                       onDocumentInfo={handleDocumentInfo}
                       onFolderClick={handleFolderClick}
                       selectedDocumentId={selectedDocument?.id}
+                      isShareMode={isShareMode}
+                      selectedDocuments={selectedDocuments}
+                      onDocumentSelect={handleDocumentSelect}
+                      onEditClick={handleEditClick}
                     />
                   ) : (
                     <div>
@@ -319,6 +434,10 @@ export function DocumentViewer({
                         onDocumentInfo={handleDocumentInfo}
                         onFolderClick={handleFolderClick}
                         selectedDocumentId={selectedDocument?.id}
+                        isShareMode={isShareMode}
+                        selectedDocuments={selectedDocuments}
+                        onDocumentSelect={handleDocumentSelect}
+                        onEditClick={handleEditClick}
                       />
                     </div>
                   )}
@@ -339,9 +458,14 @@ export function DocumentViewer({
         </div>
         {/* Document Detail Modal */}
         <DocumentDetailModal
-          document={selectedDocument}
+         document={selectedDocument}
           isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          onClose={() => {
+            setIsModalOpen(false)
+            setOpenModalInEditMode(false)
+            setSelectedDocument(null)
+          }}
+          openInEditMode={openModalInEditMode}
         />
 
         <FilterModal
@@ -355,6 +479,34 @@ export function DocumentViewer({
               : filterState.selectedTypes
           }
           onApply={handleFilterApply}
+        />
+
+        <ScrollToTopButton />
+
+        <ShareEmailModal
+          isOpen={isShareEmailModalOpen}
+          onClose={handleModalClose}
+          selectedDocuments={getSelectedDocumentObjects()}
+          onCancel={handleCancelFromModal}
+        />
+
+        <CancelShareModal
+          isOpen={isCancelShareModalOpen}
+          onConfirm={confirmCancelShare}
+          onCancel={() => setIsCancelShareModalOpen(false)}
+        />
+
+        <SelectedDocsModal
+          isOpen={isSelectedDocsModalOpen}
+          onClose={handleModalClose}
+          selectedDocuments={getSelectedDocumentObjects()}
+          onRemoveDocument={handleRemoveSelectedDocument}
+          onSelectMore={handleModalClose}
+          onShareViaEmail={() => {
+            setIsSelectedDocsModalOpen(false)
+            setIsShareEmailModalOpen(true)
+          }}
+          onCancel={handleCancelFromModal}
         />
       </div>
     </div>

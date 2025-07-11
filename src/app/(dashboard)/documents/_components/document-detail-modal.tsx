@@ -1,24 +1,55 @@
-"use client"
+'use client'
 
-import { useState } from "react"
+import { useEffect, useState } from 'react'
 
-import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { Document } from "@/types/document.types"
-import { Check, Download, Edit, MoreVertical, Move, Share, X } from "lucide-react"
-import { FileIcon } from "./file-icon"
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
+import { Document } from '@/types/document.types'
+import {
+  Check,
+  Download,
+  Edit,
+  MoreVertical,
+  Move,
+  Share,
+  X,
+} from 'lucide-react'
+import { FileIcon } from './file-icon'
 
 interface DocumentDetailModalProps {
   document: Document | null
   isOpen: boolean
   onClose: () => void
+  openInEditMode?: boolean
 }
 
-export function DocumentDetailModal({ document, isOpen, onClose }: DocumentDetailModalProps) {
+export function DocumentDetailModal({
+  document,
+  isOpen,
+  onClose,
+  openInEditMode = false,
+}: DocumentDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false)
-  const [editedName, setEditedName] = useState("")
-  const [editedLinkedProperty, setEditedLinkedProperty] = useState("")
+  const [editedName, setEditedName] = useState('')
+  const [editedLinkedProperty, setEditedLinkedProperty] = useState('')
+
+  useEffect(() => {
+    if (isOpen && openInEditMode && document) {
+      setEditedName(document.name)
+      setEditedLinkedProperty(document.linkedProperty)
+      setIsEditing(true)
+    } else if (isOpen && document) {
+      setEditedName(document.name)
+      setEditedLinkedProperty(document.linkedProperty)
+      setIsEditing(false)
+    }
+  }, [isOpen, openInEditMode, document])
 
   if (!document || !isOpen) return null
 
@@ -29,42 +60,56 @@ export function DocumentDetailModal({ document, isOpen, onClose }: DocumentDetai
   }
 
   const handleSave = () => {
-    // Here you would typically save the changes to your backend
-    console.log("Saving changes:", { name: editedName, linkedProperty: editedLinkedProperty })
+    console.log('Saving changes:', {
+      name: editedName,
+      linkedProperty: editedLinkedProperty,
+    })
     setIsEditing(false)
   }
 
   const handleCancel = () => {
     setIsEditing(false)
-    setEditedName("")
-    setEditedLinkedProperty("")
+    setEditedName(document.name)
+    setEditedLinkedProperty(document.linkedProperty)
   }
 
   return (
-    <div className="fixed right-0 top-0 h-full w-[400px] bg-white border-l shadow-lg flex flex-col border-none">
+    <div className="fixed top-0 right-0 flex h-full w-[400px] flex-col border-l border-none bg-white shadow-lg">
       {/* Header */}
       <div className="flex items-center justify-between p-4 pt-24">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <FileIcon type={document.icon} className="w-5 h-6 flex-shrink-0" />
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <FileIcon type={document.icon} className="h-6 w-5 flex-shrink-0" />
           {isEditing ? (
             <Input
               value={editedName}
               onChange={(e) => setEditedName(e.target.value)}
-              className="text-lg font-semibold border-gray-400 p-2 h-auto focus-visible:ring-0"
+              className="h-auto border-gray-400 p-2 text-lg font-semibold focus-visible:ring-0"
               autoFocus
             />
           ) : (
-            <h2 className="text-lg font-semibold truncate pl-1">{document.name}</h2>
+            <h2 className="truncate pl-1 text-lg font-semibold">
+              {document.name}
+            </h2>
           )}
         </div>
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex flex-shrink-0 items-center gap-1">
           {isEditing ? (
             <>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleSave}>
-                <Check className="w-4 h-4" />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleSave}
+              >
+                <Check className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCancel}>
-                <X className="w-4 h-4" />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleCancel}
+              >
+                <X className="h-4 w-4" />
               </Button>
             </>
           ) : (
@@ -72,30 +117,35 @@ export function DocumentDetailModal({ document, isOpen, onClose }: DocumentDetai
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreVertical className="w-4 h-4" />
+                    <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={handleEdit}>
-                    <Edit className="w-4 h-4 mr-2" />
+                    <Edit className="mr-2 h-4 w-4" />
                     Edit
                   </DropdownMenuItem>
                   <DropdownMenuItem>
-                    <Share className="w-4 h-4 mr-2" />
+                    <Share className="mr-2 h-4 w-4" />
                     Share
                   </DropdownMenuItem>
                   <DropdownMenuItem>
-                    <Download className="w-4 h-4 mr-2" />
+                    <Download className="mr-2 h-4 w-4" />
                     Download
                   </DropdownMenuItem>
                   <DropdownMenuItem>
-                    <Move className="w-4 h-4 mr-2" />
+                    <Move className="mr-2 h-4 w-4" />
                     Move Doc
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
-                <X className="w-4 h-4" />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={onClose}
+              >
+                <X className="h-4 w-4" />
               </Button>
             </>
           )}
@@ -105,17 +155,19 @@ export function DocumentDetailModal({ document, isOpen, onClose }: DocumentDetai
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         {/* Document Preview Area */}
-        <div className="bg-gray-100 h-64 flex items-center justify-center m-4 rounded-lg">
+        <div className="m-4 flex h-64 items-center justify-center rounded-lg bg-gray-100">
           <div className="text-center">
-            <FileIcon type={document.icon} className="w-16 h-20 mx-auto mb-2" />
+            <FileIcon type={document.icon} className="mx-auto mb-2 h-20 w-16" />
             <p className="text-sm text-gray-500">Document Preview</p>
           </div>
         </div>
 
         {/* Document Details */}
-        <div className="p-4 space-y-4">
+        <div className="space-y-4 p-4">
           <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-1">Linked Property</h3>
+            <h3 className="mb-1 text-sm font-medium text-gray-500">
+              Linked Property
+            </h3>
             {isEditing ? (
               <Input
                 value={editedLinkedProperty}
@@ -128,27 +180,35 @@ export function DocumentDetailModal({ document, isOpen, onClose }: DocumentDetai
           </div>
 
           <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-1">Date Added</h3>
+            <h3 className="mb-1 text-sm font-medium text-gray-500">
+              Date Added
+            </h3>
             <p className="text-sm">{document.dateAdded}</p>
           </div>
 
           <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-1">Date Modified</h3>
+            <h3 className="mb-1 text-sm font-medium text-gray-500">
+              Date Modified
+            </h3>
             <p className="text-sm">{document.dateModified}</p>
           </div>
 
           <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-1">Last Opened</h3>
+            <h3 className="mb-1 text-sm font-medium text-gray-500">
+              Last Opened
+            </h3>
             <p className="text-sm">{document.lastOpened}</p>
           </div>
 
           <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-1">File Type</h3>
+            <h3 className="mb-1 text-sm font-medium text-gray-500">
+              File Type
+            </h3>
             <p className="text-sm">{document.fileType}</p>
           </div>
 
           <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-1">Tags</h3>
+            <h3 className="mb-1 text-sm font-medium text-gray-500">Tags</h3>
             <p className="text-sm">{document.tags}</p>
           </div>
         </div>
