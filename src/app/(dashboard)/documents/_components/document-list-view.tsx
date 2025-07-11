@@ -7,24 +7,32 @@ import { useState } from 'react'
 import { FileIcon } from './file-icon'
 
 interface DocumentListViewProps {
-  documents: Document[]
+ documents: Document[]
   onDocumentInfo: (document: Document) => void
   onFolderClick?: (document: Document) => void
   selectedDocumentId?: string
+  isShareMode?: boolean
+  selectedDocuments?: string[]
+  onDocumentSelect?: (documentId: string) => void
+  onEditClick?: (document: Document) => void
 }
 
 export function DocumentListView({
-  documents,
+ documents,
   onDocumentInfo,
   onFolderClick,
   selectedDocumentId,
+  isShareMode,
+  selectedDocuments,
+  onDocumentSelect,
+  onEditClick,
 }: DocumentListViewProps) {
   const [hoveredRow, setHoveredRow] = useState<string | null>(null)
 
   const handleRowClick = (document: Document) => {
-    if (document.isFolder && onFolderClick) {
+    if (document.isFolder && onFolderClick && !isShareMode) {
       onFolderClick(document)
-    } else {
+    } else if (!isShareMode) {
       onDocumentInfo(document)
     }
   }
@@ -52,6 +60,15 @@ export function DocumentListView({
           onClick={() => handleRowClick(document)}
         >
           <div className="col-span-4 flex items-center gap-3">
+            {isShareMode && (
+              <input
+                type="checkbox"
+                checked={selectedDocuments?.includes(document.id) || false}
+                onChange={() => onDocumentSelect?.(document.id)}
+                onClick={(e) => e.stopPropagation()}
+                className="w-4 h-4"
+              />
+            )}
             <FileIcon type={document.icon} />
             <span className="truncate text-sm font-medium">
               {document.name}
@@ -64,9 +81,14 @@ export function DocumentListView({
             {document.dateAdded}
           </div>
           <div className="col-span-1 truncate text-sm text-[#9B9B9D]">
-            {hoveredRow === document.id && !document.isFolder ? (
+            {hoveredRow === document.id && !isShareMode ? (
               <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-6 w-6">
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => {
+                    e.stopPropagation()
+                    if (onEditClick) {
+                      onEditClick(document)
+                    }
+                  }}>
                   <Edit className="h-3 w-3" />
                 </Button>
                 <Button variant="ghost" size="icon" className="h-6 w-6">
@@ -84,7 +106,7 @@ export function DocumentListView({
             )}
           </div>
           <div className="col-span-1 flex justify-end">
-            {!document.isFolder && (
+            {!isShareMode && (
               <Button
                 variant="ghost"
                 size="icon"

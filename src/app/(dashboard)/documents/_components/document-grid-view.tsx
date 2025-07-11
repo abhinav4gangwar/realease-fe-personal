@@ -12,6 +12,10 @@ interface DocumentGridViewProps {
   onDocumentInfo: (document: Document) => void
   onFolderClick?: (document: Document) => void
   selectedDocumentId?: string
+  isShareMode?: boolean
+  selectedDocuments?: string[]
+  onDocumentSelect?: (documentId: string) => void
+  onEditClick?: (document: Document) => void
 }
 
 export function DocumentGridView({
@@ -19,13 +23,17 @@ export function DocumentGridView({
   onDocumentInfo,
   onFolderClick,
   selectedDocumentId,
+  isShareMode,
+  selectedDocuments,
+  onDocumentSelect,
+  onEditClick,
 }: DocumentGridViewProps) {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
 
   const handleCardClick = (document: Document) => {
-    if (document.isFolder && onFolderClick) {
+    if (document.isFolder && onFolderClick && !isShareMode) {
       onFolderClick(document)
-    } else {
+    } else if (!isShareMode) {
       onDocumentInfo(document)
     }
   }
@@ -46,10 +54,46 @@ export function DocumentGridView({
           <CardContent>
             <div className="mb-3 flex items-start justify-between">
               <div className="flex items-center gap-2">
+                {isShareMode && (
+                  <input
+                    type="checkbox"
+                    checked={selectedDocuments?.includes(document.id) || false}
+                    onChange={() => onDocumentSelect?.(document.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="h-4 w-4 flex-shrink-0"
+                  />
+                )}
                 <FileIcon type={document.icon} className="h-7 w-6" />
                 <h3 className="text-md truncate">{document.name}</h3>
+
+                {hoveredCard === document.id && !isShareMode && (
+                  <div className="ml-2 flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (onEditClick) {
+                          onEditClick(document)
+                        }
+                      }}
+                    >
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-5 w-5">
+                      <Move className="h-3 w-3" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-5 w-5">
+                      <Share className="h-3 w-3" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-5 w-5">
+                      <Download className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
               </div>
-              {!document.isFolder && (
+              {!isShareMode && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -67,26 +111,7 @@ export function DocumentGridView({
             <div className="space-y-1 text-sm text-[#9B9B9D]">
               <p className="truncate">{document.linkedProperty}</p>
               <p>{document.dateAdded}</p>
-              <div className="truncate">
-                {hoveredCard === document.id && !document.isFolder ? (
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="h-5 w-5">
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-5 w-5">
-                      <Move className="h-3 w-3" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-5 w-5">
-                      <Share className="h-3 w-3" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-5 w-5">
-                      <Download className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ) : (
-                  <p>{document.tags}</p>
-                )}
-              </div>
+              <div className="truncate">{document.tags}</div>
             </div>
           </CardContent>
         </Card>
