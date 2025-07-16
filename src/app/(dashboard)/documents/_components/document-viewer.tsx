@@ -1,6 +1,5 @@
 'use client'
 import { Button } from '@/components/ui/button'
-import { QUICK_ACTIONS_DOCS } from '@/lib/constants'
 import {
   BreadcrumbItem,
   Document,
@@ -11,7 +10,7 @@ import {
   ViewMode,
 } from '@/types/document.types'
 import { useMemo, useState } from 'react'
-import QuickActionMenu from '../../_components/quick-action-menu'
+import { AddButton, addType } from './add-button'
 import { BreadcrumbNavigation } from './breadcrumb-navigation'
 import { CancelShareModal } from './cancel-share-modal'
 import { DocumentDetailModal } from './document-detail-modal'
@@ -23,6 +22,7 @@ import { ScrollToTopButton } from './scroll-to-top-button'
 import { SelectedDocsModal } from './selected-docs-modal'
 import { ShareEmailModal } from './share-email-modal'
 import { SortButton } from './sort-button'
+import { UploadModal } from './upload-modal'
 import { ViewModeToggle } from './viewmode-toggle'
 
 interface DocumentViewerProps {
@@ -48,6 +48,10 @@ export function DocumentViewer({
     selectedProperties: [],
     selectedTypes: [],
   })
+  const [isUploadModalOpen, setUploadModalOpen] = useState(false)
+  const [addModalType, setAddModaltype] = useState<
+    'uploadFile' | 'uploadFolder' | 'createFolder'
+  >('uploadFile')
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
   const [filterModalType, setFilterModalType] = useState<'property' | 'type'>(
     'property'
@@ -204,6 +208,10 @@ export function DocumentViewer({
     return groupDocuments(sorted)
   }, [currentDocuments, filterState, sortField, sortOrder])
 
+  const handleAddSelect = (addType: addType) => {
+      setAddModaltype(addType)
+      setUploadModalOpen(true)
+  }
   const handleFilterSelect = (filterType: FilterType) => {
     if (filterType === 'property' || filterType === 'type') {
       setFilterModalType(filterType)
@@ -342,7 +350,7 @@ export function DocumentViewer({
               Share Docs
             </Button>
           )}
-          <QuickActionMenu quickActionOptions={QUICK_ACTIONS_DOCS} />
+          <AddButton onAddSelect={handleAddSelect} />
         </div>
       </div>
       {currentFolder && (
@@ -458,7 +466,7 @@ export function DocumentViewer({
         </div>
         {/* Document Detail Modal */}
         <DocumentDetailModal
-         document={selectedDocument}
+          document={selectedDocument}
           isOpen={isModalOpen}
           onClose={() => {
             setIsModalOpen(false)
@@ -479,6 +487,12 @@ export function DocumentViewer({
               : filterState.selectedTypes
           }
           onApply={handleFilterApply}
+        />
+
+        <UploadModal
+          isOpen={isUploadModalOpen}
+          onClose={() => setUploadModalOpen(false)}
+          addType={addModalType}
         />
 
         <ScrollToTopButton />
