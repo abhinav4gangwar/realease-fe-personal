@@ -444,15 +444,20 @@ export function UploadModal({ isOpen, addType, onClose }: UploadModalProps) {
       allFiles.forEach((fileItem, index) => {
       
         if (fileItem.file) {
-            console.log(fileItem.name)
           formData.append("files", fileItem.file)
-          formData.append(`metadata[${index}][name]`, fileItem.name)
-          formData.append(`metadata[${index}][path]`, fileItem.path)
-          formData.append(`metadata[${index}][propertyId]`, fileItem.propertyId || "0")
-          formData.append(`metadata[${index}][tags]`, fileItem.tags || "")
         }
 
       })
+
+      
+      const metadata = allFiles.map((fileItem) => ({
+        name: fileItem.name,
+        path: fileItem.path,
+        propertyId: fileItem.propertyId || "0",
+        tags: fileItem.tags || ""
+      }));
+
+      formData.append("meta", JSON.stringify(metadata));
 
      console.log(formData)
       const response = await apiClient.post("/dashboard/documents/upload", formData, {
