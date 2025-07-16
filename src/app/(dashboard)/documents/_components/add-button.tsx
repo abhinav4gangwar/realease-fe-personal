@@ -2,10 +2,10 @@
 
 import { Button } from '@/components/ui/button'
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useState } from 'react'
@@ -18,8 +18,7 @@ interface AddButtonProps {
 
 const addOptions: { label: string; value: addType }[] = [
   { label: 'Create Folder', value: 'createFolder' },
-  { label: 'Upload Folder', value: 'uploadFolder' },
-  { label: 'Upload File', value: 'uploadFile' },
+  { label: 'Upload Docs', value: 'uploadFile' },
 ]
 
 export function AddButton({ onAddSelect }: AddButtonProps) {
