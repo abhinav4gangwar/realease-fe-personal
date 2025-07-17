@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import type { Document } from "@/types/document.types"
-import { Download, Edit, Info, Move, Share } from "lucide-react"
+import { Download, Edit, Info, Loader2, Move, Share } from 'lucide-react'
 import { useState } from "react"
 import { FileIcon } from "./file-icon"
 
@@ -15,6 +15,7 @@ interface DocumentListViewProps {
   selectedDocuments?: string[]
   onDocumentSelect?: (documentId: string) => void
   onEditClick?: (document: Document) => void
+  loadingFolders?: Set<string>
 }
 
 export function DocumentListView({
@@ -26,6 +27,7 @@ export function DocumentListView({
   selectedDocuments,
   onDocumentSelect,
   onEditClick,
+  loadingFolders = new Set(),
 }: DocumentListViewProps) {
   const [hoveredRow, setHoveredRow] = useState<string | null>(null)
 
@@ -68,7 +70,12 @@ export function DocumentListView({
                 className="w-4 h-4"
               />
             )}
-            <FileIcon type={document.icon} />
+            <div className="flex items-center gap-2">
+              <FileIcon type={document.icon} />
+              {loadingFolders.has(document.id) && document.isFolder && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
+            </div>
             <span className="truncate text-sm font-medium">{document.name}</span>
           </div>
           <div className="col-span-3 truncate text-sm text-[#9B9B9D]">{document.linkedProperty}</div>

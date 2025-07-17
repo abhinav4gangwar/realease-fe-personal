@@ -2,12 +2,10 @@
 
 import documentsData from "@/lib/documents.dummy.json"
 import { apiClient } from "@/utils/api"
-import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { DocumentViewer } from "./_components/document-viewer"
 
 const Documentspage = () => {
-  const router = useRouter()
   const [fetchedDocuments, setFetchedDocuments] = useState(null)
 
   useEffect(() => {
@@ -27,7 +25,6 @@ const Documentspage = () => {
   // Transform API response to match component expectations
   const transformApiResponse = (apiData: any) => {
     if (!apiData || !apiData.children) return []
-
     return apiData.children.map((item: any) => ({
       id: item.id.toString(),
       name: item.name,
@@ -49,19 +46,16 @@ const Documentspage = () => {
 
   const getFileTypeFromMimeType = (mimeType: string) => {
     if (!mimeType) return "file"
-
     if (mimeType.includes("pdf")) return "pdf"
     if (mimeType.includes("word") || mimeType.includes("document")) return "word"
     if (mimeType.includes("excel") || mimeType.includes("spreadsheet")) return "excel"
     if (mimeType.includes("powerpoint") || mimeType.includes("presentation")) return "powerpoint"
     if (mimeType.includes("image")) return "img"
-
     return "file"
   }
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "Unknown"
-
     const date = new Date(dateString)
     return date.toLocaleDateString("en-US", {
       year: "numeric",
@@ -77,6 +71,8 @@ const Documentspage = () => {
       <DocumentViewer
         // recentlyAccessed={documentsData.recentlyAccessed}
         allFiles={transformedDocuments}
+        apiClient={apiClient}
+        transformApiResponse={transformApiResponse}
       />
     </div>
   )

@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import type { Document } from "@/types/document.types"
-import { Download, Edit, Info, Move, Share } from "lucide-react"
+import { Download, Edit, Info, Loader2, Move, Share } from 'lucide-react'
 import { useState } from "react"
 import { FileIcon } from "./file-icon"
 
@@ -16,6 +16,7 @@ interface DocumentGridViewProps {
   selectedDocuments?: string[]
   onDocumentSelect?: (documentId: string) => void
   onEditClick?: (document: Document) => void
+  loadingFolders?: Set<string>
 }
 
 export function DocumentGridView({
@@ -27,6 +28,7 @@ export function DocumentGridView({
   selectedDocuments,
   onDocumentSelect,
   onEditClick,
+  loadingFolders = new Set(),
 }: DocumentGridViewProps) {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
 
@@ -62,7 +64,12 @@ export function DocumentGridView({
                     className="h-4 w-4 flex-shrink-0"
                   />
                 )}
-                <FileIcon type={document.icon} className="h-7 w-6" />
+                <div className="flex items-center gap-2">
+                  <FileIcon type={document.icon} className="h-7 w-6" />
+                  {loadingFolders.has(document.id) && document.isFolder && (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  )}
+                </div>
                 <h3 className="text-md truncate">{document.name}</h3>
                 {hoveredCard === document.id && !isShareMode && (
                   <div className="ml-2 flex items-center gap-1">
