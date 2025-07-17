@@ -1,13 +1,13 @@
-'use client'
+"use client"
 
-import { Button } from '@/components/ui/button'
-import { Document } from '@/types/document.types'
-import { Download, Edit, Info, Move, Share } from 'lucide-react'
-import { useState } from 'react'
-import { FileIcon } from './file-icon'
+import { Button } from "@/components/ui/button"
+import type { Document } from "@/types/document.types"
+import { Download, Edit, Info, Move, Share } from "lucide-react"
+import { useState } from "react"
+import { FileIcon } from "./file-icon"
 
 interface DocumentListViewProps {
- documents: Document[]
+  documents: Document[]
   onDocumentInfo: (document: Document) => void
   onFolderClick?: (document: Document) => void
   selectedDocumentId?: string
@@ -18,7 +18,7 @@ interface DocumentListViewProps {
 }
 
 export function DocumentListView({
- documents,
+  documents,
   onDocumentInfo,
   onFolderClick,
   selectedDocumentId,
@@ -36,6 +36,7 @@ export function DocumentListView({
       onDocumentInfo(document)
     }
   }
+
   return (
     <div className="space-y-1">
       {/* Header */}
@@ -51,9 +52,7 @@ export function DocumentListView({
         <div
           key={document.id}
           className={`gapp-4 grid grid-cols-12 items-center px-4 py-3 hover:rounded-md hover:bg-[#A2CFE333] ${
-            selectedDocumentId === document.id
-              ? 'border-blue-200 bg-blue-50'
-              : ''
+            selectedDocumentId === document.id ? "border-blue-200 bg-blue-50" : ""
           }`}
           onMouseEnter={() => setHoveredRow(document.id)}
           onMouseLeave={() => setHoveredRow(null)}
@@ -70,25 +69,24 @@ export function DocumentListView({
               />
             )}
             <FileIcon type={document.icon} />
-            <span className="truncate text-sm font-medium">
-              {document.name}
-            </span>
+            <span className="truncate text-sm font-medium">{document.name}</span>
           </div>
-          <div className="col-span-3 truncate text-sm text-[#9B9B9D]">
-            {document.linkedProperty}
-          </div>
-          <div className="col-span-3 text-sm text-[#9B9B9D]">
-            {document.dateAdded}
-          </div>
+          <div className="col-span-3 truncate text-sm text-[#9B9B9D]">{document.linkedProperty}</div>
+          <div className="col-span-3 text-sm text-[#9B9B9D]">{document.dateAdded}</div>
           <div className="col-span-1 truncate text-sm text-[#9B9B9D]">
             {hoveredRow === document.id && !isShareMode ? (
               <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => {
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => {
                     e.stopPropagation()
                     if (onEditClick) {
                       onEditClick(document)
                     }
-                  }}>
+                  }}
+                >
                   <Edit className="h-3 w-3" />
                 </Button>
                 <Button variant="ghost" size="icon" className="h-6 w-6">
