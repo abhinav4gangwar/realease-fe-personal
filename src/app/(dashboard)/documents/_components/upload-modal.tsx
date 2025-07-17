@@ -83,11 +83,7 @@ const formatFileSize = (bytes: number) => {
 }
 
 const properties = [
-  { id: "0", name: "General" },
-  { id: "1", name: "Finance" },
-  { id: "2", name: "HR" },
-  { id: "3", name: "Marketing" },
-  { id: "4", name: "Legal" },
+  { id: "0", name: "Test Property" },
 ]
 
 export function UploadModal({ isOpen, addType, onClose }: UploadModalProps) {
@@ -418,7 +414,7 @@ export function UploadModal({ isOpen, addType, onClose }: UploadModalProps) {
     }
   }
 
-  const updateFileMetadata = (path: string, field: "propertyId" | "tags", value: string) => {
+const updateFileMetadata = (path: string, field: "propertyId" | "tags", value: string) => {
     const updateInTree = (items: FileItem[]): FileItem[] => {
       return items.map((item) => {
         if (item.path === path) {
@@ -430,7 +426,27 @@ export function UploadModal({ isOpen, addType, onClose }: UploadModalProps) {
         return item
       })
     }
-    setUploadedFiles(updateInTree(uploadedFiles))
+    
+    const newUploadedFiles = updateInTree(uploadedFiles)
+    setUploadedFiles(newUploadedFiles)
+
+    if (folderPath.length > 0) {
+      let newCurrentFolder: FileItem | null = null
+      let currentLevel = newUploadedFiles
+
+      for (const pathPart of folderPath) {
+        const folder = currentLevel.find((item) => item.name === pathPart && item.isDirectory)
+        if (folder && folder.children) {
+          newCurrentFolder = folder
+          currentLevel = folder.children
+        } else {
+          newCurrentFolder = null
+          break
+        }
+      }
+
+      setCurrentFolder(newCurrentFolder)
+    }
   }
 
   const handleSave = async () => {
