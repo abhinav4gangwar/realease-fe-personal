@@ -26,7 +26,7 @@ import { UploadModal } from './upload-modal'
 import { ViewModeToggle } from './viewmode-toggle'
 
 interface DocumentViewerProps {
-  recentlyAccessed: Document[]
+  recentlyAccessed?: Document[]
   allFiles: Document[]
 }
 
@@ -50,7 +50,7 @@ export function DocumentViewer({
   })
   const [isUploadModalOpen, setUploadModalOpen] = useState(false)
   const [addModalType, setAddModaltype] = useState<
-    'uploadFile' | 'uploadFolder' | 'createFolder'
+    'uploadFile' | 'createFolder'
   >('uploadFile')
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
   const [filterModalType, setFilterModalType] = useState<'property' | 'type'>(
@@ -194,9 +194,9 @@ export function DocumentViewer({
     return { 'Recently Uploaded': documents }
   }
 
-  const processedRecentlyAccessed = useMemo(() => {
-    return sortDocuments([...recentlyAccessed])
-  }, [recentlyAccessed, sortField, sortOrder])
+  // const processedRecentlyAccessed = useMemo(() => {
+  //   return sortDocuments([...recentlyAccessed])
+  // }, [recentlyAccessed, sortField, sortOrder])
 
   const currentDocuments = currentFolder
     ? currentFolder.children || []
@@ -298,7 +298,7 @@ export function DocumentViewer({
   }
 
   const getSelectedDocumentObjects = () => {
-    const allDocs = [...recentlyAccessed, ...allFiles]
+    const allDocs = [ ...allFiles] //have to add recently accessed
     const allDocsWithChildren: Document[] = []
     allDocs.forEach((doc) => {
       allDocsWithChildren.push(doc)
@@ -311,12 +311,12 @@ export function DocumentViewer({
       .filter(Boolean) as Document[]
   }
 
-  const paginatedRecentlyAccessed = processedRecentlyAccessed.slice(
-    0,
-    recentPage * itemsPerPage
-  )
-  const hasMoreRecent =
-    processedRecentlyAccessed.length > recentPage * itemsPerPage
+  // const paginatedRecentlyAccessed = processedRecentlyAccessed.slice(
+  //   0,
+  //   recentPage * itemsPerPage
+  // )
+  // const hasMoreRecent =
+  //   processedRecentlyAccessed.length > recentPage * itemsPerPage
 
   return (
     <div
@@ -362,7 +362,7 @@ export function DocumentViewer({
         </div>
       )}
       <div>
-        {/* Recently Accessed Section */}
+        {/* Recently Accessed Section
         {!currentFolder && (
           <div className="mb-8">
             <h2 className="text-secondary text-lg font-semibold lg:text-xl">
@@ -406,7 +406,7 @@ export function DocumentViewer({
               )}
             </div>
           </div>
-        )}
+        )} */}
 
         <div className="space-y-8">
           {Object.entries(processedAllFiles).map(([groupName, documents]) => {
