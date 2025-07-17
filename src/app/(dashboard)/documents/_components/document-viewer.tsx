@@ -209,8 +209,8 @@ export function DocumentViewer({
   }, [currentDocuments, filterState, sortField, sortOrder])
 
   const handleAddSelect = (addType: addType) => {
-      setAddModaltype(addType)
-      setUploadModalOpen(true)
+    setAddModaltype(addType)
+    setUploadModalOpen(true)
   }
   const handleFilterSelect = (filterType: FilterType) => {
     if (filterType === 'property' || filterType === 'type') {
@@ -298,7 +298,7 @@ export function DocumentViewer({
   }
 
   const getSelectedDocumentObjects = () => {
-    const allDocs = [ ...allFiles] //have to add recently accessed
+    const allDocs = [...allFiles] //have to add recently accessed
     const allDocsWithChildren: Document[] = []
     allDocs.forEach((doc) => {
       allDocsWithChildren.push(doc)
@@ -336,7 +336,8 @@ export function DocumentViewer({
           <SortButton onSortChange={handleSortChange} />
           {isShareMode ? (
             <Button
-              className="h-8 bg-green-500 hover:bg-green-600"
+              variant="outline"
+              className={`hover:bg-secondary } flex h-11 cursor-pointer items-center space-x-1 font-semibold hover:text-white`}
               onClick={handleConfirmShare}
               disabled={selectedDocuments.length === 0}
             >
@@ -344,7 +345,8 @@ export function DocumentViewer({
             </Button>
           ) : (
             <Button
-              className="h-8 bg-blue-500 hover:bg-blue-600"
+              variant="outline"
+              className={`hover:bg-secondary } flex h-11 cursor-pointer items-center space-x-1 font-semibold hover:text-white`}
               onClick={handleShareDocsClick}
             >
               Share Docs
