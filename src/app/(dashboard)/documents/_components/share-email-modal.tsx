@@ -47,7 +47,7 @@ export function ShareEmailModal({
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message ||
-        'File Sahre failed. Please try again.'
+        'File Share failed. Please try again.'
       toast.error(errorMessage)
     } finally {
       setIsLoading(false)

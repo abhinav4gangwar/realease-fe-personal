@@ -1,12 +1,27 @@
-"use client"
+'use client'
 
-import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import type { Document } from "@/types/document.types"
-import { Check, Download, Edit, MoreVertical, Move, Share, X } from "lucide-react"
-import { useEffect, useState } from "react"
-import { FileIcon } from "./file-icon"
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
+import type { Document } from '@/types/document.types'
+import { apiClient } from '@/utils/api'
+import {
+  Check,
+  Download,
+  Edit,
+  MoreVertical,
+  Move,
+  Share,
+  X,
+} from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
+import { FileIcon } from './file-icon'
 
 interface DocumentDetailModalProps {
   document: Document | null
@@ -15,10 +30,16 @@ interface DocumentDetailModalProps {
   openInEditMode?: boolean
 }
 
-export function DocumentDetailModal({ document, isOpen, onClose, openInEditMode = false }: DocumentDetailModalProps) {
+export function DocumentDetailModal({
+  document,
+  isOpen,
+  onClose,
+  openInEditMode = false,
+}: DocumentDetailModalProps) {
+  const [isLoading, setIsLoading] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
-  const [editedName, setEditedName] = useState("")
-  const [editedLinkedProperty, setEditedLinkedProperty] = useState("")
+  const [editedName, setEditedName] = useState('')
+  const [editedLinkedProperty, setEditedLinkedProperty] = useState('')
 
   useEffect(() => {
     if (isOpen && openInEditMode && document) {
@@ -40,11 +61,37 @@ export function DocumentDetailModal({ document, isOpen, onClose, openInEditMode 
     setIsEditing(true)
   }
 
-  const handleSave = () => {
-    console.log("Saving changes:", {
-      name: editedName,
-      linkedProperty: editedLinkedProperty,
-    })
+  //   {
+  //   "itemId": 23,
+  //   "newName": "rend folder"
+  // }
+  // console.log('Saving changes:', {
+  //       id: Number.parseInt(document.id),
+  //       name: editedName,
+  //     })
+  //     setIsEditing(false)
+
+  const handleSave = async () => {
+    const payload = {
+      itemId: Number.parseInt(document.id),
+      newName: editedName,
+    }
+    try {
+      setIsLoading(true)
+      const response = await apiClient.put(
+        '/dashboard/documents/rename',
+        payload
+      )
+      if (response.data.message) {
+        toast.success(response.data.message)
+      }
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message || 'File Rename failed. Please try again.'
+      toast.error(errorMessage)
+    } finally {
+      setIsLoading(false)
+    }
     setIsEditing(false)
   }
 
@@ -68,16 +115,28 @@ export function DocumentDetailModal({ document, isOpen, onClose, openInEditMode 
               autoFocus
             />
           ) : (
-            <h2 className="truncate pl-1 text-lg font-semibold">{document.name}</h2>
+            <h2 className="truncate pl-1 text-lg font-semibold">
+              {document.name}
+            </h2>
           )}
         </div>
         <div className="flex flex-shrink-0 items-center gap-1">
           {isEditing ? (
             <>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleSave}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleSave}
+              >
                 <Check className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCancel}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleCancel}
+              >
                 <X className="h-4 w-4" />
               </Button>
             </>
@@ -108,7 +167,12 @@ export function DocumentDetailModal({ document, isOpen, onClose, openInEditMode 
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={onClose}
+              >
                 <X className="h-4 w-4" />
               </Button>
             </>
@@ -129,7 +193,9 @@ export function DocumentDetailModal({ document, isOpen, onClose, openInEditMode 
         {/* Document Details */}
         <div className="space-y-4 p-4">
           <div>
-            <h3 className="mb-1 text-sm font-medium text-gray-500">Linked Property</h3>
+            <h3 className="mb-1 text-sm font-medium text-gray-500">
+              Linked Property
+            </h3>
             {isEditing ? (
               <Input
                 value={editedLinkedProperty}
@@ -141,19 +207,27 @@ export function DocumentDetailModal({ document, isOpen, onClose, openInEditMode 
             )}
           </div>
           <div>
-            <h3 className="mb-1 text-sm font-medium text-gray-500">Date Added</h3>
+            <h3 className="mb-1 text-sm font-medium text-gray-500">
+              Date Added
+            </h3>
             <p className="text-sm">{document.dateAdded}</p>
           </div>
           <div>
-            <h3 className="mb-1 text-sm font-medium text-gray-500">Date Modified</h3>
+            <h3 className="mb-1 text-sm font-medium text-gray-500">
+              Date Modified
+            </h3>
             <p className="text-sm">{document.dateModified}</p>
           </div>
           <div>
-            <h3 className="mb-1 text-sm font-medium text-gray-500">Last Opened</h3>
+            <h3 className="mb-1 text-sm font-medium text-gray-500">
+              Last Opened
+            </h3>
             <p className="text-sm">{document.lastOpened}</p>
           </div>
           <div>
-            <h3 className="mb-1 text-sm font-medium text-gray-500">File Type</h3>
+            <h3 className="mb-1 text-sm font-medium text-gray-500">
+              File Type
+            </h3>
             <p className="text-sm">{document.fileType}</p>
           </div>
           <div>
@@ -173,9 +247,9 @@ export function DocumentDetailModal({ document, isOpen, onClose, openInEditMode 
 }
 
 function formatFileSize(bytes: number): string {
-  if (bytes === 0) return "0 Bytes"
+  if (bytes === 0) return '0 Bytes'
   const k = 1024
-  const sizes = ["Bytes", "KB", "MB", "GB"]
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
+  return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
