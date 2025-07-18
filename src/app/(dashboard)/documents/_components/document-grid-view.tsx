@@ -25,6 +25,7 @@ interface DocumentGridViewProps {
   onDocumentSelect?: (documentId: string) => void
   onEditClick?: (document: Document) => void
   onDeleteClick?: (document: Document) => void
+  onMoveClick?: (document: Document) => void
   loadingFolders?: Set<string>
 }
 
@@ -37,6 +38,7 @@ export function DocumentGridView({
   selectedDocuments,
   onDocumentSelect,
   onDeleteClick,
+  onMoveClick,
   onEditClick,
   loadingFolders = new Set(),
 }: DocumentGridViewProps) {
@@ -98,9 +100,14 @@ export function DocumentGridView({
                     >
                       <Edit className="h-3 w-3" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-5 w-5">
-                      <Move className="h-3 w-3" />
-                    </Button>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => {
+                    e.stopPropagation()
+                    if (onMoveClick) {
+                      onMoveClick(document)
+                    }
+                  }}>
+                  <Move className="h-3 w-3" />
+                </Button>
                     <Button variant="ghost" size="icon" className="h-5 w-5">
                       <Share className="h-3 w-3" />
                     </Button>

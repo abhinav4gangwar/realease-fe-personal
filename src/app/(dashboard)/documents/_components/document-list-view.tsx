@@ -24,6 +24,7 @@ interface DocumentListViewProps {
   onDocumentSelect?: (documentId: string) => void
   onEditClick?: (document: Document) => void
   onDeleteClick?: (document: Document) => void
+  onMoveClick?: (document: Document) => void
   loadingFolders?: Set<string>
 }
 
@@ -36,6 +37,7 @@ export function DocumentListView({
   selectedDocuments,
   onDocumentSelect,
   onEditClick,
+  onMoveClick,
   onDeleteClick,
   loadingFolders = new Set(),
 }: DocumentListViewProps) {
@@ -116,7 +118,12 @@ export function DocumentListView({
                 >
                   <Edit className="h-3 w-3" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-6 w-6">
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => {
+                    e.stopPropagation()
+                    if (onMoveClick) {
+                      onMoveClick(document)
+                    }
+                  }}>
                   <Move className="h-3 w-3" />
                 </Button>
                 <Button variant="ghost" size="icon" className="h-6 w-6">

@@ -21,6 +21,7 @@ import { DocumentGridView } from './document-grid-view'
 import { DocumentListView } from './document-list-view'
 import { FilterButton } from './filter-button'
 import { FilterModal } from './filter-modal'
+import { MoveDocumentModal } from './move-document-modal'
 import { ScrollToTopButton } from './scroll-to-top-button'
 import { SelectedDocsModal } from './selected-docs-modal'
 import { ShareEmailModal } from './share-email-modal'
@@ -69,6 +70,8 @@ export function DocumentViewer({
   ])
   const [isShareMode, setIsShareMode] = useState(false)
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([])
+  const [documentToMove, setDocumentToMove] = useState<Document | null>(null)
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false)
   const [isShareEmailModalOpen, setIsShareEmailModalOpen] = useState(false)
   const [isCancelShareModalOpen, setIsCancelShareModalOpen] = useState(false)
   const [isSelectedDocsModalOpen, setIsSelectedDocsModalOpen] = useState(false)
@@ -220,6 +223,11 @@ export function DocumentViewer({
 
   const handleViewModeChange = (mode: ViewMode) => {
     setViewMode(mode)
+  }
+
+  const handleMoveClick = (document: Document) => {
+    setDocumentToMove(document)
+    setIsMoveModalOpen(true)
   }
 
   const handleSortChange = (field: SortField, order: SortOrder) => {
@@ -503,6 +511,45 @@ export function DocumentViewer({
     }
   }
 
+  const getAllFolders = (documents: Document[]) => {
+    const folders: Document[] = []
+
+    const extractFolders = (docs: Document[]) => {
+      docs.forEach((doc) => {
+        if (doc.isFolder) {
+          folders.push(doc)
+          if (doc.children) {
+            extractFolders(doc.children)
+          }
+        }
+      })
+    }
+    extractFolders(documents)
+    return folders
+  }
+
+  const handleMoveDocument = async (
+    documentId: string,
+    newParentId: string | null
+  ) => {
+    try {
+      await apiClient.put('/dashboard/documents/move', {
+        itemId: Number.parseInt(documentId),
+        newParentId: newParentId ? Number.parseInt(newParentId) : null,
+      })
+      await handleUploadSuccess()
+
+      toast.success('Document moved successfully')
+    } catch (error: any) {
+      console.error('Error moving document:', error)
+      const errorMessage =
+        error.response?.data?.message ||
+        'Failed to move document. Please try again.'
+      toast.error(errorMessage)
+      throw error
+    }
+  }
+
   return (
     <div
       className={`transition-all duration-300 ${isModalOpen ? 'mr-[350px]' : ''}`}
@@ -578,6 +625,7 @@ export function DocumentViewer({
                       onEditClick={handleEditClick}
                       loadingFolders={loadingFolders}
                       onDeleteClick={handleDeleteClick}
+                      onMoveClick={handleMoveClick}
                     />
                   ) : (
                     <div>
@@ -592,6 +640,7 @@ export function DocumentViewer({
                         onEditClick={handleEditClick}
                         loadingFolders={loadingFolders}
                         onDeleteClick={handleDeleteClick}
+                        onMoveClick={handleMoveClick}
                       />
                     </div>
                   )}
@@ -676,6 +725,17 @@ export function DocumentViewer({
             setIsShareEmailModalOpen(true)
           }}
           onCancel={handleCancelFromModal}
+        />
+
+        <MoveDocumentModal
+          isOpen={isMoveModalOpen}
+          onClose={() => {
+            setIsMoveModalOpen(false)
+            setDocumentToMove(null)
+          }}
+          document={documentToMove}
+          availableFolders={getAllFolders(documentsState)}
+          onMove={handleMoveDocument}
         />
       </div>
     </div>
