@@ -1,4 +1,5 @@
 'use client'
+
 import { Button } from '@/components/ui/button'
 import {
   BreadcrumbItem,
@@ -9,7 +10,7 @@ import {
   SortOrder,
   ViewMode,
 } from '@/types/document.types'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AddButton, addType } from './add-button'
 import { BreadcrumbNavigation } from './breadcrumb-navigation'
 import { CancelShareModal } from './cancel-share-modal'
@@ -26,13 +27,17 @@ import { UploadModal } from './upload-modal'
 import { ViewModeToggle } from './viewmode-toggle'
 
 interface DocumentViewerProps {
-  recentlyAccessed: Document[]
+  recentlyAccessed?: Document[]
   allFiles: Document[]
+  apiClient: any
+  transformApiResponse: (apiData: any) => Document[]
 }
 
 export function DocumentViewer({
   recentlyAccessed,
   allFiles,
+  apiClient,
+  transformApiResponse,
 }: DocumentViewerProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(
@@ -50,7 +55,7 @@ export function DocumentViewer({
   })
   const [isUploadModalOpen, setUploadModalOpen] = useState(false)
   const [addModalType, setAddModaltype] = useState<
-    'uploadFile' | 'uploadFolder' | 'createFolder'
+    'uploadFile' | 'createFolder'
   >('uploadFile')
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
   const [filterModalType, setFilterModalType] = useState<'property' | 'type'>(
@@ -66,6 +71,8 @@ export function DocumentViewer({
   const [isCancelShareModalOpen, setIsCancelShareModalOpen] = useState(false)
   const [isSelectedDocsModalOpen, setIsSelectedDocsModalOpen] = useState(false)
   const [openModalInEditMode, setOpenModalInEditMode] = useState(false)
+  const [documentsState, setDocumentsState] = useState<Document[]>(allFiles)
+  const [loadingFolders, setLoadingFolders] = useState<Set<string>>(new Set())
 
   const itemsPerPage = 15
 
@@ -75,8 +82,44 @@ export function DocumentViewer({
     setIsModalOpen(true)
   }
 
-  const handleFolderClick = (folder: Document) => {
-    setCurrentFolder(folder)
+  const fetchFolderContents = async (folderId: string) => {
+    try {
+      setLoadingFolders(prev => new Set(prev).add(folderId))
+      const response = await apiClient.get(`/dashboard/documents/list?parentId=${folderId}`)
+      const folderContents = transformApiResponse(response.data)
+      
+      // Update the folder's children in the documents state
+      setDocumentsState(prevDocs => 
+        prevDocs.map(doc => 
+          doc.id === folderId 
+            ? { ...doc, children: folderContents }
+            : doc
+        )
+      )
+      
+      return folderContents
+    } catch (error) {
+      console.error("Error fetching folder contents:", error)
+      return []
+    } finally {
+      setLoadingFolders(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(folderId)
+        return newSet
+      })
+    }
+  }
+
+  const handleFolderClick = async (folder: Document) => {
+    // If folder doesn't have children loaded, fetch them
+    if (!folder.children || folder.children.length === 0) {
+      const folderContents = await fetchFolderContents(folder.id)
+      const updatedFolder = { ...folder, children: folderContents }
+      setCurrentFolder(updatedFolder)
+    } else {
+      setCurrentFolder(folder)
+    }
+    
     setBreadcrumbs((prev) => [
       ...prev,
       { name: `${folder.name} (${getFolderCounts(folder)})`, id: folder.id },
@@ -90,7 +133,28 @@ export function DocumentViewer({
     } else {
       // Navigate to specific folder level
       setBreadcrumbs((prev) => prev.slice(0, index + 1))
+      // Find the folder to navigate to based on breadcrumb
+      const targetBreadcrumb = breadcrumbs[index]
+      if (targetBreadcrumb.id) {
+        const targetFolder = findFolderById(targetBreadcrumb.id, documentsState)
+        if (targetFolder) {
+          setCurrentFolder(targetFolder)
+        }
+      }
     }
+  }
+
+  const findFolderById = (folderId: string, documents: Document[]): Document | null => {
+    for (const doc of documents) {
+      if (doc.id === folderId) {
+        return doc
+      }
+      if (doc.children) {
+        const found = findFolderById(folderId, doc.children)
+        if (found) return found
+      }
+    }
+    return null
   }
 
   const getFolderCounts = (folder: Document) => {
@@ -119,7 +183,6 @@ export function DocumentViewer({
     return documents.sort((a, b) => {
       let aValue: string
       let bValue: string
-
       if (sortField === 'dateAdded') {
         aValue = a.dateAdded
         bValue = b.dateAdded
@@ -127,7 +190,6 @@ export function DocumentViewer({
         aValue = a[sortField]
         bValue = b[sortField]
       }
-
       if (sortOrder === 'asc') {
         return aValue.localeCompare(bValue)
       } else {
@@ -140,25 +202,21 @@ export function DocumentViewer({
     if (filterState.type === 'none') {
       return documents
     }
-
     if (filterState.type === 'property') {
       return documents.filter((doc) =>
         filterState.selectedProperties.includes(doc.linkedProperty)
       )
     }
-
     if (filterState.type === 'type') {
       return documents.filter((doc) =>
         filterState.selectedTypes.includes(doc.fileType)
       )
     }
-
     if (filterState.type === 'recent') {
       return documents
         .slice()
         .sort((a, b) => b.dateAdded.localeCompare(a.dateAdded))
     }
-
     return documents
   }
 
@@ -166,7 +224,6 @@ export function DocumentViewer({
     if (filterState.type === 'none') {
       return { [`Files & Folders (${getFileCounts(documents)})`]: documents }
     }
-
     if (filterState.type === 'property') {
       return documents.reduce(
         (groups, doc) => {
@@ -178,7 +235,6 @@ export function DocumentViewer({
         {} as Record<string, Document[]>
       )
     }
-
     if (filterState.type === 'type') {
       return documents.reduce(
         (groups, doc) => {
@@ -190,17 +246,13 @@ export function DocumentViewer({
         {} as Record<string, Document[]>
       )
     }
-
     return { 'Recently Uploaded': documents }
   }
 
-  const processedRecentlyAccessed = useMemo(() => {
-    return sortDocuments([...recentlyAccessed])
-  }, [recentlyAccessed, sortField, sortOrder])
-
+  // Use documentsState instead of allFiles for current documents
   const currentDocuments = currentFolder
     ? currentFolder.children || []
-    : allFiles
+    : documentsState
 
   const processedAllFiles = useMemo(() => {
     const filtered = filterDocuments(currentDocuments)
@@ -209,9 +261,10 @@ export function DocumentViewer({
   }, [currentDocuments, filterState, sortField, sortOrder])
 
   const handleAddSelect = (addType: addType) => {
-      setAddModaltype(addType)
-      setUploadModalOpen(true)
+    setAddModaltype(addType)
+    setUploadModalOpen(true)
   }
+
   const handleFilterSelect = (filterType: FilterType) => {
     if (filterType === 'property' || filterType === 'type') {
       setFilterModalType(filterType)
@@ -298,7 +351,7 @@ export function DocumentViewer({
   }
 
   const getSelectedDocumentObjects = () => {
-    const allDocs = [...recentlyAccessed, ...allFiles]
+    const allDocs = [...documentsState] //have to add recently accessed
     const allDocsWithChildren: Document[] = []
     allDocs.forEach((doc) => {
       allDocsWithChildren.push(doc)
@@ -311,12 +364,10 @@ export function DocumentViewer({
       .filter(Boolean) as Document[]
   }
 
-  const paginatedRecentlyAccessed = processedRecentlyAccessed.slice(
-    0,
-    recentPage * itemsPerPage
-  )
-  const hasMoreRecent =
-    processedRecentlyAccessed.length > recentPage * itemsPerPage
+  // Update documentsState when allFiles prop changes
+  useEffect(() => {
+    setDocumentsState(allFiles)
+  }, [allFiles])
 
   return (
     <div
@@ -326,7 +377,6 @@ export function DocumentViewer({
         <div className="text-secondary text-2xl font-semibold lg:text-3xl">
           Documents
         </div>
-
         <div className="flex items-center gap-4">
           <ViewModeToggle
             viewMode={viewMode}
@@ -336,7 +386,8 @@ export function DocumentViewer({
           <SortButton onSortChange={handleSortChange} />
           {isShareMode ? (
             <Button
-              className="h-8 bg-green-500 hover:bg-green-600"
+              variant="outline"
+              className={`hover:bg-secondary } flex h-11 cursor-pointer items-center space-x-1 font-semibold hover:text-white`}
               onClick={handleConfirmShare}
               disabled={selectedDocuments.length === 0}
             >
@@ -344,7 +395,8 @@ export function DocumentViewer({
             </Button>
           ) : (
             <Button
-              className="h-8 bg-blue-500 hover:bg-blue-600"
+              variant="outline"
+              className={`hover:bg-secondary } flex h-11 cursor-pointer items-center space-x-1 font-semibold hover:text-white`}
               onClick={handleShareDocsClick}
             >
               Share Docs
@@ -353,6 +405,7 @@ export function DocumentViewer({
           <AddButton onAddSelect={handleAddSelect} />
         </div>
       </div>
+
       {currentFolder && (
         <div className="mb-6">
           <BreadcrumbNavigation
@@ -361,53 +414,8 @@ export function DocumentViewer({
           />
         </div>
       )}
-      <div>
-        {/* Recently Accessed Section */}
-        {!currentFolder && (
-          <div className="mb-8">
-            <h2 className="text-secondary text-lg font-semibold lg:text-xl">
-              Recently Accessed
-            </h2>
-            <div
-              className={`${viewMode === 'list' ? 'mt-5 rounded-lg bg-white p-6' : 'mt-6'}`}
-            >
-              {viewMode === 'list' ? (
-                <DocumentListView
-                  documents={paginatedRecentlyAccessed}
-                  onDocumentInfo={handleDocumentInfo}
-                  selectedDocumentId={selectedDocument?.id}
-                  isShareMode={isShareMode}
-                  selectedDocuments={selectedDocuments}
-                  onDocumentSelect={handleDocumentSelect}
-                  onEditClick={handleEditClick}
-                />
-              ) : (
-                <div>
-                  <DocumentGridView
-                    documents={paginatedRecentlyAccessed}
-                    onDocumentInfo={handleDocumentInfo}
-                    selectedDocumentId={selectedDocument?.id}
-                    isShareMode={isShareMode}
-                    selectedDocuments={selectedDocuments}
-                    onDocumentSelect={handleDocumentSelect}
-                    onEditClick={handleEditClick}
-                  />
-                </div>
-              )}
-              {hasMoreRecent && (
-                <div className="px-4 pt-4">
-                  <div
-                    onClick={() => setAllFilesPage((prev) => prev + 1)}
-                    className="hover:text-primary w-full cursor-pointer text-sm font-light text-[#9B9B9D]"
-                  >
-                    View More
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
+      <div>
         <div className="space-y-8">
           {Object.entries(processedAllFiles).map(([groupName, documents]) => {
             const paginatedDocuments = documents.slice(
@@ -434,6 +442,7 @@ export function DocumentViewer({
                       selectedDocuments={selectedDocuments}
                       onDocumentSelect={handleDocumentSelect}
                       onEditClick={handleEditClick}
+                      loadingFolders={loadingFolders}
                     />
                   ) : (
                     <div>
@@ -446,6 +455,7 @@ export function DocumentViewer({
                         selectedDocuments={selectedDocuments}
                         onDocumentSelect={handleDocumentSelect}
                         onEditClick={handleEditClick}
+                        loadingFolders={loadingFolders}
                       />
                     </div>
                   )}
@@ -464,6 +474,7 @@ export function DocumentViewer({
             )
           })}
         </div>
+
         {/* Document Detail Modal */}
         <DocumentDetailModal
           document={selectedDocument}

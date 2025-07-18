@@ -1,11 +1,11 @@
-'use client'
+"use client"
 
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Document } from '@/types/document.types'
-import { Download, Edit, Info, Move, Share } from 'lucide-react'
-import { useState } from 'react'
-import { FileIcon } from './file-icon'
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import type { Document } from "@/types/document.types"
+import { Download, Edit, Info, Loader2, Move, Share } from 'lucide-react'
+import { useState } from "react"
+import { FileIcon } from "./file-icon"
 
 interface DocumentGridViewProps {
   documents: Document[]
@@ -16,6 +16,7 @@ interface DocumentGridViewProps {
   selectedDocuments?: string[]
   onDocumentSelect?: (documentId: string) => void
   onEditClick?: (document: Document) => void
+  loadingFolders?: Set<string>
 }
 
 export function DocumentGridView({
@@ -27,6 +28,7 @@ export function DocumentGridView({
   selectedDocuments,
   onDocumentSelect,
   onEditClick,
+  loadingFolders = new Set(),
 }: DocumentGridViewProps) {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
 
@@ -37,15 +39,14 @@ export function DocumentGridView({
       onDocumentInfo(document)
     }
   }
+
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
       {documents.map((document) => (
         <Card
           key={document.id}
           className={`rounded-sm border-none transition-shadow hover:bg-[#A2CFE333] hover:shadow-md ${
-            selectedDocumentId === document.id
-              ? 'bg-blue-50 ring-2 ring-blue-500'
-              : ''
+            selectedDocumentId === document.id ? "bg-blue-50 ring-2 ring-blue-500" : ""
           }`}
           onMouseEnter={() => setHoveredCard(document.id)}
           onMouseLeave={() => setHoveredCard(null)}
@@ -63,9 +64,13 @@ export function DocumentGridView({
                     className="h-4 w-4 flex-shrink-0"
                   />
                 )}
-                <FileIcon type={document.icon} className="h-7 w-6" />
+                <div className="flex items-center gap-2">
+                  <FileIcon type={document.icon} className="h-7 w-6" />
+                  {loadingFolders.has(document.id) && document.isFolder && (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  )}
+                </div>
                 <h3 className="text-md truncate">{document.name}</h3>
-
                 {hoveredCard === document.id && !isShareMode && (
                   <div className="ml-2 flex items-center gap-1">
                     <Button
@@ -107,7 +112,6 @@ export function DocumentGridView({
                 </Button>
               )}
             </div>
-
             <div className="space-y-1 text-sm text-[#9B9B9D]">
               <p className="truncate">{document.linkedProperty}</p>
               <p>{document.dateAdded}</p>

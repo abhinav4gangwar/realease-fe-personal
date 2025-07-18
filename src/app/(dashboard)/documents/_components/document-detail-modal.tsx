@@ -1,26 +1,12 @@
-'use client'
+"use client"
 
-import { useEffect, useState } from 'react'
-
-import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Input } from '@/components/ui/input'
-import { Document } from '@/types/document.types'
-import {
-  Check,
-  Download,
-  Edit,
-  MoreVertical,
-  Move,
-  Share,
-  X,
-} from 'lucide-react'
-import { FileIcon } from './file-icon'
+import { Button } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import type { Document } from "@/types/document.types"
+import { Check, Download, Edit, MoreVertical, Move, Share, X } from "lucide-react"
+import { useEffect, useState } from "react"
+import { FileIcon } from "./file-icon"
 
 interface DocumentDetailModalProps {
   document: Document | null
@@ -29,15 +15,10 @@ interface DocumentDetailModalProps {
   openInEditMode?: boolean
 }
 
-export function DocumentDetailModal({
-  document,
-  isOpen,
-  onClose,
-  openInEditMode = false,
-}: DocumentDetailModalProps) {
+export function DocumentDetailModal({ document, isOpen, onClose, openInEditMode = false }: DocumentDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false)
-  const [editedName, setEditedName] = useState('')
-  const [editedLinkedProperty, setEditedLinkedProperty] = useState('')
+  const [editedName, setEditedName] = useState("")
+  const [editedLinkedProperty, setEditedLinkedProperty] = useState("")
 
   useEffect(() => {
     if (isOpen && openInEditMode && document) {
@@ -60,7 +41,7 @@ export function DocumentDetailModal({
   }
 
   const handleSave = () => {
-    console.log('Saving changes:', {
+    console.log("Saving changes:", {
       name: editedName,
       linkedProperty: editedLinkedProperty,
     })
@@ -87,28 +68,16 @@ export function DocumentDetailModal({
               autoFocus
             />
           ) : (
-            <h2 className="truncate pl-1 text-lg font-semibold">
-              {document.name}
-            </h2>
+            <h2 className="truncate pl-1 text-lg font-semibold">{document.name}</h2>
           )}
         </div>
         <div className="flex flex-shrink-0 items-center gap-1">
           {isEditing ? (
             <>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={handleSave}
-              >
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleSave}>
                 <Check className="h-4 w-4" />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={handleCancel}
-              >
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCancel}>
                 <X className="h-4 w-4" />
               </Button>
             </>
@@ -139,12 +108,7 @@ export function DocumentDetailModal({
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={onClose}
-              >
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
                 <X className="h-4 w-4" />
               </Button>
             </>
@@ -165,9 +129,7 @@ export function DocumentDetailModal({
         {/* Document Details */}
         <div className="space-y-4 p-4">
           <div>
-            <h3 className="mb-1 text-sm font-medium text-gray-500">
-              Linked Property
-            </h3>
+            <h3 className="mb-1 text-sm font-medium text-gray-500">Linked Property</h3>
             {isEditing ? (
               <Input
                 value={editedLinkedProperty}
@@ -178,41 +140,42 @@ export function DocumentDetailModal({
               <p className="text-sm">{document.linkedProperty}</p>
             )}
           </div>
-
           <div>
-            <h3 className="mb-1 text-sm font-medium text-gray-500">
-              Date Added
-            </h3>
+            <h3 className="mb-1 text-sm font-medium text-gray-500">Date Added</h3>
             <p className="text-sm">{document.dateAdded}</p>
           </div>
-
           <div>
-            <h3 className="mb-1 text-sm font-medium text-gray-500">
-              Date Modified
-            </h3>
+            <h3 className="mb-1 text-sm font-medium text-gray-500">Date Modified</h3>
             <p className="text-sm">{document.dateModified}</p>
           </div>
-
           <div>
-            <h3 className="mb-1 text-sm font-medium text-gray-500">
-              Last Opened
-            </h3>
+            <h3 className="mb-1 text-sm font-medium text-gray-500">Last Opened</h3>
             <p className="text-sm">{document.lastOpened}</p>
           </div>
-
           <div>
-            <h3 className="mb-1 text-sm font-medium text-gray-500">
-              File Type
-            </h3>
+            <h3 className="mb-1 text-sm font-medium text-gray-500">File Type</h3>
             <p className="text-sm">{document.fileType}</p>
           </div>
-
           <div>
             <h3 className="mb-1 text-sm font-medium text-gray-500">Tags</h3>
             <p className="text-sm">{document.tags}</p>
           </div>
+          {document.size && (
+            <div>
+              <h3 className="mb-1 text-sm font-medium text-gray-500">Size</h3>
+              <p className="text-sm">{formatFileSize(document.size)}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
   )
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return "0 Bytes"
+  const k = 1024
+  const sizes = ["Bytes", "KB", "MB", "GB"]
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
 }
