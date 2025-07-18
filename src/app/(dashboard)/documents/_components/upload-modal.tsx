@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { apiClient } from "@/utils/api"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ArrowLeft, File, Folder, Upload, X } from "lucide-react"
-import { useRouter } from "next/navigation"
 import { useCallback, useRef, useState } from "react"
 import { useDropzone } from "react-dropzone"
 import { useForm } from "react-hook-form"
@@ -90,7 +89,6 @@ export function UploadModal({ isOpen, addType, onClose, onSuccess }: UploadModal
   const [folderPath, setFolderPath] = useState<string[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const folderInputRef = useRef<HTMLInputElement>(null)
-  const router = useRouter()
 
   type createFolderFormValues = z.infer<typeof createFolderSchema>
 

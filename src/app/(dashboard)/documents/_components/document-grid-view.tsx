@@ -1,11 +1,19 @@
-"use client"
+'use client'
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import type { Document } from "@/types/document.types"
-import { Download, Edit, Info, Loader2, Move, Share } from 'lucide-react'
-import { useState } from "react"
-import { FileIcon } from "./file-icon"
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import type { Document } from '@/types/document.types'
+import {
+  Download,
+  Edit,
+  Info,
+  Loader2,
+  Move,
+  Share,
+  Trash2,
+} from 'lucide-react'
+import { useState } from 'react'
+import { FileIcon } from './file-icon'
 
 interface DocumentGridViewProps {
   documents: Document[]
@@ -16,6 +24,7 @@ interface DocumentGridViewProps {
   selectedDocuments?: string[]
   onDocumentSelect?: (documentId: string) => void
   onEditClick?: (document: Document) => void
+  onDeleteClick?: (document: Document) => void
   loadingFolders?: Set<string>
 }
 
@@ -27,6 +36,7 @@ export function DocumentGridView({
   isShareMode,
   selectedDocuments,
   onDocumentSelect,
+  onDeleteClick,
   onEditClick,
   loadingFolders = new Set(),
 }: DocumentGridViewProps) {
@@ -46,7 +56,9 @@ export function DocumentGridView({
         <Card
           key={document.id}
           className={`rounded-sm border-none transition-shadow hover:bg-[#A2CFE333] hover:shadow-md ${
-            selectedDocumentId === document.id ? "bg-blue-50 ring-2 ring-blue-500" : ""
+            selectedDocumentId === document.id
+              ? 'bg-blue-50 ring-2 ring-blue-500'
+              : ''
           }`}
           onMouseEnter={() => setHoveredCard(document.id)}
           onMouseLeave={() => setHoveredCard(null)}
@@ -94,6 +106,19 @@ export function DocumentGridView({
                     </Button>
                     <Button variant="ghost" size="icon" className="h-5 w-5">
                       <Download className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (onDeleteClick) {
+                          onDeleteClick(document)
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
                 )}
