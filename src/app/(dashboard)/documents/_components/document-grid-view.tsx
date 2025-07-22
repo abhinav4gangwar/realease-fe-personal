@@ -1,6 +1,6 @@
 'use client'
-
 import { Button } from '@/components/ui/button'
+
 import { Card, CardContent } from '@/components/ui/card'
 import type { Document } from '@/types/document.types'
 import {
@@ -9,8 +9,7 @@ import {
   Info,
   Loader2,
   Move,
-  Share,
-  Trash2,
+  Trash2
 } from 'lucide-react'
 import { useState } from 'react'
 import { FileIcon } from './file-icon'
@@ -26,6 +25,7 @@ interface DocumentGridViewProps {
   onEditClick?: (document: Document) => void
   onDeleteClick?: (document: Document) => void
   onMoveClick?: (document: Document) => void
+  onShareClick?: (document: Document) => void
   loadingFolders?: Set<string>
 }
 
@@ -40,6 +40,7 @@ export function DocumentGridView({
   onDeleteClick,
   onMoveClick,
   onEditClick,
+  onShareClick,
   loadingFolders = new Set(),
 }: DocumentGridViewProps) {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
@@ -100,17 +101,32 @@ export function DocumentGridView({
                     >
                       <Edit className="h-3 w-3" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => {
-                    e.stopPropagation()
-                    if (onMoveClick) {
-                      onMoveClick(document)
-                    }
-                  }}>
-                  <Move className="h-3 w-3" />
-                </Button>
-                    <Button variant="ghost" size="icon" className="h-5 w-5">
-                      <Share className="h-3 w-3" />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (onMoveClick) {
+                          onMoveClick(document)
+                        }
+                      }}
+                    >
+                      <Move className="h-3 w-3" />
                     </Button>
+                    {/* <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (onShareClick) {
+                          onShareClick(document)
+                        }
+                      }}
+                    >
+                      <Share className="h-3 w-3" />
+                    </Button> */}
                     <Button variant="ghost" size="icon" className="h-5 w-5">
                       <Download className="h-3 w-3" />
                     </Button>

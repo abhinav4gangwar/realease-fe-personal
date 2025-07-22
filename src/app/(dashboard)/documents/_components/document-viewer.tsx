@@ -1,6 +1,4 @@
 'use client'
-
-import { Button } from '@/components/ui/button'
 import type {
   BreadcrumbItem,
   Document,
@@ -15,6 +13,9 @@ import { toast } from 'sonner'
 import { ActionsButton } from './actions-button'
 import { AddButton, type addType } from './add-button'
 import { BreadcrumbNavigation } from './breadcrumb-navigation'
+
+import { getAllFolders } from '../doc_utils'
+import BulkDeleteModal from './bulk-delete-modal'
 import { CancelShareModal } from './cancel-share-modal'
 import DocumentDeleteModal from './document-delete-modal'
 import { DocumentDetailModal } from './document-detail-modal'
@@ -69,7 +70,7 @@ export function DocumentViewer({
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([
     { name: 'Documents' },
   ])
-  const [isShareMode, setIsShareMode] = useState(false)
+  const [isSelectMode, setIsSelectMode] = useState(false)
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([])
   const [documentToMove, setDocumentToMove] = useState<Document | null>(null)
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false)
@@ -80,6 +81,7 @@ export function DocumentViewer({
   const [openDeleteModal, setOpenDeleteModal] = useState(false)
   const [documentsState, setDocumentsState] = useState<Document[]>(allFiles)
   const [loadingFolders, setLoadingFolders] = useState<Set<string>>(new Set())
+  const [openBulkDeleteModal, setOpenBulkDeleteModal] = useState(false)
 
   const itemsPerPage = 15
 
@@ -107,21 +109,17 @@ export function DocumentViewer({
           return doc
         })
       }
-
       setDocumentsState((prevDocs) => updateDocumentInArray(prevDocs))
-
       // Update the selected document if it's the one being renamed
       if (selectedDocument?.id === documentId) {
         setSelectedDocument((prev) =>
           prev ? { ...prev, name: newName } : null
         )
       }
-
       // Update current folder if it's the one being renamed
       if (currentFolder?.id === documentId) {
         setCurrentFolder((prev) => (prev ? { ...prev, name: newName } : null))
       }
-
       console.log('Document renamed successfully')
     } catch (error: any) {
       console.error('Error renaming document:', error)
@@ -138,14 +136,12 @@ export function DocumentViewer({
         `/dashboard/documents/list?parentId=${folderId}`
       )
       const folderContents = transformApiResponse(response.data)
-
       // Update the folder's children in the documents state
       setDocumentsState((prevDocs) =>
         prevDocs.map((doc) =>
           doc.id === folderId ? { ...doc, children: folderContents } : doc
         )
       )
-
       return folderContents
     } catch (error) {
       console.error('Error fetching folder contents:', error)
@@ -168,7 +164,6 @@ export function DocumentViewer({
     } else {
       setCurrentFolder(folder)
     }
-
     setBreadcrumbs((prev) => [
       ...prev,
       { name: `${folder.name} (${getFolderCounts(folder)})`, id: folder.id },
@@ -231,6 +226,11 @@ export function DocumentViewer({
     setIsMoveModalOpen(true)
   }
 
+  const handleShareClick = (document: Document) => {
+    setSelectedDocument(document)
+    setIsSelectedDocsModalOpen(true)
+  }
+
   const handleSortChange = (field: SortField, order: SortOrder) => {
     setSortField(field)
     setSortOrder(order)
@@ -240,7 +240,6 @@ export function DocumentViewer({
     return documents.sort((a, b) => {
       let aValue: string
       let bValue: string
-
       if (sortField === 'dateAdded') {
         aValue = a.dateAdded
         bValue = b.dateAdded
@@ -248,7 +247,6 @@ export function DocumentViewer({
         aValue = a[sortField]
         bValue = b[sortField]
       }
-
       if (sortOrder === 'asc') {
         return aValue.localeCompare(bValue)
       } else {
@@ -261,25 +259,21 @@ export function DocumentViewer({
     if (filterState.type === 'none') {
       return documents
     }
-
     if (filterState.type === 'property') {
       return documents.filter((doc) =>
         filterState.selectedProperties.includes(doc.linkedProperty)
       )
     }
-
     if (filterState.type === 'type') {
       return documents.filter((doc) =>
         filterState.selectedTypes.includes(doc.fileType)
       )
     }
-
     if (filterState.type === 'recent') {
       return documents
         .slice()
         .sort((a, b) => b.dateAdded.localeCompare(a.dateAdded))
     }
-
     return documents
   }
 
@@ -287,7 +281,6 @@ export function DocumentViewer({
     if (filterState.type === 'none') {
       return { [`Files & Folders (${getFileCounts(documents)})`]: documents }
     }
-
     if (filterState.type === 'property') {
       return documents.reduce(
         (groups, doc) => {
@@ -299,7 +292,6 @@ export function DocumentViewer({
         {} as Record<string, Document[]>
       )
     }
-
     if (filterState.type === 'type') {
       return documents.reduce(
         (groups, doc) => {
@@ -311,7 +303,6 @@ export function DocumentViewer({
         {} as Record<string, Document[]>
       )
     }
-
     return { 'Recently Uploaded': documents }
   }
 
@@ -368,14 +359,14 @@ export function DocumentViewer({
 
   const confirmDelete = async () => {
     if (!selectedDocument) return
-
     try {
       const response = await apiClient.delete('/dashboard/documents/delete', {
-        data: {
-          itemId: Number.parseInt(selectedDocument.id),
-        },
+        data: [
+          {
+            itemId: Number.parseInt(selectedDocument.id),
+          },
+        ],
       })
-
       // Remove the document from the state
       const removeDocumentFromArray = (docs: Document[]): Document[] => {
         return docs.filter((doc) => {
@@ -388,9 +379,7 @@ export function DocumentViewer({
           return true
         })
       }
-
       setDocumentsState((prevDocs) => removeDocumentFromArray(prevDocs))
-
       // Update current folder if we're inside one
       if (currentFolder) {
         const updatedChildren =
@@ -400,10 +389,8 @@ export function DocumentViewer({
         const updatedFolder = { ...currentFolder, children: updatedChildren }
         setCurrentFolder(updatedFolder)
       }
-
       setOpenDeleteModal(false)
       setSelectedDocument(null)
-
       const successMessage =
         response.data?.message || 'Document deleted successfully'
       toast.success(successMessage)
@@ -416,15 +403,125 @@ export function DocumentViewer({
     }
   }
 
-  const handleShareDocsClick = () => {
-    setIsShareMode(true)
-    setSelectedDocuments([])
-    setViewMode('list') // Force list view for sharing
+  const handleBulkDelete = async () => {
+    if (selectedDocuments.length === 0) return
+    try {
+      const deletePayload = selectedDocuments.map((id) => ({
+        itemId: Number.parseInt(id),
+      }))
+
+      const response = await apiClient.delete('/dashboard/documents/delete', {
+        data: deletePayload,
+      })
+
+      // Remove the documents from the state
+      const removeDocumentsFromArray = (docs: Document[]): Document[] => {
+        return docs.filter((doc) => {
+          if (selectedDocuments.includes(doc.id)) {
+            return false
+          }
+          if (doc.children) {
+            doc.children = removeDocumentsFromArray(doc.children)
+          }
+          return true
+        })
+      }
+
+      setDocumentsState((prevDocs) => removeDocumentsFromArray(prevDocs))
+
+      // Update current folder if we're inside one
+      if (currentFolder) {
+        const updatedChildren =
+          currentFolder.children?.filter(
+            (child) => !selectedDocuments.includes(child.id)
+          ) || []
+        const updatedFolder = { ...currentFolder, children: updatedChildren }
+        setCurrentFolder(updatedFolder)
+      }
+
+      // Reset selection mode
+      resetSelectMode()
+
+      const successMessage =
+        response.data?.message ||
+        `${selectedDocuments.length} documents deleted successfully`
+      toast.success(successMessage)
+    } catch (error: any) {
+      console.error('Error deleting documents:', error)
+      const errorMessage =
+        error.response?.data?.message ||
+        'Failed to delete documents. Please try again.'
+      toast.error(errorMessage)
+    }
   }
 
-  const handleConfirmShare = () => {
-    if (selectedDocuments.length > 0) {
-      setIsSelectedDocsModalOpen(true)
+  const handleBulkMove = async (newParentId: string | null) => {
+    if (selectedDocuments.length === 0) return
+    try {
+      const movePayload = selectedDocuments.map((id) => ({
+        itemId: Number.parseInt(id),
+        newParentId: newParentId ? Number.parseInt(newParentId) : null,
+      }))
+
+      await apiClient.put('/dashboard/documents/move', movePayload)
+      await handleUploadSuccess()
+
+      // Reset selection mode
+      resetSelectMode()
+
+      toast.success(`${selectedDocuments.length} documents moved successfully`)
+    } catch (error: any) {
+      console.error('Error moving documents:', error)
+      const errorMessage =
+        error.response?.data?.message ||
+        'Failed to move documents. Please try again.'
+      toast.error(errorMessage)
+      throw error
+    }
+  }
+
+  const handleActionSelect = (actionType: string) => {
+    switch (actionType) {
+      case 'select':
+        setIsSelectMode(!isSelectMode)
+        if (isSelectMode) {
+          setSelectedDocuments([])
+        } else {
+          setViewMode('list')
+        }
+        break
+      case 'move':
+        if (selectedDocuments.length > 0) {
+          setDocumentToMove({
+            id: 'bulk',
+            name: `${selectedDocuments.length} selected documents`,
+            isFolder: false,
+            icon: 'file',
+            linkedProperty: '',
+            dateAdded: '',
+            tags: '',
+            fileType: '',
+          } as Document)
+          setIsMoveModalOpen(true)
+        }
+        break
+      case 'download':
+        if (selectedDocuments.length > 0) {
+          // Handle bulk download
+          console.log('Bulk download:', selectedDocuments)
+          toast.info('Bulk download functionality to be implemented')
+        }
+        break
+      case 'share':
+        if (selectedDocuments.length > 0) {
+          setIsSelectedDocsModalOpen(true)
+        }
+        break
+      case 'delete':
+        if (selectedDocuments.length > 0) {
+          setOpenBulkDeleteModal(true)
+        }
+        break
     }
   }
 
@@ -440,8 +537,8 @@ export function DocumentViewer({
     setSelectedDocuments((prev) => prev.filter((id) => id !== documentId))
   }
 
-  const resetShareMode = () => {
-    setIsShareMode(false)
+  const resetSelectMode = () => {
+    setIsSelectMode(false)
     setSelectedDocuments([])
     setIsSelectedDocsModalOpen(false)
     setIsShareEmailModalOpen(false)
@@ -449,7 +546,7 @@ export function DocumentViewer({
   }
 
   const confirmCancelShare = () => {
-    resetShareMode()
+    resetSelectMode()
   }
 
   const handleCancelFromModal = () => {
@@ -466,14 +563,12 @@ export function DocumentViewer({
   const getSelectedDocumentObjects = () => {
     const allDocs = [...documentsState] //have to add recently accessed
     const allDocsWithChildren: Document[] = []
-
     allDocs.forEach((doc) => {
       allDocsWithChildren.push(doc)
       if (doc.children) {
         allDocsWithChildren.push(...doc.children)
       }
     })
-
     return selectedDocuments
       .map((id) => allDocsWithChildren.find((doc) => doc.id === id))
       .filter(Boolean) as Document[]
@@ -489,7 +584,6 @@ export function DocumentViewer({
       const response = await apiClient.get('/dashboard/documents/list')
       const updatedDocuments = transformApiResponse(response.data)
       setDocumentsState(updatedDocuments)
-
       if (currentFolder) {
         const folderResponse = await apiClient.get(
           `/dashboard/documents/list?parentId=${currentFolder.id}`
@@ -497,14 +591,12 @@ export function DocumentViewer({
         const folderContents = transformApiResponse(folderResponse.data)
         const updatedFolder = { ...currentFolder, children: folderContents }
         setCurrentFolder(updatedFolder)
-
         setDocumentsState((prevDocs) =>
           prevDocs.map((doc) =>
             doc.id === currentFolder.id ? updatedFolder : doc
           )
         )
       }
-
       toast.success('Documents updated successfully')
     } catch (error) {
       console.error('Error refreshing documents:', error)
@@ -512,35 +604,22 @@ export function DocumentViewer({
     }
   }
 
-  const getAllFolders = (documents: Document[]) => {
-    const folders: Document[] = []
-
-    const extractFolders = (docs: Document[]) => {
-      docs.forEach((doc) => {
-        if (doc.isFolder) {
-          folders.push(doc)
-          if (doc.children) {
-            extractFolders(doc.children)
-          }
-        }
-      })
-    }
-    extractFolders(documents)
-    return folders
-  }
-
   const handleMoveDocument = async (
     documentId: string,
     newParentId: string | null
   ) => {
     try {
-      await apiClient.put('/dashboard/documents/move', {
-        itemId: Number.parseInt(documentId),
-        newParentId: newParentId ? Number.parseInt(newParentId) : null,
-      })
+      const movePayload = [
+        {
+          itemId: Number.parseInt(documentId),
+          newParentId: newParentId ? Number.parseInt(newParentId) : null,
+        },
+      ]
+
+      await apiClient.put('/dashboard/documents/move', movePayload)
       await handleUploadSuccess()
 
-      toast.success('Document moved successfully')
+      toast.success(`Document moved successfully`)
     } catch (error: any) {
       console.error('Error moving document:', error)
       const errorMessage =
@@ -566,29 +645,19 @@ export function DocumentViewer({
           />
           <FilterButton onFilterSelect={handleFilterSelect} />
           <SortButton onSortChange={handleSortChange} />
-          {isShareMode ? (
-            <Button
-              variant="outline"
-              className={`hover:bg-secondary } flex h-11 cursor-pointer items-center space-x-1 font-semibold hover:text-white`}
-              onClick={handleConfirmShare}
-              disabled={selectedDocuments.length === 0}
-            >
-              Confirm
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              className={`hover:bg-secondary } flex h-11 cursor-pointer items-center space-x-1 font-semibold hover:text-white`}
-              onClick={handleShareDocsClick}
-            >
-              Share Docs
-            </Button>
+          {isSelectMode && selectedDocuments.length > 0 && (
+            <div className="text-sm text-gray-600">
+              {selectedDocuments.length} selected
+            </div>
           )}
-          <ActionsButton onActionSelect={() => {}} />
+          <ActionsButton
+            onActionSelect={handleActionSelect}
+            isSelectMode={isSelectMode}
+            selectedCount={selectedDocuments.length}
+          />
           <AddButton onAddSelect={handleAddSelect} />
         </div>
       </div>
-
       {currentFolder && (
         <div className="mb-6">
           <BreadcrumbNavigation
@@ -597,7 +666,6 @@ export function DocumentViewer({
           />
         </div>
       )}
-
       <div>
         <div className="space-y-8">
           {Object.entries(processedAllFiles).map(([groupName, documents]) => {
@@ -606,7 +674,6 @@ export function DocumentViewer({
               allFilesPage * itemsPerPage
             )
             const hasMore = documents.length > allFilesPage * itemsPerPage
-
             return (
               <div key={groupName}>
                 <h2 className="text-secondary text-lg font-semibold lg:text-xl">
@@ -621,13 +688,14 @@ export function DocumentViewer({
                       onDocumentInfo={handleDocumentInfo}
                       onFolderClick={handleFolderClick}
                       selectedDocumentId={selectedDocument?.id}
-                      isShareMode={isShareMode}
+                      isShareMode={isSelectMode}
                       selectedDocuments={selectedDocuments}
                       onDocumentSelect={handleDocumentSelect}
                       onEditClick={handleEditClick}
                       loadingFolders={loadingFolders}
                       onDeleteClick={handleDeleteClick}
                       onMoveClick={handleMoveClick}
+                      onShareClick={handleShareClick}
                     />
                   ) : (
                     <div>
@@ -636,13 +704,14 @@ export function DocumentViewer({
                         onDocumentInfo={handleDocumentInfo}
                         onFolderClick={handleFolderClick}
                         selectedDocumentId={selectedDocument?.id}
-                        isShareMode={isShareMode}
+                        isShareMode={isSelectMode}
                         selectedDocuments={selectedDocuments}
                         onDocumentSelect={handleDocumentSelect}
                         onEditClick={handleEditClick}
                         loadingFolders={loadingFolders}
                         onDeleteClick={handleDeleteClick}
                         onMoveClick={handleMoveClick}
+                        onShareClick={handleShareClick}
                       />
                     </div>
                   )}
@@ -661,7 +730,6 @@ export function DocumentViewer({
             )
           })}
         </div>
-
         {/* Document Detail Modal */}
         <DocumentDetailModal
           document={selectedDocument}
@@ -674,7 +742,6 @@ export function DocumentViewer({
           openInEditMode={openModalInEditMode}
           onSave={handleDocumentRename}
         />
-
         <FilterModal
           isOpen={isFilterModalOpen}
           onClose={() => setIsFilterModalOpen(false)}
@@ -687,35 +754,29 @@ export function DocumentViewer({
           }
           onApply={handleFilterApply}
         />
-
         <UploadModal
           isOpen={isUploadModalOpen}
           onClose={() => setUploadModalOpen(false)}
           addType={addModalType}
           onSuccess={handleUploadSuccess}
         />
-
         <ScrollToTopButton />
-
         <ShareEmailModal
           isOpen={isShareEmailModalOpen}
           onClose={handleModalClose}
           selectedDocuments={getSelectedDocumentObjects()}
           onCancel={handleCancelFromModal}
         />
-
         <CancelShareModal
           isOpen={isCancelShareModalOpen}
           onConfirm={confirmCancelShare}
           onCancel={() => setIsCancelShareModalOpen(false)}
         />
-
         <DocumentDeleteModal
           isOpen={openDeleteModal}
           onConfirm={confirmDelete}
           onCancel={() => setOpenDeleteModal(false)}
         />
-
         <SelectedDocsModal
           isOpen={isSelectedDocsModalOpen}
           onClose={handleModalClose}
@@ -728,7 +789,6 @@ export function DocumentViewer({
           }}
           onCancel={handleCancelFromModal}
         />
-
         <MoveDocumentModal
           isOpen={isMoveModalOpen}
           onClose={() => {
@@ -737,7 +797,22 @@ export function DocumentViewer({
           }}
           document={documentToMove}
           availableFolders={getAllFolders(documentsState)}
-          onMove={handleMoveDocument}
+          onMove={async (documentId: string, newParentId: string | null) => {
+            if (documentId === 'bulk') {
+              await handleBulkMove(newParentId)
+            } else {
+              await handleMoveDocument(documentId, newParentId)
+            }
+          }}
+        />
+        <BulkDeleteModal
+          isOpen={openBulkDeleteModal}
+          onConfirm={() => {
+            setOpenBulkDeleteModal(false)
+            handleBulkDelete()
+          }}
+          onCancel={() => setOpenBulkDeleteModal(false)}
+          selectedCount={selectedDocuments.length}
         />
       </div>
     </div>

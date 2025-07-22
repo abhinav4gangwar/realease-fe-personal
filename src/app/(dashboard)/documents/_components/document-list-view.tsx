@@ -1,6 +1,6 @@
 'use client'
-
 import { Button } from '@/components/ui/button'
+
 import type { Document } from '@/types/document.types'
 import {
   Download,
@@ -8,8 +8,7 @@ import {
   Info,
   Loader2,
   Move,
-  Share,
-  Trash2,
+  Trash2
 } from 'lucide-react'
 import { useState } from 'react'
 import { FileIcon } from './file-icon'
@@ -25,6 +24,7 @@ interface DocumentListViewProps {
   onEditClick?: (document: Document) => void
   onDeleteClick?: (document: Document) => void
   onMoveClick?: (document: Document) => void
+  onShareClick?: (document: Document) => void
   loadingFolders?: Set<string>
 }
 
@@ -39,6 +39,7 @@ export function DocumentListView({
   onEditClick,
   onMoveClick,
   onDeleteClick,
+  onShareClick,
   loadingFolders = new Set(),
 }: DocumentListViewProps) {
   const [hoveredRow, setHoveredRow] = useState<string | null>(null)
@@ -51,6 +52,8 @@ export function DocumentListView({
     }
   }
 
+  
+
   return (
     <div className="space-y-1">
       {/* Header */}
@@ -60,7 +63,6 @@ export function DocumentListView({
         <div className="col-span-2">Date Added</div>
         <div className="col-span-2">Tags</div>
       </div>
-
       {/* Document Rows */}
       {documents.map((document) => (
         <div
@@ -94,14 +96,12 @@ export function DocumentListView({
               {document.name}
             </span>
           </div>
-
           <div className="col-span-3 truncate text-sm text-[#9B9B9D]">
             {document.linkedProperty}
           </div>
           <div className="col-span-2 text-sm text-[#9B9B9D]">
             {document.dateAdded}
           </div>
-
           <div className="col-span-2 truncate text-sm text-[#9B9B9D]">
             {hoveredRow === document.id && !isShareMode ? (
               <div className="flex items-center gap-1">
@@ -118,17 +118,32 @@ export function DocumentListView({
                 >
                   <Edit className="h-3 w-3" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => {
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => {
                     e.stopPropagation()
                     if (onMoveClick) {
                       onMoveClick(document)
                     }
-                  }}>
+                  }}
+                >
                   <Move className="h-3 w-3" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-6 w-6">
+                {/* <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                   onClick={(e) => {
+                    e.stopPropagation()
+                    if (onShareClick) {
+                      onShareClick(document)
+                    }
+                  }}
+                >
                   <Share className="h-3 w-3" />
-                </Button>
+                </Button> */}
                 <Button variant="ghost" size="icon" className="h-6 w-6">
                   <Download className="h-3 w-3" />
                 </Button>
@@ -150,7 +165,6 @@ export function DocumentListView({
               document.tags
             )}
           </div>
-
           <div className="col-span-1 flex justify-end">
             {!isShareMode && (
               <Button
