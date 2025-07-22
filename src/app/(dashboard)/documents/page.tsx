@@ -1,6 +1,5 @@
 "use client"
 
-import documentsData from "@/lib/documents.dummy.json"
 import { apiClient } from "@/utils/api"
 import { useEffect, useState } from "react"
 import { DocumentViewer } from "./_components/document-viewer"
@@ -64,7 +63,7 @@ const Documentspage = () => {
     })
   }
 
-  const transformedDocuments = fetchedDocuments ? transformApiResponse(fetchedDocuments) : documentsData.allFiles
+  const transformedDocuments =  transformApiResponse(fetchedDocuments)
 
   return (
     <div>

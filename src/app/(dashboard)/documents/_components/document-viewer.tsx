@@ -12,6 +12,7 @@ import type {
 } from '@/types/document.types'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { ActionsButton } from './actions-button'
 import { AddButton, type addType } from './add-button'
 import { BreadcrumbNavigation } from './breadcrumb-navigation'
 import { CancelShareModal } from './cancel-share-modal'
@@ -583,6 +584,7 @@ export function DocumentViewer({
               Share Docs
             </Button>
           )}
+          <ActionsButton onActionSelect={() => {}} />
           <AddButton onAddSelect={handleAddSelect} />
         </div>
       </div>
