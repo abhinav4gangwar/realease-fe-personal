@@ -1,11 +1,14 @@
 "use client"
 
+import type React from "react"
+
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import type { Document } from "@/types/document.types"
 import { Check, Download, Edit, MoreVertical, Move, Share, X } from "lucide-react"
 import { useEffect, useState } from "react"
+import { toast } from "sonner"
 import { FileIcon } from "./file-icon"
 
 interface DocumentDetailModalProps {
@@ -13,21 +16,26 @@ interface DocumentDetailModalProps {
   isOpen: boolean
   onClose: () => void
   openInEditMode?: boolean
+  onSave?: (documentId: string, newName: string) => Promise<void>
 }
 
-export function DocumentDetailModal({ document, isOpen, onClose, openInEditMode = false }: DocumentDetailModalProps) {
+export function DocumentDetailModal({
+  document,
+  isOpen,
+  onClose,
+  openInEditMode = false,
+  onSave,
+}: DocumentDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editedName, setEditedName] = useState("")
-  const [editedLinkedProperty, setEditedLinkedProperty] = useState("")
+  const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
     if (isOpen && openInEditMode && document) {
       setEditedName(document.name)
-      setEditedLinkedProperty(document.linkedProperty)
       setIsEditing(true)
     } else if (isOpen && document) {
       setEditedName(document.name)
-      setEditedLinkedProperty(document.linkedProperty)
       setIsEditing(false)
     }
   }, [isOpen, openInEditMode, document])
@@ -36,22 +44,45 @@ export function DocumentDetailModal({ document, isOpen, onClose, openInEditMode 
 
   const handleEdit = () => {
     setEditedName(document.name)
-    setEditedLinkedProperty(document.linkedProperty)
     setIsEditing(true)
   }
 
-  const handleSave = () => {
-    console.log("Saving changes:", {
-      name: editedName,
-      linkedProperty: editedLinkedProperty,
-    })
-    setIsEditing(false)
+  const handleSave = async () => {
+    if (!onSave || !document || editedName.trim() === document.name) {
+      setIsEditing(false)
+      return
+    }
+
+    if (editedName.trim() === "") {
+      toast.error("Document name cannot be empty")
+      return
+    }
+
+    try {
+      setIsSaving(true)
+      await onSave(document.id, editedName.trim())
+      setIsEditing(false)
+      toast.success(`Document renamed to "${editedName.trim()}"`)
+    } catch (error) {
+      console.error("Error saving document:", error)
+      toast.error("Failed to rename document. Please try again.")
+      setEditedName(document.name)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleCancel = () => {
     setIsEditing(false)
     setEditedName(document.name)
-    setEditedLinkedProperty(document.linkedProperty)
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSave()
+    } else if (e.key === "Escape") {
+      handleCancel()
+    }
   }
 
   return (
@@ -64,8 +95,10 @@ export function DocumentDetailModal({ document, isOpen, onClose, openInEditMode 
             <Input
               value={editedName}
               onChange={(e) => setEditedName(e.target.value)}
+              onKeyDown={handleKeyPress}
               className="h-auto border-gray-400 p-2 text-lg font-semibold focus-visible:ring-0"
               autoFocus
+              disabled={isSaving}
             />
           ) : (
             <h2 className="truncate pl-1 text-lg font-semibold">{document.name}</h2>
@@ -74,10 +107,16 @@ export function DocumentDetailModal({ document, isOpen, onClose, openInEditMode 
         <div className="flex flex-shrink-0 items-center gap-1">
           {isEditing ? (
             <>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleSave}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleSave}
+                disabled={isSaving || editedName.trim() === "" || editedName.trim() === document.name}
+              >
                 <Check className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCancel}>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCancel} disabled={isSaving}>
                 <X className="h-4 w-4" />
               </Button>
             </>
@@ -130,15 +169,7 @@ export function DocumentDetailModal({ document, isOpen, onClose, openInEditMode 
         <div className="space-y-4 p-4">
           <div>
             <h3 className="mb-1 text-sm font-medium text-gray-500">Linked Property</h3>
-            {isEditing ? (
-              <Input
-                value={editedLinkedProperty}
-                onChange={(e) => setEditedLinkedProperty(e.target.value)}
-                className="text-sm"
-              />
-            ) : (
-              <p className="text-sm">{document.linkedProperty}</p>
-            )}
+            <p className="text-sm">{document.linkedProperty}</p>
           </div>
           <div>
             <h3 className="mb-1 text-sm font-medium text-gray-500">Date Added</h3>

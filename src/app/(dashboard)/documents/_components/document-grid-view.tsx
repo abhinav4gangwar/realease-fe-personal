@@ -1,11 +1,18 @@
-"use client"
+'use client'
+import { Button } from '@/components/ui/button'
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import type { Document } from "@/types/document.types"
-import { Download, Edit, Info, Loader2, Move, Share } from 'lucide-react'
-import { useState } from "react"
-import { FileIcon } from "./file-icon"
+import { Card, CardContent } from '@/components/ui/card'
+import type { Document } from '@/types/document.types'
+import {
+  Download,
+  Edit,
+  Info,
+  Loader2,
+  Move,
+  Trash2
+} from 'lucide-react'
+import { useState } from 'react'
+import { FileIcon } from './file-icon'
 
 interface DocumentGridViewProps {
   documents: Document[]
@@ -16,6 +23,9 @@ interface DocumentGridViewProps {
   selectedDocuments?: string[]
   onDocumentSelect?: (documentId: string) => void
   onEditClick?: (document: Document) => void
+  onDeleteClick?: (document: Document) => void
+  onMoveClick?: (document: Document) => void
+  onShareClick?: (document: Document) => void
   loadingFolders?: Set<string>
 }
 
@@ -27,7 +37,10 @@ export function DocumentGridView({
   isShareMode,
   selectedDocuments,
   onDocumentSelect,
+  onDeleteClick,
+  onMoveClick,
   onEditClick,
+  onShareClick,
   loadingFolders = new Set(),
 }: DocumentGridViewProps) {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
@@ -46,7 +59,9 @@ export function DocumentGridView({
         <Card
           key={document.id}
           className={`rounded-sm border-none transition-shadow hover:bg-[#A2CFE333] hover:shadow-md ${
-            selectedDocumentId === document.id ? "bg-blue-50 ring-2 ring-blue-500" : ""
+            selectedDocumentId === document.id
+              ? 'bg-blue-50 ring-2 ring-blue-500'
+              : ''
           }`}
           onMouseEnter={() => setHoveredCard(document.id)}
           onMouseLeave={() => setHoveredCard(null)}
@@ -86,14 +101,47 @@ export function DocumentGridView({
                     >
                       <Edit className="h-3 w-3" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-5 w-5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (onMoveClick) {
+                          onMoveClick(document)
+                        }
+                      }}
+                    >
                       <Move className="h-3 w-3" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-5 w-5">
+                    {/* <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (onShareClick) {
+                          onShareClick(document)
+                        }
+                      }}
+                    >
                       <Share className="h-3 w-3" />
-                    </Button>
+                    </Button> */}
                     <Button variant="ghost" size="icon" className="h-5 w-5">
                       <Download className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (onDeleteClick) {
+                          onDeleteClick(document)
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
                 )}

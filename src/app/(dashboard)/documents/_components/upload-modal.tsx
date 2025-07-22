@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { apiClient } from "@/utils/api"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ArrowLeft, File, Folder, Upload, X } from "lucide-react"
-import { useRouter } from "next/navigation"
 import { useCallback, useRef, useState } from "react"
 import { useDropzone } from "react-dropzone"
 import { useForm } from "react-hook-form"
@@ -23,6 +22,7 @@ interface UploadModalProps {
   isOpen: boolean
   onClose: () => void
   addType: "uploadFile" | "createFolder"
+  onSuccess?: () => void
 }
 
 interface FileItem {
@@ -37,12 +37,6 @@ interface FileItem {
   tags?: string
 }
 
-interface FileMetadata {
-  name: string
-  path: string
-  propertyId: string
-  tags: string
-}
 
 export const createFolderSchema = z.object({
   value: z.string(),
@@ -86,7 +80,7 @@ const properties = [
   { id: "0", name: "Test Property" },
 ]
 
-export function UploadModal({ isOpen, addType, onClose }: UploadModalProps) {
+export function UploadModal({ isOpen, addType, onClose, onSuccess }: UploadModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [uploadedFiles, setUploadedFiles] = useState<FileItem[]>([])
   const [showUploadQueue, setShowUploadQueue] = useState(false)
@@ -95,7 +89,6 @@ export function UploadModal({ isOpen, addType, onClose }: UploadModalProps) {
   const [folderPath, setFolderPath] = useState<string[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const folderInputRef = useRef<HTMLInputElement>(null)
-  const router = useRouter()
 
   type createFolderFormValues = z.infer<typeof createFolderSchema>
 
@@ -116,7 +109,9 @@ export function UploadModal({ isOpen, addType, onClose }: UploadModalProps) {
       if (response.data.message) {
         toast.success(response.data.message)
       }
-      router.refresh()
+      if (onSuccess) {
+        await onSuccess()
+      }
       onClose()
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || "Folder creation failed. Please try again."
@@ -486,7 +481,9 @@ const updateFileMetadata = (path: string, field: "propertyId" | "tags", value: s
         toast.success(response.data.message)
       }
 
-      router.refresh()
+      if (onSuccess) {
+        await onSuccess()
+      }
       setShowUploadQueue(false)
       setShowDetailsDialog(false)
       setUploadedFiles([])
