@@ -31,21 +31,21 @@ export function SelectedDocsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-lg border w-full max-w-2xl max-h-[80vh]">
+      <div className="bg-white rounded-lg shadow-lg border border-gray-400 w-full max-w-5xl max-h-[80vh] px-6">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">
+        <div className="flex items-center justify-between py-4">
+          <h2 className="text-xl text-secondary font-semibold">
             Selected Docs ({folderCount} Folder & {fileCount} Files)
           </h2>
           <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4 text-gray-500" />
           </Button>
         </div>
 
         {/* Content */}
-        <div className="max-h-96 overflow-y-auto">
+        <div className="max-h-96 overflow-y-auto border border-gray-400 rounded-md p-4">
           {/* Header Row */}
-          <div className="grid grid-cols-12 gap-4 px-4 py-2 text-xs font-medium text-gray-500 border-b bg-gray-50">
+          <div className="grid grid-cols-12 gap-4 px-4 py-2 text-md font-semibold text-secondary">
             <div className="col-span-3">Name</div>
             <div className="col-span-3">Linked Property</div>
             <div className="col-span-3">Date Added</div>
@@ -55,7 +55,7 @@ export function SelectedDocsModal({
 
           {/* Document Rows */}
           {selectedDocuments.map((document) => (
-            <div key={document.id} className="grid grid-cols-12 gap-4 px-4 py-3 border-b border-gray-100 items-center">
+            <div key={document.id} className="grid grid-cols-12 gap-4 px-4 py-4 items-center">
               <div className="col-span-3 flex items-center gap-2">
                 <FileIcon type={document.icon} />
                 <span className="text-sm font-medium truncate">{document.name}</span>
@@ -65,7 +65,7 @@ export function SelectedDocsModal({
               <div className="col-span-2 text-sm text-gray-600 truncate">{document.tags}</div>
               <div className="col-span-1 flex justify-end">
                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onRemoveDocument(document.id)}>
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4 text-gray-500" />
                 </Button>
               </div>
             </div>
@@ -73,15 +73,15 @@ export function SelectedDocsModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-4 border-t">
-          <Button variant="outline" onClick={onSelectMore}>
+        <div className="flex items-center justify-between py-6">
+          <Button variant="outline" onClick={onSelectMore} className="px-6 bg-transparent h-11">
             Select More
           </Button>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={onCancel}>
+            <Button variant="outline" onClick={onCancel} className="px-6 bg-transparent h-11 hover:bg-secondary hover:text-white cursor-pointer">
               Cancel
             </Button>
-            <Button onClick={onShareViaEmail} className="bg-red-500 hover:bg-red-600">
+            <Button onClick={onShareViaEmail} className="bg-primary hover:bg-secondary cursor-pointer h-11 px-6">
               Share via Email
             </Button>
           </div>

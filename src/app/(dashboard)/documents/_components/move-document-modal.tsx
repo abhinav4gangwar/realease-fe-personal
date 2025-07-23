@@ -41,42 +41,24 @@ export function MoveDocumentModal({ isOpen, onClose, document, availableFolders,
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-transparent bg-opacity-50">
-      <div className="w-full max-w-4xl rounded-lg border bg-white shadow-lg max-h-[80vh] flex flex-col">
+      <div className="w-full max-w-5xl rounded-lg border bg-white shadow-lg max-h-[80vh] flex flex-col border-gray-400 px-6">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-lg font-semibold">Move Docs</h2>
+        <div className="flex items-center justify-between py-6">
+          <h2 className="text-lg font-semibold text-secondary">Move Docs</h2>
           <Button variant="ghost" size="icon" onClick={onClose} className="h-6 w-6">
             <X className="h-4 w-4" />
           </Button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-auto p-6 border border-gray-400 rounded-md">
           <div className="space-y-1">
             {/* Header Row */}
-            <div className="text-md text-secondary grid grid-cols-12 gap-4 px-4 py-2 font-semibold border-b">
+            <div className="text-md text-secondary grid grid-cols-12 gap-4 px-4 py-2 font-semibold">
               <div className="col-span-4">Name</div>
               <div className="col-span-3">Linked Property</div>
               <div className="col-span-3">Date Added</div>
               <div className="col-span-2">Tags</div>
-            </div>
-
-            {/* Root Directory Option */}
-            <div
-              className={`grid grid-cols-12 items-center px-4 py-3 hover:rounded-md hover:bg-[#A2CFE333] cursor-pointer ${
-                selectedFolderId === null ? "bg-blue-50 border border-blue-200" : ""
-              }`}
-              onClick={() => handleRowClick("root")}
-            >
-              <div className="col-span-4 flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <FileIcon type="folder" />
-                </div>
-                <span className="truncate text-sm font-medium">Root Directory</span>
-              </div>
-              <div className="col-span-3 truncate text-sm text-[#9B9B9D]">-</div>
-              <div className="col-span-3 text-sm text-[#9B9B9D]">-</div>
-              <div className="col-span-2 truncate text-sm text-[#9B9B9D]">-</div>
             </div>
 
             {/* Folder Rows */}
@@ -105,15 +87,15 @@ export function MoveDocumentModal({ isOpen, onClose, document, availableFolders,
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t">
-          <Button variant="outline" className="px-6 bg-transparent">
+        <div className="flex items-center justify-between py-6">
+          <Button variant="outline" className="px-6 bg-transparent h-11">
             Create Folder
           </Button>
           <div className="flex items-center gap-3">
-            <Button variant="outline" onClick={onClose} className="px-6 bg-transparent">
+            <Button variant="outline" onClick={onClose} className="px-6 bg-transparent h-11 hover:bg-secondary hover:text-white cursor-pointer">
               Cancel
             </Button>
-            <Button onClick={handleMove} disabled={isMoving} className="bg-red-500 hover:bg-red-600 px-6">
+            <Button onClick={handleMove} disabled={isMoving} className="bg-primary hover:bg-secondary cursor-pointer h-11 px-6">
               {isMoving ? "Moving..." : "Move Here"}
             </Button>
           </div>
