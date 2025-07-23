@@ -510,11 +510,9 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
   }
 
   const handleModalClose = () => {
-    // If it's individual share, reset everything
     if (isIndividualShare) {
       resetSelectMode()
     } else {
-      // For bulk share, just close the modals but keep selection
       setIsSelectedDocsModalOpen(false)
       setIsShareEmailModalOpen(false)
     }
