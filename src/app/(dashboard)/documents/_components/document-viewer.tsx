@@ -14,7 +14,12 @@ import { ActionsButton } from './actions-button'
 import { AddButton, type addType } from './add-button'
 import { BreadcrumbNavigation } from './breadcrumb-navigation'
 
-import { getAllFolders } from '../doc_utils'
+import {
+  findFolderById,
+  getAllFolders,
+  getFileCounts,
+  getFolderCounts,
+} from '../doc_utils'
 import BulkDeleteModal from './bulk-delete-modal'
 import { CancelShareModal } from './cancel-share-modal'
 import DocumentDeleteModal from './document-delete-modal'
@@ -186,35 +191,6 @@ export function DocumentViewer({
         }
       }
     }
-  }
-
-  const findFolderById = (
-    folderId: string,
-    documents: Document[]
-  ): Document | null => {
-    for (const doc of documents) {
-      if (doc.id === folderId) {
-        return doc
-      }
-      if (doc.children) {
-        const found = findFolderById(folderId, doc.children)
-        if (found) return found
-      }
-    }
-    return null
-  }
-
-  const getFolderCounts = (folder: Document) => {
-    if (!folder.children) return '0 Files'
-    const folders = folder.children.filter((child) => child.isFolder).length
-    const files = folder.children.filter((child) => !child.isFolder).length
-    return `${folders} Folders & ${files} Files`
-  }
-
-  const getFileCounts = (documents: Document[]) => {
-    const folders = documents.filter((doc) => doc.isFolder).length
-    const files = documents.filter((doc) => !doc.isFolder).length
-    return `${folders} Folders & ${files} Files`
   }
 
   const handleViewModeChange = (mode: ViewMode) => {
