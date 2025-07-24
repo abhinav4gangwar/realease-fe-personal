@@ -8,6 +8,7 @@ import {
   Info,
   Loader2,
   Move,
+  Share,
   Trash2
 } from 'lucide-react'
 import { useState } from 'react'
@@ -131,7 +132,7 @@ export function DocumentListView({
                 >
                   <Move className="h-3 w-3" />
                 </Button>
-                {/* <Button
+                <Button
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
@@ -143,7 +144,7 @@ export function DocumentListView({
                   }}
                 >
                   <Share className="h-3 w-3" />
-                </Button> */}
+                </Button>
                 <Button variant="ghost" size="icon" className="h-6 w-6">
                   <Download className="h-3 w-3" />
                 </Button>

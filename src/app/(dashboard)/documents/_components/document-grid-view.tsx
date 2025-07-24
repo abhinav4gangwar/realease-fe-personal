@@ -9,6 +9,7 @@ import {
   Info,
   Loader2,
   Move,
+  Share,
   Trash2
 } from 'lucide-react'
 import { useState } from 'react'
@@ -114,7 +115,7 @@ export function DocumentGridView({
                     >
                       <Move className="h-3 w-3" />
                     </Button>
-                    {/* <Button
+                    <Button
                       variant="ghost"
                       size="icon"
                       className="h-5 w-5"
@@ -126,7 +127,7 @@ export function DocumentGridView({
                       }}
                     >
                       <Share className="h-3 w-3" />
-                    </Button> */}
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-5 w-5">
                       <Download className="h-3 w-3" />
                     </Button>

@@ -2,7 +2,13 @@
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { apiClient } from '@/utils/api'
 import { X } from 'lucide-react'
 import { useState } from 'react'
@@ -28,26 +34,31 @@ export function ShareEmailModal({
 
   if (!isOpen) return null
 
+  const folderCount = selectedDocuments.filter((doc) => doc.isFolder).length
+  const fileCount = selectedDocuments.filter((doc) => !doc.isFolder).length
+
   const handleSend = async () => {
     const payload = {
       email,
       expiry: parseInt(expiry),
-      items: selectedDocuments.map(doc => ({
+      items: selectedDocuments.map((doc) => ({
         id: parseInt(doc.id),
-        type: doc.icon === 'folder' ? 'folder' : 'file'
-      }))
+        type: doc.icon === 'folder' ? 'folder' : 'file',
+      })),
     }
-    
+
     try {
       setIsLoading(true)
-      const response = await apiClient.post('/dashboard/documents/share', payload)
+      const response = await apiClient.post(
+        '/dashboard/documents/share',
+        payload
+      )
       if (response.data.message) {
         toast.success(response.data.message)
       }
     } catch (error: any) {
       const errorMessage =
-        error.response?.data?.message ||
-        'File Share failed. Please try again.'
+        error.response?.data?.message || 'File Share failed. Please try again.'
       toast.error(errorMessage)
     } finally {
       setIsLoading(false)
@@ -65,10 +76,12 @@ export function ShareEmailModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md rounded-lg border bg-white shadow-lg">
+      <div className="flex max-h-[80vh] w-full max-w-5xl flex-col rounded-lg border border-gray-400 bg-white px-6 shadow-lg">
         {/* Header */}
-        <div className="flex items-center justify-between border-b p-4">
-          <h2 className="text-lg font-semibold">Share Docs via Email</h2>
+        <div className="flex items-center justify-between py-6">
+          <h2 className="text-secondary text-lg font-semibold">
+            Share Docs via Email
+          </h2>
           <Button
             variant="ghost"
             size="icon"
@@ -80,22 +93,20 @@ export function ShareEmailModal({
         </div>
 
         {/* Content */}
-        <div className="space-y-4 p-4">
+        <div className="space-y-4 pb-6">
           <Input
             placeholder="Enter Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
-              Link Expiry
-            </label>
+
+          <div>
+            <h1 className="pb-3">Expires in</h1>
             <Select value={expiry} onValueChange={setExpiry}>
-              <SelectTrigger className='w-full'>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select expiry time" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="border-none">
                 {expiryOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
@@ -105,9 +116,11 @@ export function ShareEmailModal({
             </Select>
           </div>
         </div>
-        
-        <div className="max-h-40 overflow-y-auto">
-          <div className="grid grid-cols-12 gap-4 border-b bg-gray-50 px-4 py-2 text-xs font-medium text-gray-500">
+        <h2 className="text-secondary text-xl font-semibold pb-3">
+          Selected Docs ({folderCount} Folder & {fileCount} Files)
+        </h2>
+        <div className="max-h-45 overflow-y-auto rounded-md border border-gray-500">
+          <div className="text-md text-secondary grid grid-cols-12 gap-4 px-4 py-2 font-semibold">
             <div className="col-span-3">Name</div>
             <div className="col-span-3">Linked Property</div>
             <div className="col-span-3">Date Added</div>
@@ -140,11 +153,18 @@ export function ShareEmailModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 border-t p-4">
-          <Button variant="outline" onClick={onCancel}>
+        <div className="flex items-center justify-end gap-2 p-4">
+          <Button
+            variant="outline"
+            onClick={onCancel}
+            className="hover:bg-secondary h-11 cursor-pointer bg-transparent px-6 hover:text-white"
+          >
             Cancel
           </Button>
-          <Button onClick={handleSend} className="bg-red-500 hover:bg-red-600">
+          <Button
+            onClick={handleSend}
+            className="bg-primary hover:bg-secondary h-11 cursor-pointer px-6"
+          >
             Send
           </Button>
         </div>
