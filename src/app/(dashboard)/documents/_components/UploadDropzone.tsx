@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button"
 import { File, Folder, Upload } from "lucide-react"
 
 interface UploadDropzoneProps {
-  getRootProps: any
-  getInputProps: any
   isDragActive: boolean
+  handleDrop: (e: React.DragEvent<HTMLDivElement>) => void
+  handleDragEnter: (e: React.DragEvent<HTMLDivElement>) => void
+  handleDragLeave: (e: React.DragEvent<HTMLDivElement>) => void
+  handleDragOver: (e: React.DragEvent<HTMLDivElement>) => void
   openFileDialog: (e: React.MouseEvent) => void
   openFolderDialog: (e?: React.MouseEvent) => void
   fileInputRef: React.RefObject<HTMLInputElement>
@@ -15,21 +17,35 @@ interface UploadDropzoneProps {
 }
 
 export function UploadDropzone({
-  getRootProps, getInputProps, isDragActive, openFileDialog, openFolderDialog,
-  fileInputRef, folderInputRef, handleFilesFromInput
+  isDragActive, handleDrop, handleDragEnter, handleDragLeave, handleDragOver,
+  openFileDialog, openFolderDialog, fileInputRef, folderInputRef, handleFilesFromInput
 }: UploadDropzoneProps) {
   return (
     <div className="p-6">
-      <div
-        {...getRootProps()}
-        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-primary/50"}`}
-        onClick={() => openFolderDialog()}
-      >
-        <input {...getInputProps()} />
+    <div
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      className={`min-h-[200px] border-2 border-dashed rounded-lg p-8 text-center flex flex-col items-center justify-center cursor-pointer transition-colors ${
+        isDragActive
+          ? "border-primary bg-primary/5"
+          : "border-muted-foreground/25 hover:border-primary/50"
+      }`}
+    >
+      <div className="pointer-events-none">
         <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-        <p className="text-lg font-medium mb-2">Drag & drop or click to select</p>
-        <p className="text-sm text-muted-foreground">Supports files and entire folders</p>
+        {isDragActive ? (
+          <p className="text-lg font-medium">Drop files here...</p>
+        ) : (
+          <>
+            <p className="text-lg font-medium mb-2">Drag & drop or click to select</p>
+            <p className="text-sm text-muted-foreground">Supports files and entire folders</p>
+          </>
+        )}
       </div>
+    </div>
+
 
       <input ref={fileInputRef} type="file" multiple onChange={handleFilesFromInput} style={{ display: "none" }} />
       <input ref={folderInputRef} type="file" {...({ webkitdirectory: "" } as any)} multiple onChange={handleFilesFromInput} style={{ display: "none" }} />

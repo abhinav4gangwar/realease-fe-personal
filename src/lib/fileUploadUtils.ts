@@ -25,6 +25,7 @@ const readAllDirectoryEntries = async (directoryReader: any): Promise<any[]> => 
 }
 
 export const processEntry = async (entry: any, path = ""): Promise<FileItem | null> => {
+    console.log("Processing entry:", entry, "at path:", path)
   const fullPath = path ? `${path}/${entry.name}` : entry.name
 
   if (entry.isFile) {
