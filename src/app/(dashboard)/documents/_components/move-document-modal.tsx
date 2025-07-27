@@ -61,6 +61,23 @@ export function MoveDocumentModal({ isOpen, onClose, document, availableFolders,
               <div className="col-span-2">Tags</div>
             </div>
 
+             <div
+              className={`grid grid-cols-12 items-center px-4 py-3 hover:rounded-md hover:bg-[#A2CFE333] cursor-pointer ${
+                selectedFolderId === null ? "bg-blue-50 border border-blue-200" : ""
+              }`}
+              onClick={() => handleRowClick("root")}
+            >
+              <div className="col-span-4 flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <FileIcon type="folder" />
+                </div>
+                <span className="truncate text-sm font-medium">Move to Default</span>
+              </div>
+              <div className="col-span-3 truncate text-sm text-[#9B9B9D]">-</div>
+              <div className="col-span-3 text-sm text-[#9B9B9D]">-</div>
+              <div className="col-span-2 truncate text-sm text-[#9B9B9D]">-</div>
+            </div>
+
             {/* Folder Rows */}
             {availableFolders
               .filter((folder) => folder.isFolder && folder.id !== document.id)
