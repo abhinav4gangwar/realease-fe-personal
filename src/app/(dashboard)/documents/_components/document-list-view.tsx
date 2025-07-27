@@ -9,7 +9,7 @@ import {
   Loader2,
   Move,
   Share,
-  Trash2
+  Trash2,
 } from 'lucide-react'
 import { useState } from 'react'
 import { FileIcon } from './file-icon'
@@ -53,8 +53,6 @@ export function DocumentListView({
     }
   }
 
-  
-
   return (
     <div className="space-y-1">
       {/* Header */}
@@ -78,15 +76,14 @@ export function DocumentListView({
           onClick={() => handleRowClick(document)}
         >
           <div className="col-span-4 flex items-center gap-3">
-            {isShareMode && (
-              <input
-                type="checkbox"
-                checked={selectedDocuments?.includes(document.id) || false}
-                onChange={() => onDocumentSelect?.(document.id)}
-                onClick={(e) => e.stopPropagation()}
-                className="h-4 w-4"
-              />
-            )}
+            <input
+              type="checkbox"
+              checked={selectedDocuments?.includes(document.id) || false}
+              onChange={() => onDocumentSelect?.(document.id)}
+              onClick={(e) => e.stopPropagation()}
+              className="h-4 w-4 accent-[#f56161]"
+            />
+
             <div className="flex items-center gap-2">
               <FileIcon type={document.icon} />
               {loadingFolders.has(document.id) && document.isFolder && (
@@ -136,7 +133,7 @@ export function DocumentListView({
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
-                   onClick={(e) => {
+                  onClick={(e) => {
                     e.stopPropagation()
                     if (onShareClick) {
                       onShareClick(document)

@@ -10,7 +10,7 @@ import {
   Loader2,
   Move,
   Share,
-  Trash2
+  Trash2,
 } from 'lucide-react'
 import { useState } from 'react'
 import { FileIcon } from './file-icon'
@@ -61,7 +61,7 @@ export function DocumentGridView({
           key={document.id}
           className={`rounded-sm border-none transition-shadow hover:bg-[#A2CFE333] hover:shadow-md ${
             selectedDocumentId === document.id
-              ? 'bg-blue-50 ring-2 ring-blue-500'
+              ? 'bg-[#A2CFE333]'
               : ''
           }`}
           onMouseEnter={() => setHoveredCard(document.id)}
@@ -71,22 +71,21 @@ export function DocumentGridView({
           <CardContent>
             <div className="mb-3 flex items-start justify-between">
               <div className="flex items-center gap-2">
-                {isShareMode && (
-                  <input
-                    type="checkbox"
-                    checked={selectedDocuments?.includes(document.id) || false}
-                    onChange={() => onDocumentSelect?.(document.id)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="h-4 w-4 flex-shrink-0"
-                  />
-                )}
+                <input
+                  type="checkbox"
+                  checked={selectedDocuments?.includes(document.id) || false}
+                  onChange={() => onDocumentSelect?.(document.id)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="h-4 w-4 flex-shrink-0 accent-[#f56161]"
+                />
+
                 <div className="flex items-center gap-2">
                   <FileIcon type={document.icon} className="h-7 w-6" />
                   {loadingFolders.has(document.id) && document.isFolder && (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   )}
                 </div>
-                <h3 className="text-md truncate">{document.name}</h3>
+                <h3 className="text-md truncate max-w-[160px]">{document.name}</h3>
                 {hoveredCard === document.id && !isShareMode && (
                   <div className="ml-2 flex items-center gap-1">
                     <Button

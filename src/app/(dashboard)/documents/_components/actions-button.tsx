@@ -13,7 +13,6 @@ interface ActionButtonProps {
 }
 
 const actionOptions: { label: string; value: actionType }[] = [
-  { label: "Select", value: "select" },
   { label: "Move", value: "move" },
   { label: "Download", value: "download" },
   { label: "Share", value: "share" },
