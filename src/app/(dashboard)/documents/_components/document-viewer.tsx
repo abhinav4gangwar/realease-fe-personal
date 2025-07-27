@@ -24,7 +24,7 @@ import { DocumentListView } from "./document-list-view"
 import { FilterButton } from "./filter-button"
 import { FilterModal } from "./filter-modal"
 import { MoveDocumentModal } from "./move-document-modal"
-import { ScrollToTopButton } from "./scroll-to-top-button"
+import ScrollToTop from "./scroll-to-top"
 import { SelectedDocsModal } from "./selected-docs-modal"
 import { ShareEmailModal } from "./share-email-modal"
 import { SortButton } from "./sort-button"
@@ -73,6 +73,7 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
 
   const itemsPerPage = 15
 
+ 
   const handleDocumentInfo = (document: Document) => {
     setSelectedDocument(document)
     setOpenModalInEditMode(false)
@@ -548,7 +549,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
         const folderContents = transformApiResponse(folderResponse.data)
         const updatedFolder = { ...currentFolder, children: folderContents }
         setCurrentFolder(updatedFolder)
-
         setDocumentsState((prevDocs) => prevDocs.map((doc) => (doc.id === currentFolder.id ? updatedFolder : doc)))
       }
 
@@ -664,6 +664,7 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
             )
           })}
         </div>
+        <ScrollToTop />
 
         {/* Document Detail Modal */}
         <DocumentDetailModal
@@ -696,8 +697,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
           addType={addModalType}
           onSuccess={handleUploadSuccess}
         />
-
-        <ScrollToTopButton />
 
         <ShareEmailModal
           isOpen={isShareEmailModalOpen}
