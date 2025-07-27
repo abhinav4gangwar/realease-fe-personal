@@ -1,15 +1,20 @@
-"use client"
+'use client'
 
-import type React from "react"
+import type React from 'react'
 
-import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import type { Document } from "@/types/document.types"
-import { Check, Download, Edit, MoreVertical, Move, Share, X } from "lucide-react"
-import { useEffect, useState } from "react"
-import { toast } from "sonner"
-import { FileIcon } from "./file-icon"
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
+import type { Document } from '@/types/document.types'
+import { Check, MoreVertical, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
+import { FileIcon } from './file-icon'
 
 interface DocumentDetailModalProps {
   document: Document | null
@@ -17,6 +22,9 @@ interface DocumentDetailModalProps {
   onClose: () => void
   openInEditMode?: boolean
   onSave?: (documentId: string, newName: string) => Promise<void>
+  onDeleteClick?: (document: Document) => void
+  onShareClick?: (document: Document) => void
+  onMoveClick?: (document: Document) => void
 }
 
 export function DocumentDetailModal({
@@ -25,9 +33,12 @@ export function DocumentDetailModal({
   onClose,
   openInEditMode = false,
   onSave,
+  onDeleteClick,
+  onShareClick,
+  onMoveClick,
 }: DocumentDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false)
-  const [editedName, setEditedName] = useState("")
+  const [editedName, setEditedName] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
@@ -53,8 +64,8 @@ export function DocumentDetailModal({
       return
     }
 
-    if (editedName.trim() === "") {
-      toast.error("Document name cannot be empty")
+    if (editedName.trim() === '') {
+      toast.error('Document name cannot be empty')
       return
     }
 
@@ -64,8 +75,8 @@ export function DocumentDetailModal({
       setIsEditing(false)
       toast.success(`Document renamed to "${editedName.trim()}"`)
     } catch (error) {
-      console.error("Error saving document:", error)
-      toast.error("Failed to rename document. Please try again.")
+      console.error('Error saving document:', error)
+      toast.error('Failed to rename document. Please try again.')
       setEditedName(document.name)
     } finally {
       setIsSaving(false)
@@ -78,9 +89,9 @@ export function DocumentDetailModal({
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
+    if (e.key === 'Enter') {
       handleSave()
-    } else if (e.key === "Escape") {
+    } else if (e.key === 'Escape') {
       handleCancel()
     }
   }
@@ -101,7 +112,9 @@ export function DocumentDetailModal({
               disabled={isSaving}
             />
           ) : (
-            <h2 className="truncate pl-1 text-lg font-semibold">{document.name}</h2>
+            <h2 className="truncate pl-1 text-lg font-semibold">
+              {document.name}
+            </h2>
           )}
         </div>
         <div className="flex flex-shrink-0 items-center gap-1">
@@ -112,11 +125,21 @@ export function DocumentDetailModal({
                 size="icon"
                 className="h-8 w-8"
                 onClick={handleSave}
-                disabled={isSaving || editedName.trim() === "" || editedName.trim() === document.name}
+                disabled={
+                  isSaving ||
+                  editedName.trim() === '' ||
+                  editedName.trim() === document.name
+                }
               >
                 <Check className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCancel} disabled={isSaving}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleCancel}
+                disabled={isSaving}
+              >
                 <X className="h-4 w-4" />
               </Button>
             </>
@@ -124,30 +147,66 @@ export function DocumentDetailModal({
             <>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 cursor-pointer"
+                  >
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleEdit}>
-                    <Edit className="mr-2 h-4 w-4" />
+                <DropdownMenuContent align="end" className="border-none">
+                  <DropdownMenuItem
+                    onClick={handleEdit}
+                    className="cursor-pointer font-semibold hover:bg-[#A2CFE333]"
+                  >
                     Edit
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Share className="mr-2 h-4 w-4" />
-                    Share
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (onMoveClick) {
+                        onMoveClick(document)
+                      }
+                    }}
+                    className="cursor-pointer font-semibold hover:bg-[#A2CFE333]"
+                  >
+                    Move
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Download className="mr-2 h-4 w-4" />
+
+                  <DropdownMenuItem className="cursor-pointer font-semibold hover:bg-[#A2CFE333]">
                     Download
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Move className="mr-2 h-4 w-4" />
-                    Move Doc
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (onShareClick) {
+                        onShareClick(document)
+                      }
+                    }}
+                    className="cursor-pointer font-semibold hover:bg-[#A2CFE333]"
+                  >
+                    Share
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (onDeleteClick) {
+                        onDeleteClick(document)
+                      }
+                    }}
+                    className="cursor-pointer font-semibold hover:bg-[#A2CFE333]"
+                  >
+                    Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={onClose}
+              >
                 <X className="h-4 w-4" />
               </Button>
             </>
@@ -168,23 +227,33 @@ export function DocumentDetailModal({
         {/* Document Details */}
         <div className="space-y-4 p-4">
           <div>
-            <h3 className="mb-1 text-sm font-medium text-gray-500">Linked Property</h3>
+            <h3 className="mb-1 text-sm font-medium text-gray-500">
+              Linked Property
+            </h3>
             <p className="text-sm">{document.linkedProperty}</p>
           </div>
           <div>
-            <h3 className="mb-1 text-sm font-medium text-gray-500">Date Added</h3>
+            <h3 className="mb-1 text-sm font-medium text-gray-500">
+              Date Added
+            </h3>
             <p className="text-sm">{document.dateAdded}</p>
           </div>
           <div>
-            <h3 className="mb-1 text-sm font-medium text-gray-500">Date Modified</h3>
+            <h3 className="mb-1 text-sm font-medium text-gray-500">
+              Date Modified
+            </h3>
             <p className="text-sm">{document.dateModified}</p>
           </div>
           <div>
-            <h3 className="mb-1 text-sm font-medium text-gray-500">Last Opened</h3>
+            <h3 className="mb-1 text-sm font-medium text-gray-500">
+              Last Opened
+            </h3>
             <p className="text-sm">{document.lastOpened}</p>
           </div>
           <div>
-            <h3 className="mb-1 text-sm font-medium text-gray-500">File Type</h3>
+            <h3 className="mb-1 text-sm font-medium text-gray-500">
+              File Type
+            </h3>
             <p className="text-sm">{document.fileType}</p>
           </div>
           <div>
@@ -204,9 +273,9 @@ export function DocumentDetailModal({
 }
 
 function formatFileSize(bytes: number): string {
-  if (bytes === 0) return "0 Bytes"
+  if (bytes === 0) return '0 Bytes'
   const k = 1024
-  const sizes = ["Bytes", "KB", "MB", "GB"]
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
+  return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }

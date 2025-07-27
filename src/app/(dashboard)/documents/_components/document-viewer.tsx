@@ -676,6 +676,9 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
           }}
           openInEditMode={openModalInEditMode}
           onSave={handleDocumentRename}
+          onDeleteClick={handleDeleteClick}
+          onShareClick={handleShareClick}
+          onMoveClick={handleMoveClick}
         />
 
         <FilterModal
