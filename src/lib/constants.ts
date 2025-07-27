@@ -1,3 +1,12 @@
+import { QuickAction } from '@/types'
+import {
+  BarChart3,
+  FileText,
+  Home,
+  MapPin,
+  Settings
+} from 'lucide-react'
+
 export const APP_CONFIG = {
   name: 'RealEase',
   description: 'Modern real estate management platform',
@@ -70,5 +79,29 @@ export const PROPERTY_STATUS = [
   'off-market',
 ] as const
 
+export const navigationItems = [
+  { icon: Home, label: 'Dashboard', href: '/' },
+  { icon: MapPin, label: 'Properties', href: '/properties' },
+  { icon: BarChart3, label: 'Analytics', href: '/analytics' },
+  { icon: FileText, label: 'Documents', href: '/documents' },
+]
+
+export const navigationItemSection = [
+  { icon: Settings, label: 'Settings', href: '/settings' },
+]
+
+export const QUICK_ACTIONS_HOME: QuickAction[] = [
+  { id: '1', label: 'Bulk Upload', value: 'bulk_upload' },
+  { id: '2', label: 'Share Docs', value: 'share_docs' },
+  { id: '3', label: 'Add Members', value: 'add_members' },
+  { id: '4', label: 'Access Controls', value: 'access_controls' },
+  { id: '5', label: 'Create Report', value: 'create_report' },
+]
+
+export const QUICK_ACTIONS_DOCS: QuickAction[] = [
+  { id: '1', label: 'Add Docs', value: 'add_docs' },
+  { id: '2', label: 'Share Docs', value: 'share_docs' },
+]
+
 export type PropertyType = (typeof PROPERTY_TYPES)[number]
-export type PropertyStatus = (typeof PROPERTY_STATUS)[number] 
+export type PropertyStatus = (typeof PROPERTY_STATUS)[number]
