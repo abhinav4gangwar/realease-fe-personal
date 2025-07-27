@@ -5,35 +5,35 @@ interface FileIconProps {
   className?: string
 }
 
-export function FileIcon({ type, className = "w-5 h-7" }: FileIconProps) {
+export function FileIcon({ type, className = "w-5 h-6" }: FileIconProps) {
   const getIconPath = () => {
     switch (type.toLowerCase()) {
       case "pdf":
-        return "/assets/doc-icons/pdf.png"
+        return "/assets/doc-icons/pdf.svg"
       case "word":
       case "docx":
       case "doc":
-        return "/assets/doc-icons/doc.png"
+        return "/assets/doc-icons/doc.svg"
       case "excel":
       case "xlsx":
       case "xls":
-        return "/assets/doc-icons/xls.png"
+        return "/assets/doc-icons/xls.svg"
       case "powerpoint":
       case "pptx":
       case "ppt":
-        return "/assets/doc-icons/ppt.png"
+        return "/assets/doc-icons/ppt.svg"
       case "folder":
-        return "/assets/doc-icons/folder.png"
+        return "/assets/doc-icons/folder.svg"
       case "img":
-        return "/assets/doc-icons/img.png"
+        return "/assets/doc-icons/img.svg"
       default:
-        return "/assets/doc-icons/kml.png"
+        return "/assets/doc-icons/kml.svg"
     }
   }
 
   return (
     <Image
-      src={getIconPath() || "/zip.png"}
+      src={getIconPath() || "/zip.svg"}
       alt={`${type} file icon`}
       width={20}
       height={20}
