@@ -97,7 +97,7 @@ export function DocumentDetailModal({
   }
 
   return (
-    <div className="fixed top-0 right-0 flex h-full w-[400px] flex-col border-l border-none bg-white shadow-lg">
+    <div className="fixed top-0 right-0 flex h-full w-[380px] flex-col border-l border-none bg-white shadow-lg">
       {/* Header */}
       <div className="flex items-center justify-between p-4 pt-24">
         <div className="flex min-w-0 flex-1 items-center gap-2">

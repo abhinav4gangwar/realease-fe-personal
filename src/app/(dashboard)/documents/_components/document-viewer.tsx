@@ -581,7 +581,7 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
   }
 
   return (
-    <div className={`transition-all duration-300 ${isModalOpen ? "mr-[350px]" : ""}`}>
+    <div className={`transition-all duration-300 ${isModalOpen ? "mr-[343px]" : ""}`}>
       <div className="flex justify-between pb-4">
         <div className="text-secondary text-2xl font-semibold lg:text-3xl">Documents</div>
         <div className="flex items-center gap-4">

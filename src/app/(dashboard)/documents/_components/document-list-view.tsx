@@ -56,10 +56,10 @@ export function DocumentListView({
     <div className="space-y-1">
       {/* Header */}
       <div className="text-md text-secondary grid grid-cols-12 gap-4 px-4 py-2 font-semibold">
-        <div className="col-span-4">Name</div>
-        <div className="col-span-3">Linked Property</div>
-        <div className="col-span-2">Date Added</div>
-        <div className="col-span-2">Tags</div>
+        <div className="col-span-3">Name</div>
+        <div className="col-span-4 text-center">Linked Property</div>
+        <div className="col-span-2 text-center">Date Added</div>
+        <div className="col-span-2 text-center">Tags</div>
       </div>
       {/* Document Rows */}
       {documents.map((document) => (
@@ -74,7 +74,7 @@ export function DocumentListView({
           onMouseLeave={() => setHoveredRow(null)}
           onClick={() => handleRowClick(document)}
         >
-          <div className="col-span-4 flex items-center gap-3">
+          <div className="col-span-3 flex items-center gap-3">
             <input
               type="checkbox"
               checked={selectedDocuments?.includes(document.id) || false}
@@ -93,15 +93,15 @@ export function DocumentListView({
               {document.name}
             </span>
           </div>
-          <div className="col-span-3 truncate text-sm text-[#9B9B9D]">
+          <div className="col-span-4 truncate text-sm text-[#9B9B9D] text-center">
             {document.linkedProperty}
           </div>
-          <div className="col-span-2 text-sm text-[#9B9B9D]">
+          <div className="col-span-2 text-sm text-[#9B9B9D] text-center">
             {document.dateAdded}
           </div>
-          <div className="col-span-2 truncate text-sm text-[#9B9B9D]">
+          <div className="col-span-2 truncate text-sm text-[#9B9B9D] text-center">
             {hoveredRow === document.id && !isShareMode ? (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 justify-center">
                 <Button
                   variant="ghost"
                   size="icon"
