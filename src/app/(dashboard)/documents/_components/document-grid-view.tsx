@@ -5,14 +5,14 @@ import { Card, CardContent } from '@/components/ui/card'
 import type { Document } from '@/types/document.types'
 import {
   Download,
-  Edit,
+  FolderInput,
   Info,
   Loader2,
-  Move,
-  Share,
-  Trash2,
+  Pencil,
+  Trash2
 } from 'lucide-react'
 import { useState } from 'react'
+import { HiShare } from 'react-icons/hi2'
 import { FileIcon } from './file-icon'
 
 interface DocumentGridViewProps {
@@ -59,10 +59,8 @@ export function DocumentGridView({
       {documents.map((document) => (
         <Card
           key={document.id}
-          className={`rounded-sm border-none transition-shadow hover:bg-[#A2CFE333] hover:shadow-md ${
-            selectedDocumentId === document.id
-              ? 'bg-[#A2CFE333]'
-              : ''
+          className={`cursor-pointer rounded-sm border-none transition-shadow hover:bg-[#A2CFE333] hover:shadow-md ${
+            selectedDocumentId === document.id ? 'bg-[#A2CFE333]' : ''
           }`}
           onMouseEnter={() => setHoveredCard(document.id)}
           onMouseLeave={() => setHoveredCard(null)}
@@ -76,7 +74,7 @@ export function DocumentGridView({
                   checked={selectedDocuments?.includes(document.id) || false}
                   onChange={() => onDocumentSelect?.(document.id)}
                   onClick={(e) => e.stopPropagation()}
-                  className="h-4 w-4 flex-shrink-0 accent-[#f56161]"
+                  className="h-4 w-4 flex-shrink-0 cursor-pointer accent-[#f56161]"
                 />
 
                 <div className="flex items-center gap-2">
@@ -85,13 +83,15 @@ export function DocumentGridView({
                     <Loader2 className="h-4 w-4 animate-spin" />
                   )}
                 </div>
-                <h3 className="text-md truncate max-w-[160px]">{document.name}</h3>
+                <h3 className="text-md max-w-[160px] truncate">
+                  {document.name}
+                </h3>
                 {hoveredCard === document.id && !isShareMode && (
-                  <div className="ml-2 flex items-center gap-1">
+                  <div className="ml-2 flex items-center gap-1 text-[#9B9B9D]">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-5 w-5"
+                      className="hover:text-primary h-5 w-5 cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation()
                         if (onEditClick) {
@@ -99,12 +99,12 @@ export function DocumentGridView({
                         }
                       }}
                     >
-                      <Edit className="h-3 w-3" />
+                      <Pencil className="h-3 w-3" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6"
+                      className="hover:text-primary h-5 w-5 cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation()
                         if (onMoveClick) {
@@ -112,12 +112,19 @@ export function DocumentGridView({
                         }
                       }}
                     >
-                      <Move className="h-3 w-3" />
+                      <FolderInput className="h-3 w-3" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-5 w-5"
+                      className="hover:text-primary h-5 w-5 cursor-pointer"
+                    >
+                      <Download className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                       className="hover:text-primary h-5 w-5 cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation()
                         if (onShareClick) {
@@ -125,11 +132,9 @@ export function DocumentGridView({
                         }
                       }}
                     >
-                      <Share className="h-3 w-3" />
+                      <HiShare className="h-3 w-3" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-5 w-5">
-                      <Download className="h-3 w-3" />
-                    </Button>
+
                     <Button
                       variant="ghost"
                       size="icon"

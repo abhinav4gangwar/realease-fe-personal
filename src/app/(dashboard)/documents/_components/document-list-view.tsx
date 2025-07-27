@@ -1,17 +1,16 @@
 'use client'
 import { Button } from '@/components/ui/button'
-
 import type { Document } from '@/types/document.types'
 import {
   Download,
-  Edit,
+  FolderInput,
   Info,
   Loader2,
-  Move,
-  Share,
+  Pencil,
   Trash2,
 } from 'lucide-react'
 import { useState } from 'react'
+import { HiShare } from 'react-icons/hi2'
 import { FileIcon } from './file-icon'
 
 interface DocumentListViewProps {
@@ -66,7 +65,7 @@ export function DocumentListView({
       {documents.map((document) => (
         <div
           key={document.id}
-          className={`grid grid-cols-12 items-center px-4 py-3 hover:rounded-md hover:bg-[#A2CFE333] ${
+          className={`grid cursor-pointer grid-cols-12 items-center px-4 py-3 hover:rounded-md hover:bg-[#A2CFE333] ${
             selectedDocumentId === document.id
               ? 'border-blue-200 bg-blue-50'
               : ''
@@ -106,7 +105,7 @@ export function DocumentListView({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6"
+                  className="hover:text-primary h-6 w-6 cursor-pointer"
                   onClick={(e) => {
                     e.stopPropagation()
                     if (onEditClick) {
@@ -114,12 +113,12 @@ export function DocumentListView({
                     }
                   }}
                 >
-                  <Edit className="h-3 w-3" />
+                  <Pencil className="h-3 w-3" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6"
+                  className="hover:text-primary h-6 w-6 cursor-pointer"
                   onClick={(e) => {
                     e.stopPropagation()
                     if (onMoveClick) {
@@ -127,12 +126,19 @@ export function DocumentListView({
                     }
                   }}
                 >
-                  <Move className="h-3 w-3" />
+                  <FolderInput className="h-3 w-3" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6"
+                  className="hover:text-primary h-6 w-6 cursor-pointer"
+                >
+                  <Download className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="hover:text-primary h-6 w-6 cursor-pointer"
                   onClick={(e) => {
                     e.stopPropagation()
                     if (onShareClick) {
@@ -140,15 +146,13 @@ export function DocumentListView({
                     }
                   }}
                 >
-                  <Share className="h-3 w-3" />
+                  <HiShare className="h-3 w-3" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-6 w-6">
-                  <Download className="h-3 w-3" />
-                </Button>
+
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6"
+                  className="hover:text-primary h-6 w-6 cursor-pointer"
                   onClick={(e) => {
                     e.stopPropagation()
                     if (onDeleteClick) {
@@ -174,7 +178,7 @@ export function DocumentListView({
                   onDocumentInfo(document)
                 }}
               >
-                <Info className="h-6 w-6 font-semibold text-[#9B9B9D]" />
+                <Info className="hover:text-primary h-6 w-6 font-semibold text-[#9B9B9D]" />
               </Button>
             )}
           </div>
