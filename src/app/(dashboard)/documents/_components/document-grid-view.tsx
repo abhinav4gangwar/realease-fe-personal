@@ -1,23 +1,17 @@
-'use client'
-import { Button } from '@/components/ui/button'
+"use client"
 
-import { Card, CardContent } from '@/components/ui/card'
-import type { Document } from '@/types/document.types'
-import {
-  Download,
-  FolderInput,
-  Info,
-  Loader2,
-  Pencil,
-  Trash2,
-} from 'lucide-react'
-import { useState } from 'react'
-import { HiShare } from 'react-icons/hi2'
-import { FileIcon } from './file-icon'
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import type { Document } from "@/types/document.types"
+import { Download, Eye, FolderInput, Info, Loader2, Pencil, Trash2 } from "lucide-react"
+import { useState } from "react"
+import { HiShare } from "react-icons/hi2"
+import { FileIcon } from "./file-icon"
 
 interface DocumentGridViewProps {
   documents: Document[]
   onDocumentInfo: (document: Document) => void
+  onDocumentPreview?: (document: Document) => void
   onFolderClick?: (document: Document) => void
   selectedDocumentId?: string
   isShareMode?: boolean
@@ -34,6 +28,7 @@ interface DocumentGridViewProps {
 export function DocumentGridView({
   documents,
   onDocumentInfo,
+  onDocumentPreview,
   onFolderClick,
   selectedDocumentId,
   isShareMode,
@@ -49,9 +44,13 @@ export function DocumentGridView({
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
 
   const handleCardClick = (document: Document) => {
-    if (document.isFolder && onFolderClick && !isShareMode) {
+    if (isShareMode) return
+
+    if (document.isFolder && onFolderClick) {
       onFolderClick(document)
-    } else if (!isShareMode) {
+    } else if (onDocumentPreview) {
+      onDocumentPreview(document)
+    } else {
       onDocumentInfo(document)
     }
   }
@@ -62,7 +61,7 @@ export function DocumentGridView({
         <Card
           key={document.id}
           className={`cursor-pointer rounded-sm border-none transition-shadow hover:bg-[#A2CFE333] hover:shadow-md ${
-            selectedDocumentId === document.id ? 'bg-[#A2CFE333]' : ''
+            selectedDocumentId === document.id ? "bg-[#A2CFE333]" : ""
           }`}
           onMouseEnter={() => setHoveredCard(document.id)}
           onMouseLeave={() => setHoveredCard(null)}
@@ -78,18 +77,26 @@ export function DocumentGridView({
                   onClick={(e) => e.stopPropagation()}
                   className="h-4 w-4 flex-shrink-0 cursor-pointer accent-[#f56161]"
                 />
-
                 <div className="flex items-center gap-2">
                   <FileIcon type={document.icon} className="h-7 w-6" />
-                  {loadingFolders.has(document.id) && document.isFolder && (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  )}
+                  {loadingFolders.has(document.id) && document.isFolder && <Loader2 className="h-4 w-4 animate-spin" />}
                 </div>
-                <h3 className="text-md max-w-[160px] truncate">
-                  {document.name}
-                </h3>
+                <h3 className="text-md max-w-[160px] truncate">{document.name}</h3>
                 {hoveredCard === document.id && !isShareMode && (
                   <div className="ml-2 flex items-center gap-1 text-[#9B9B9D]">
+                    {!document.isFolder && onDocumentPreview && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="hover:text-primary h-5 w-5 cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onDocumentPreview(document)
+                        }}
+                      >
+                        <Eye className="h-3 w-3" />
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
@@ -142,7 +149,6 @@ export function DocumentGridView({
                     >
                       <HiShare className="h-3 w-3" />
                     </Button>
-
                     <Button
                       variant="ghost"
                       size="icon"
