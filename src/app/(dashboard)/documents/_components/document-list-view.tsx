@@ -25,6 +25,7 @@ interface DocumentListViewProps {
   onDeleteClick?: (document: Document) => void
   onMoveClick?: (document: Document) => void
   onShareClick?: (document: Document) => void
+  onDownloadClick?: (document: Document) => void
   loadingFolders?: Set<string>
 }
 
@@ -40,6 +41,7 @@ export function DocumentListView({
   onMoveClick,
   onDeleteClick,
   onShareClick,
+  onDownloadClick,
   loadingFolders = new Set(),
 }: DocumentListViewProps) {
   const [hoveredRow, setHoveredRow] = useState<string | null>(null)
@@ -93,15 +95,15 @@ export function DocumentListView({
               {document.name}
             </span>
           </div>
-          <div className="col-span-4 truncate text-sm text-[#9B9B9D] text-center">
+          <div className="col-span-4 truncate text-center text-sm text-[#9B9B9D]">
             {document.linkedProperty}
           </div>
-          <div className="col-span-2 text-sm text-[#9B9B9D] text-center">
+          <div className="col-span-2 text-center text-sm text-[#9B9B9D]">
             {document.dateAdded}
           </div>
-          <div className="col-span-2 truncate text-sm text-[#9B9B9D] text-center">
+          <div className="col-span-2 truncate text-center text-sm text-[#9B9B9D]">
             {hoveredRow === document.id && !isShareMode ? (
-              <div className="flex items-center gap-1 justify-center">
+              <div className="flex items-center justify-center gap-1">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -132,6 +134,12 @@ export function DocumentListView({
                   variant="ghost"
                   size="icon"
                   className="hover:text-primary h-6 w-6 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (onDownloadClick) {
+                      onDownloadClick(document)
+                    }
+                  }}
                 >
                   <Download className="h-3 w-3" />
                 </Button>

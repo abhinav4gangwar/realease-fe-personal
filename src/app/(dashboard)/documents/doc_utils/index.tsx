@@ -1,4 +1,6 @@
 import { Document } from '@/types/document.types'
+import { apiClient } from '@/utils/api'
+import { toast } from 'sonner'
 
 export const getAllFolders = (documents: Document[]) => {
   const folders: Document[] = []
@@ -45,3 +47,29 @@ export const getFileCounts = (documents: Document[]) => {
   return `${folders} Folders & ${files} Files`
 }
 
+export const handleDownloadClick = async (document: Document) => {
+  try {
+    const response = await apiClient.get(
+      `/dashboard/documents/download/${document.id}`
+    )
+
+    const downloadUrl = response?.data?.url
+
+    if (downloadUrl) {
+      const link = window.document.createElement('a')
+      link.href = downloadUrl
+      link.download = document.name || 'download'
+      window.document.body.appendChild(link)
+      link.click()
+      window.document.body.removeChild(link)
+      toast.success('Download started successfully!')
+    } else {
+      toast.error('No download URL received')
+    }
+  } catch (error: any) {
+    const errorMessage =
+      error?.response?.data?.error || error?.message || 'Download failed'
+    toast.error(errorMessage)
+    console.log(error)
+  }
+}

@@ -9,7 +9,7 @@ import {
   Info,
   Loader2,
   Pencil,
-  Trash2
+  Trash2,
 } from 'lucide-react'
 import { useState } from 'react'
 import { HiShare } from 'react-icons/hi2'
@@ -27,6 +27,7 @@ interface DocumentGridViewProps {
   onDeleteClick?: (document: Document) => void
   onMoveClick?: (document: Document) => void
   onShareClick?: (document: Document) => void
+  onDownloadClick?: (document: Document) => void
   loadingFolders?: Set<string>
 }
 
@@ -42,6 +43,7 @@ export function DocumentGridView({
   onMoveClick,
   onEditClick,
   onShareClick,
+  onDownloadClick,
   loadingFolders = new Set(),
 }: DocumentGridViewProps) {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
@@ -118,13 +120,19 @@ export function DocumentGridView({
                       variant="ghost"
                       size="icon"
                       className="hover:text-primary h-5 w-5 cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (onDownloadClick) {
+                          onDownloadClick(document)
+                        }
+                      }}
                     >
                       <Download className="h-3 w-3" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                       className="hover:text-primary h-5 w-5 cursor-pointer"
+                      className="hover:text-primary h-5 w-5 cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation()
                         if (onShareClick) {

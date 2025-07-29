@@ -25,6 +25,7 @@ interface DocumentDetailModalProps {
   onDeleteClick?: (document: Document) => void
   onShareClick?: (document: Document) => void
   onMoveClick?: (document: Document) => void
+  onDownloadClick?: (document: Document) => void
 }
 
 export function DocumentDetailModal({
@@ -36,6 +37,7 @@ export function DocumentDetailModal({
   onDeleteClick,
   onShareClick,
   onMoveClick,
+  onDownloadClick,
 }: DocumentDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editedName, setEditedName] = useState('')
@@ -174,7 +176,15 @@ export function DocumentDetailModal({
                     Move
                   </DropdownMenuItem>
 
-                  <DropdownMenuItem className="cursor-pointer font-semibold hover:bg-[#A2CFE333]">
+                  <DropdownMenuItem
+                    className="cursor-pointer font-semibold hover:bg-[#A2CFE333]"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if ( onDownloadClick) {
+                         onDownloadClick(document)
+                      }
+                    }}
+                  >
                     Download
                   </DropdownMenuItem>
                   <DropdownMenuItem
