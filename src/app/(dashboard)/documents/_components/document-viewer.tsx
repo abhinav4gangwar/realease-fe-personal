@@ -11,7 +11,7 @@ import type {
 } from "@/types/document.types"
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { findFolderById, getAllFolders, getFileCounts, getFolderCounts } from "../doc_utils"
+import { findFolderById, getAllFolders, getFileCounts, getFolderCounts, handleDownloadClick } from "../doc_utils"
 import { ActionsButton } from "./actions-button"
 import { AddButton, type addType } from "./add-button"
 import { BreadcrumbNavigation } from "./breadcrumb-navigation"
@@ -24,6 +24,8 @@ import { DocumentListView } from "./document-list-view"
 import { FilterButton } from "./filter-button"
 import { FilterModal } from "./filter-modal"
 import { MoveDocumentModal } from "./move-document-modal"
+
+import { PDFPreviewModal } from "./pdf-preview-modal"
 import ScrollToTop from "./scroll-to-top"
 import { SelectedDocsModal } from "./selected-docs-modal"
 import { ShareEmailModal } from "./share-email-modal"
@@ -42,6 +44,7 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
   const [viewMode, setViewMode] = useState<ViewMode>("list")
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false)
   const [sortField, setSortField] = useState<SortField>("dateAdded")
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc")
   const [recentPage, setRecentPage] = useState(1)
@@ -73,11 +76,21 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
 
   const itemsPerPage = 15
 
- 
   const handleDocumentInfo = (document: Document) => {
     setSelectedDocument(document)
     setOpenModalInEditMode(false)
     setIsModalOpen(true)
+  }
+
+  const handleDocumentPreview = (document: Document) => {
+    if (document.isFolder) {
+      // For folders, use the existing folder click logic
+      handleFolderClick(document)
+    } else {
+      // For files, open the PDF preview modal
+      setSelectedDocument(document)
+      setIsPdfPreviewOpen(true)
+    }
   }
 
   const handleDocumentRename = async (documentId: string, newName: string) => {
@@ -86,7 +99,7 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
         itemId: Number.parseInt(documentId),
         newName: newName,
       })
-      // Update the document in the state
+
       const updateDocumentInArray = (docs: Document[]): Document[] => {
         return docs.map((doc) => {
           if (doc.id === documentId) {
@@ -101,12 +114,10 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
 
       setDocumentsState((prevDocs) => updateDocumentInArray(prevDocs))
 
-      // Update the selected document if it's the one being renamed
       if (selectedDocument?.id === documentId) {
         setSelectedDocument((prev) => (prev ? { ...prev, name: newName } : null))
       }
 
-      // Update current folder if it's the one being renamed
       if (currentFolder?.id === documentId) {
         setCurrentFolder((prev) => (prev ? { ...prev, name: newName } : null))
       }
@@ -126,11 +137,9 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
       const response = await apiClient.get(`/dashboard/documents/list?parentId=${folderId}`)
       const folderContents = transformApiResponse(response.data)
 
-      // Update the folder's children in the documents state
       setDocumentsState((prevDocs) =>
         prevDocs.map((doc) => (doc.id === folderId ? { ...doc, children: folderContents } : doc)),
       )
-
       return folderContents
     } catch (error) {
       console.error("Error fetching folder contents:", error)
@@ -145,7 +154,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
   }
 
   const handleFolderClick = async (folder: Document) => {
-    // If folder doesn't have children loaded, fetch them
     if (!folder.children || folder.children.length === 0) {
       const folderContents = await fetchFolderContents(folder.id)
       const updatedFolder = { ...folder, children: folderContents }
@@ -153,7 +161,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
     } else {
       setCurrentFolder(folder)
     }
-
     setBreadcrumbs((prev) => [...prev, { name: `${folder.name} (${getFolderCounts(folder)})`, id: folder.id }])
   }
 
@@ -162,9 +169,7 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
       setCurrentFolder(null)
       setBreadcrumbs([{ name: "Documents" }])
     } else {
-      // Navigate to specific folder level
       setBreadcrumbs((prev) => prev.slice(0, index + 1))
-      // Find the folder to navigate to based on breadcrumb
       const targetBreadcrumb = breadcrumbs[index]
       if (targetBreadcrumb.id) {
         const targetFolder = findFolderById(targetBreadcrumb.id, documentsState)
@@ -185,7 +190,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
   }
 
   const handleShareClick = (document: Document) => {
-    // Set individual share mode and add the document to selected documents
     setIsIndividualShare(true)
     setSelectedDocuments([document.id])
     setSelectedDocument(document)
@@ -201,7 +205,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
     return documents.sort((a, b) => {
       let aValue: string
       let bValue: string
-
       if (sortField === "dateAdded") {
         aValue = a.dateAdded
         bValue = b.dateAdded
@@ -209,7 +212,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
         aValue = a[sortField]
         bValue = b[sortField]
       }
-
       if (sortOrder === "asc") {
         return aValue.localeCompare(bValue)
       } else {
@@ -222,19 +224,15 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
     if (filterState.type === "none") {
       return documents
     }
-
     if (filterState.type === "property") {
       return documents.filter((doc) => filterState.selectedProperties.includes(doc.linkedProperty))
     }
-
     if (filterState.type === "type") {
       return documents.filter((doc) => filterState.selectedTypes.includes(doc.fileType))
     }
-
     if (filterState.type === "recent") {
       return documents.slice().sort((a, b) => b.dateAdded.localeCompare(a.dateAdded))
     }
-
     return documents
   }
 
@@ -242,7 +240,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
     if (filterState.type === "none") {
       return { [`Files & Folders (${getFileCounts(documents)})`]: documents }
     }
-
     if (filterState.type === "property") {
       return documents.reduce(
         (groups, doc) => {
@@ -254,7 +251,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
         {} as Record<string, Document[]>,
       )
     }
-
     if (filterState.type === "type") {
       return documents.reduce(
         (groups, doc) => {
@@ -266,11 +262,9 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
         {} as Record<string, Document[]>,
       )
     }
-
     return { "Recently Uploaded": documents }
   }
 
-  // Use documentsState instead of allFiles for current documents
   const currentDocuments = currentFolder ? currentFolder.children || [] : documentsState
 
   const processedAllFiles = useMemo(() => {
@@ -321,7 +315,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
 
   const confirmDelete = async () => {
     if (!selectedDocument) return
-
     try {
       const response = await apiClient.delete("/dashboard/documents/delete", {
         data: [
@@ -331,7 +324,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
         ],
       })
 
-      // Remove the document from the state
       const removeDocumentFromArray = (docs: Document[]): Document[] => {
         return docs.filter((doc) => {
           if (doc.id === selectedDocument.id) {
@@ -346,7 +338,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
 
       setDocumentsState((prevDocs) => removeDocumentFromArray(prevDocs))
 
-      // Update current folder if we're inside one
       if (currentFolder) {
         const updatedChildren = currentFolder.children?.filter((child) => child.id !== selectedDocument.id) || []
         const updatedFolder = { ...currentFolder, children: updatedChildren }
@@ -355,7 +346,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
 
       setOpenDeleteModal(false)
       setSelectedDocument(null)
-
       const successMessage = response.data?.message || "Document deleted successfully"
       toast.success(successMessage)
     } catch (error: any) {
@@ -367,17 +357,14 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
 
   const handleBulkDelete = async () => {
     if (selectedDocuments.length === 0) return
-
     try {
       const deletePayload = selectedDocuments.map((id) => ({
         itemId: Number.parseInt(id),
       }))
-
       const response = await apiClient.delete("/dashboard/documents/delete", {
         data: deletePayload,
       })
 
-      // Remove the documents from the state
       const removeDocumentsFromArray = (docs: Document[]): Document[] => {
         return docs.filter((doc) => {
           if (selectedDocuments.includes(doc.id)) {
@@ -392,16 +379,13 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
 
       setDocumentsState((prevDocs) => removeDocumentsFromArray(prevDocs))
 
-      // Update current folder if we're inside one
       if (currentFolder) {
         const updatedChildren = currentFolder.children?.filter((child) => !selectedDocuments.includes(child.id)) || []
         const updatedFolder = { ...currentFolder, children: updatedChildren }
         setCurrentFolder(updatedFolder)
       }
 
-      // Reset selection mode
       resetSelectMode()
-
       const successMessage = response.data?.message || `${selectedDocuments.length} documents deleted successfully`
       toast.success(successMessage)
     } catch (error: any) {
@@ -413,19 +397,14 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
 
   const handleBulkMove = async (newParentId: string | null) => {
     if (selectedDocuments.length === 0) return
-
     try {
       const movePayload = selectedDocuments.map((id) => ({
         itemId: Number.parseInt(id),
         newParentId: newParentId ? Number.parseInt(newParentId) : null,
       }))
-
       await apiClient.put("/dashboard/documents/move", movePayload)
       await handleUploadSuccess()
-
-      // Reset selection mode
       resetSelectMode()
-
       toast.success(`${selectedDocuments.length} documents moved successfully`)
     } catch (error: any) {
       console.error("Error moving documents:", error)
@@ -462,7 +441,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
         break
       case "download":
         if (selectedDocuments.length > 0) {
-          // Handle bulk download
           console.log("Bulk download:", selectedDocuments)
           toast.info("Bulk download functionality to be implemented")
         }
@@ -520,20 +498,17 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
   }
 
   const getSelectedDocumentObjects = () => {
-    const allDocs = [...documentsState] //have to add recently accessed
+    const allDocs = [...documentsState]
     const allDocsWithChildren: Document[] = []
-
     allDocs.forEach((doc) => {
       allDocsWithChildren.push(doc)
       if (doc.children) {
         allDocsWithChildren.push(...doc.children)
       }
     })
-
     return selectedDocuments.map((id) => allDocsWithChildren.find((doc) => doc.id === id)).filter(Boolean) as Document[]
   }
 
-  // Update documentsState when allFiles prop changes
   useEffect(() => {
     setDocumentsState(allFiles)
   }, [allFiles])
@@ -543,7 +518,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
       const response = await apiClient.get("/dashboard/documents/list")
       const updatedDocuments = transformApiResponse(response.data)
       setDocumentsState(updatedDocuments)
-
       if (currentFolder) {
         const folderResponse = await apiClient.get(`/dashboard/documents/list?parentId=${currentFolder.id}`)
         const folderContents = transformApiResponse(folderResponse.data)
@@ -551,7 +525,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
         setCurrentFolder(updatedFolder)
         setDocumentsState((prevDocs) => prevDocs.map((doc) => (doc.id === currentFolder.id ? updatedFolder : doc)))
       }
-
       toast.success("Documents updated successfully")
     } catch (error) {
       console.error("Error refreshing documents:", error)
@@ -567,10 +540,8 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
           newParentId: newParentId ? Number.parseInt(newParentId) : null,
         },
       ]
-
       await apiClient.put("/dashboard/documents/move", movePayload)
       await handleUploadSuccess()
-
       toast.success(`Document moved successfully`)
     } catch (error: any) {
       console.error("Error moving document:", error)
@@ -620,6 +591,7 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
                     <DocumentListView
                       documents={paginatedDocuments}
                       onDocumentInfo={handleDocumentInfo}
+                      onDocumentPreview={handleDocumentPreview}
                       onFolderClick={handleFolderClick}
                       selectedDocumentId={selectedDocument?.id}
                       isShareMode={isSelectMode}
@@ -630,12 +602,14 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
                       onDeleteClick={handleDeleteClick}
                       onMoveClick={handleMoveClick}
                       onShareClick={handleShareClick}
+                      onDownloadClick={handleDownloadClick}
                     />
                   ) : (
                     <div>
                       <DocumentGridView
                         documents={paginatedDocuments}
                         onDocumentInfo={handleDocumentInfo}
+                        onDocumentPreview={handleDocumentPreview}
                         onFolderClick={handleFolderClick}
                         selectedDocumentId={selectedDocument?.id}
                         isShareMode={isSelectMode}
@@ -646,6 +620,7 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
                         onDeleteClick={handleDeleteClick}
                         onMoveClick={handleMoveClick}
                         onShareClick={handleShareClick}
+                        onDownloadClick={handleDownloadClick}
                       />
                     </div>
                   )}
@@ -680,6 +655,18 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
           onDeleteClick={handleDeleteClick}
           onShareClick={handleShareClick}
           onMoveClick={handleMoveClick}
+          onDownloadClick={handleDownloadClick}
+        />
+
+        {/* PDF Preview Modal */}
+        <PDFPreviewModal
+          document={selectedDocument}
+          isOpen={isPdfPreviewOpen}
+          onClose={() => {
+            setIsPdfPreviewOpen(false)
+            setSelectedDocument(null)
+          }}
+          apiClient={apiClient}
         />
 
         <FilterModal

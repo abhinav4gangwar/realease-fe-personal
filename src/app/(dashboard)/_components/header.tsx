@@ -5,7 +5,7 @@ import { Bell, CircleUser, Search } from 'lucide-react'
 
 export function Header() {
   return (
-    <header className="bg-white px-6 py-4 shadow-sm z-50">
+    <header className="bg-white px-6 py-4 shadow-sm z-40">
       <div className="flex items-center justify-between">
         {/* Search Bar */}
         <div className="mx-8 max-w-6xl flex-1">
