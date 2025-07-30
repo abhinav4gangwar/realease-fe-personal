@@ -24,7 +24,8 @@ import { DocumentListView } from "./document-list-view"
 import { FilterButton } from "./filter-button"
 import { FilterModal } from "./filter-modal"
 import { MoveDocumentModal } from "./move-document-modal"
-import { PdfPreviewModal } from "./pdf-preview-modal"
+
+import { PDFPreviewModal } from "./pdf-preview-modal"
 import ScrollToTop from "./scroll-to-top"
 import { SelectedDocsModal } from "./selected-docs-modal"
 import { ShareEmailModal } from "./share-email-modal"
@@ -658,7 +659,7 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
         />
 
         {/* PDF Preview Modal */}
-        <PdfPreviewModal
+        <PDFPreviewModal
           document={selectedDocument}
           isOpen={isPdfPreviewOpen}
           onClose={() => {
@@ -666,10 +667,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
             setSelectedDocument(null)
           }}
           apiClient={apiClient}
-          onEditClick={handleEditClick}
-          onShareClick={handleShareClick}
-          onDownloadClick={handleDownloadClick}
-          onInfoClick={handleDocumentInfo}
         />
 
         <FilterModal
