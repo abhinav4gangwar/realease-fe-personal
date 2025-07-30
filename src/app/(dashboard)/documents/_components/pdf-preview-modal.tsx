@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import type { Document as DocumentType } from "@/types/document.types"
 import { clsx } from "clsx"
-import { ChevronLeft, ChevronRight, MessageSquare, Search, X } from "lucide-react"
+import { ChevronLeft, ChevronRight, Edit3, Loader2, MessageSquare, Search, Trash2, X } from "lucide-react"
 import {
   useEffect,
   useRef,
@@ -19,36 +19,15 @@ import {
 import { Document, Page, pdfjs } from "react-pdf"
 import "react-pdf/dist/Page/AnnotationLayer.css"
 import "react-pdf/dist/Page/TextLayer.css"
+import { toast } from "sonner"
 import { twMerge } from "tailwind-merge"
+import { CommentService, type Comment, type CommentAnnotation } from "../doc_utils/comment.services"
 
-// Set up PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js"
 
-// Type definitions
 interface User {
   id: string
   name: string
-}
-
-interface AnnotationRect {
-  x: number
-  y: number
-  width: number
-  height: number
-}
-
-interface AnnotationType {
-  id: string
-  page: number
-  rect: AnnotationRect
-}
-
-interface CommentType {
-  id: string
-  text: string
-  author: string
-  timestamp: string
-  annotation: AnnotationType
 }
 
 interface PDFPreviewModalProps {
@@ -69,21 +48,6 @@ const mockUsers: User[] = [
   { id: "user-2", name: "Grace Hopper" },
   { id: "user-3", name: "Margaret Hamilton" },
   { id: "user-4", name: "Katherine Johnson" },
-]
-
-// Mock comments data
-const mockComments: CommentType[] = [
-  {
-    id: "comment-1",
-    text: "Lorem Ipsum @User",
-    author: "Name",
-    timestamp: "02 Jul at 01:53 PM",
-    annotation: {
-      id: "anno-1",
-      page: 1,
-      rect: { x: 15, y: 25, width: 25, height: 3 },
-    },
-  },
 ]
 
 // Sub-components
@@ -122,9 +86,21 @@ interface CommentModalProps {
   onSubmit: (text: string) => void
   position: { x: number; y: number }
   users: User[]
+  isLoading?: boolean
+  editingComment?: Comment | null
+  onUpdate?: (commentId: number, text: string) => void
 }
 
-const CommentModal: FC<CommentModalProps> = ({ isOpen, onClose, onSubmit, position, users }) => {
+const CommentModal: FC<CommentModalProps> = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  onUpdate,
+  position,
+  users,
+  isLoading = false,
+  editingComment = null,
+}) => {
   const [commentText, setCommentText] = useState("")
   const [mentionSuggestions, setMentionSuggestions] = useState<User[]>([])
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0)
@@ -132,11 +108,11 @@ const CommentModal: FC<CommentModalProps> = ({ isOpen, onClose, onSubmit, positi
 
   useEffect(() => {
     if (isOpen) {
-      setCommentText("")
+      setCommentText(editingComment?.text || "")
       setMentionSuggestions([])
       setTimeout(() => textareaRef.current?.focus(), 100)
     }
-  }, [isOpen])
+  }, [isOpen, editingComment])
 
   const handleCommentTextChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value
@@ -196,8 +172,11 @@ const CommentModal: FC<CommentModalProps> = ({ isOpen, onClose, onSubmit, positi
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
     if (commentText.trim()) {
-      onSubmit(commentText)
-      onClose()
+      if (editingComment && onUpdate) {
+        onUpdate(editingComment.id, commentText)
+      } else {
+        onSubmit(commentText)
+      }
     }
   }
 
@@ -226,17 +205,19 @@ const CommentModal: FC<CommentModalProps> = ({ isOpen, onClose, onSubmit, positi
                 value={commentText}
                 onChange={handleCommentTextChange}
                 onKeyDown={handleKeyDown}
-                placeholder="Add a comment..."
+                placeholder={editingComment ? "Edit comment..." : "Add a comment..."}
                 className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition resize-none text-sm"
                 rows={3}
+                disabled={isLoading}
               />
             </div>
             <div className="mt-3 flex justify-end gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={onClose}>
+              <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isLoading}>
                 Cancel
               </Button>
-              <Button type="submit" size="sm" disabled={!commentText.trim()}>
-                Comment
+              <Button type="submit" size="sm" disabled={!commentText.trim() || isLoading}>
+                {isLoading && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+                {editingComment ? "Update" : "Comment"}
               </Button>
             </div>
           </form>
@@ -247,11 +228,22 @@ const CommentModal: FC<CommentModalProps> = ({ isOpen, onClose, onSubmit, positi
 }
 
 interface CommentMarkerProps {
-  comment: CommentType
+  comment: Comment
   onClick: () => void
+  onEdit: () => void
+  onDelete: () => void
+  isDeleting?: boolean
+  isActive?: boolean
 }
 
-const CommentMarker: FC<CommentMarkerProps> = ({ comment, onClick }) => {
+const CommentMarker: FC<CommentMarkerProps> = ({
+  comment,
+  onClick,
+  onEdit,
+  onDelete,
+  isDeleting = false,
+  isActive = false,
+}) => {
   const [isHovered, setIsHovered] = useState(false)
 
   return (
@@ -264,25 +256,63 @@ const CommentMarker: FC<CommentMarkerProps> = ({ comment, onClick }) => {
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={onClick}
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick()
+      }}
     >
-      <Avatar className="h-6 w-6 border-2 border-white shadow-md">
-        <AvatarFallback className="text-xs bg-blue-500 text-white">{comment.author.charAt(0)}</AvatarFallback>
+      <Avatar className={cn("h-6 w-6 border-2 border-white shadow-md", isActive && "ring-2 ring-blue-500")}>
+        <AvatarFallback className="text-xs bg-blue-500 text-white">
+          {comment.authorName?.charAt(0).toUpperCase() || comment.author.toString().charAt(0)}
+        </AvatarFallback>
       </Avatar>
 
-      {isHovered && (
+      {(isHovered || isActive) && (
         <Card className="absolute left-8 top-0 w-64 bg-white shadow-xl border-0 z-20">
           <CardContent className="p-3">
             <div className="flex items-start gap-2">
               <Avatar className="h-8 w-8">
-                <AvatarFallback className="text-xs bg-gray-500 text-white">{comment.author.charAt(0)}</AvatarFallback>
+                <AvatarFallback className="text-xs bg-gray-500 text-white">
+                  {comment.authorName?.charAt(0).toUpperCase() || comment.author.toString().charAt(0)}
+                </AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="font-medium text-sm">{comment.author}</span>
+                  <span className="font-medium text-sm">{comment.authorName || `User ${comment.author}`}</span>
                   <span className="text-xs text-gray-500">{comment.timestamp}</span>
                 </div>
-                <p className="text-sm text-gray-800">{comment.text}</p>
+                <p className="text-sm text-gray-800 mb-2">{comment.text}</p>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onEdit()
+                    }}
+                  >
+                    <Edit3 className="h-3 w-3 mr-1" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs text-red-600 hover:text-red-700"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onDelete()
+                    }}
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3 w-3 mr-1" />
+                    )}
+                    Delete
+                  </Button>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -293,7 +323,7 @@ const CommentMarker: FC<CommentMarkerProps> = ({ comment, onClick }) => {
 }
 
 interface AnnotationProps {
-  annotation: AnnotationType
+  annotation: CommentAnnotation
   isHighlighted?: boolean
 }
 
@@ -321,21 +351,37 @@ export function PDFPreviewModal({ isOpen, onClose, document, apiClient }: PDFPre
   const [isLoading, setIsLoading] = useState<boolean>(false)
 
   // Comments and annotations state
-  const [comments, setComments] = useState<CommentType[]>(mockComments)
+  const [comments, setComments] = useState<Comment[]>([])
   const [users] = useState<User[]>(mockUsers)
-  const [tempAnnotation, setTempAnnotation] = useState<AnnotationType | null>(null)
+  const [tempAnnotation, setTempAnnotation] = useState<CommentAnnotation | null>(null)
+  const [isLoadingComments, setIsLoadingComments] = useState<boolean>(false)
+  const [isCreatingComment, setIsCreatingComment] = useState<boolean>(false)
+  const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null)
+  const [activeCommentId, setActiveCommentId] = useState<number | null>(null)
 
   // Comment modal state
   const [isCommentModalOpen, setIsCommentModalOpen] = useState(false)
   const [commentModalPosition, setCommentModalPosition] = useState({ x: 0, y: 0 })
+  const [editingComment, setEditingComment] = useState<Comment | null>(null)
+
+  // Services
+  const [commentService, setCommentService] = useState<CommentService | null>(null)
 
   // Refs
   const pageRef = useRef<HTMLDivElement>(null)
 
-  // Load PDF when document changes
+  // Initialize comment service
+  useEffect(() => {
+    if (apiClient) {
+      setCommentService(new CommentService(apiClient))
+    }
+  }, [apiClient])
+
+  // Load PDF and comments when document changes
   useEffect(() => {
     if (isOpen && document && !document.isFolder) {
       loadPdf()
+      loadComments()
     }
   }, [isOpen, document])
 
@@ -353,8 +399,25 @@ export function PDFPreviewModal({ isOpen, onClose, document, apiClient }: PDFPre
       setPdfUrl(objectUrl)
     } catch (error) {
       console.error("Error loading PDF:", error)
+      toast.error("Failed to load PDF document")
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const loadComments = async () => {
+    if (!document || !commentService) return
+
+    setIsLoadingComments(true)
+    try {
+      const fetchedComments = await commentService.getComments(Number.parseInt(document.id))
+      setComments(fetchedComments)
+    } catch (error) {
+      console.error("Error loading comments:", error)
+      toast.error("Failed to load comments")
+      setComments([])
+    } finally {
+      setIsLoadingComments(false)
     }
   }
 
@@ -375,8 +438,26 @@ export function PDFPreviewModal({ isOpen, onClose, document, apiClient }: PDFPre
       setNumPages(null)
       setTempAnnotation(null)
       setIsCommentModalOpen(false)
+      setEditingComment(null)
+      setComments([])
+      setActiveCommentId(null)
     }
   }, [isOpen])
+
+  // Close active comment when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: Event) => {
+      const target = e.target as Element
+      if (activeCommentId && !target?.closest(".comment-marker")) {
+        setActiveCommentId(null)
+      }
+    }
+
+    if (activeCommentId) {
+      window.document.addEventListener("click", handleClickOutside)
+      return () => window.document.removeEventListener("click", handleClickOutside)
+    }
+  }, [activeCommentId])
 
   // Text selection and annotation logic
   const handleMouseUp = (e: MouseEvent): void => {
@@ -398,7 +479,7 @@ export function PDFPreviewModal({ isOpen, onClose, document, apiClient }: PDFPre
     const height = (selectionRect.height / pageRect.height) * 100
 
     if (width > 0 && height > 0) {
-      const newAnnotation: AnnotationType = {
+      const newAnnotation: CommentAnnotation = {
         id: `temp-${Date.now()}`,
         page: currentPage,
         rect: { x, y, width, height },
@@ -406,37 +487,92 @@ export function PDFPreviewModal({ isOpen, onClose, document, apiClient }: PDFPre
 
       setTempAnnotation(newAnnotation)
       setCommentModalPosition({ x: e.clientX, y: e.clientY })
+      setEditingComment(null)
+      setActiveCommentId(null)
       setIsCommentModalOpen(true)
     }
 
     selection.removeAllRanges()
   }
 
-  const handleCommentSubmit = (text: string) => {
-    if (!tempAnnotation) return
+  const handleCommentSubmit = async (text: string) => {
+    if (!tempAnnotation || !document || !commentService) return
 
-    const newComment: CommentType = {
-      id: `comment-${Date.now()}`,
-      text,
-      author: "Current User",
-      timestamp: new Date().toLocaleString("en-US", {
-        day: "2-digit",
-        month: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      }),
-      annotation: tempAnnotation,
+    setIsCreatingComment(true)
+    try {
+      const newComment = await commentService.createComment({
+        text,
+        documentId: Number.parseInt(document.id),
+        annotation: tempAnnotation,
+      })
+
+      setComments((prev) => [...prev, newComment])
+      setTempAnnotation(null)
+      setIsCommentModalOpen(false)
+      toast.success("Comment added successfully")
+    } catch (error) {
+      console.error("Error creating comment:", error)
+      toast.error("Failed to add comment")
+    } finally {
+      setIsCreatingComment(false)
     }
+  }
 
-    setComments((prev) => [...prev, newComment])
-    setTempAnnotation(null)
-    setIsCommentModalOpen(false)
+  const handleCommentUpdate = async (commentId: number, text: string) => {
+    if (!commentService) return
+
+    setIsCreatingComment(true)
+    try {
+      const updatedComment = await commentService.updateComment({
+        commentId,
+        text,
+      })
+
+      setComments((prev) => prev.map((comment) => (comment.id === commentId ? updatedComment : comment)))
+      setEditingComment(null)
+      setIsCommentModalOpen(false)
+      setActiveCommentId(null)
+      toast.success("Comment updated successfully")
+    } catch (error) {
+      console.error("Error updating comment:", error)
+      toast.error("Failed to update comment")
+    } finally {
+      setIsCreatingComment(false)
+    }
+  }
+
+  const handleCommentDelete = async (commentId: number) => {
+    if (!commentService) return
+
+    setDeletingCommentId(commentId)
+    try {
+      await commentService.deleteComment(commentId)
+      setComments((prev) => prev.filter((comment) => comment.id !== commentId))
+      setActiveCommentId(null)
+      toast.success("Comment deleted successfully")
+    } catch (error) {
+      console.error("Error deleting comment:", error)
+      toast.error("Failed to delete comment")
+    } finally {
+      setDeletingCommentId(null)
+    }
+  }
+
+  const handleCommentEdit = (comment: Comment) => {
+    setEditingComment(comment)
+    setCommentModalPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 })
+    setActiveCommentId(null)
+    setIsCommentModalOpen(true)
+  }
+
+  const handleCommentClick = (commentId: number) => {
+    setActiveCommentId(activeCommentId === commentId ? null : commentId)
   }
 
   const handleCommentModalClose = () => {
     setIsCommentModalOpen(false)
     setTempAnnotation(null)
+    setEditingComment(null)
   }
 
   // PDF navigation
@@ -449,7 +585,7 @@ export function PDFPreviewModal({ isOpen, onClose, document, apiClient }: PDFPre
 
   if (!isOpen) return null
 
-  const allAnnotations: AnnotationType[] = [
+  const allAnnotations: CommentAnnotation[] = [
     ...comments.map((c) => c.annotation),
     ...(tempAnnotation ? [tempAnnotation] : []),
   ]
@@ -464,6 +600,12 @@ export function PDFPreviewModal({ isOpen, onClose, document, apiClient }: PDFPre
           <div className="flex items-center gap-3">
             <div className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">PDF</div>
             <h2 className="text-xl font-semibold text-gray-800">{document?.name || "PDF Preview"}</h2>
+            {isLoadingComments && (
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading comments...
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -539,11 +681,16 @@ export function PDFPreviewModal({ isOpen, onClose, document, apiClient }: PDFPre
                   {/* Comment markers */}
                   <div className="absolute top-0 left-0 w-full h-full">
                     {currentPageComments.map((comment) => (
-                      <CommentMarker
-                        key={comment.id}
-                        comment={comment}
-                        onClick={() => console.log("Comment clicked:", comment)}
-                      />
+                      <div key={comment.id} className="comment-marker">
+                        <CommentMarker
+                          comment={comment}
+                          onClick={() => handleCommentClick(comment.id)}
+                          onEdit={() => handleCommentEdit(comment)}
+                          onDelete={() => handleCommentDelete(comment.id)}
+                          isDeleting={deletingCommentId === comment.id}
+                          isActive={activeCommentId === comment.id}
+                        />
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -562,8 +709,11 @@ export function PDFPreviewModal({ isOpen, onClose, document, apiClient }: PDFPre
         isOpen={isCommentModalOpen}
         onClose={handleCommentModalClose}
         onSubmit={handleCommentSubmit}
+        onUpdate={handleCommentUpdate}
         position={commentModalPosition}
         users={users}
+        isLoading={isCreatingComment}
+        editingComment={editingComment}
       />
     </div>
   )
