@@ -69,9 +69,9 @@ export class CommentService {
   async createReply(data: CreateReplyRequest): Promise<Comment> {
     try {
       const response = await this.apiClient.post("/dashboard/documents/comments/create", data)
-      // API returns an array, take the first item
-      const replyData = Array.isArray(response.data) ? response.data[0] : response.data
-      return this.transformComment(replyData)
+      // API returns an array with the full comment structure including all children
+      const commentData = Array.isArray(response.data) ? response.data[0] : response.data
+      return this.transformComment(commentData)
     } catch (error) {
       console.error("Error creating reply:", error)
       throw error
