@@ -1,20 +1,20 @@
 'use client'
-
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import type { Document as DocumentType } from '@/types/document.types'
 import { clsx } from 'clsx'
 import {
   ChevronLeft,
   ChevronRight,
   Download,
-  Edit3,
   FolderInput,
   Loader2,
+  Pencil,
   Search,
   Trash2,
-  X
+  X,
 } from 'lucide-react'
 import {
   useEffect,
@@ -164,7 +164,6 @@ const CommentModal: FC<CommentModalProps> = ({
 
     const currentText = textareaRef.current.value
     const cursorPos = textareaRef.current.selectionStart
-
     const atIndex = currentText.slice(0, cursorPos).lastIndexOf('@')
     const textBefore = currentText.substring(0, atIndex)
     const textAfter = currentText.substring(cursorPos)
@@ -241,7 +240,7 @@ const CommentModal: FC<CommentModalProps> = ({
                 placeholder={
                   editingComment ? 'Edit comment...' : 'Add a comment...'
                 }
-                className="w-full resize-none rounded-lg border border-gray-200 p-3 text-sm transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                className="w-full resize-none rounded-lg border border-gray-300 p-3 text-sm transition"
                 rows={3}
                 disabled={isLoading}
               />
@@ -250,7 +249,6 @@ const CommentModal: FC<CommentModalProps> = ({
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
                 onClick={onClose}
                 disabled={isLoading}
               >
@@ -258,7 +256,7 @@ const CommentModal: FC<CommentModalProps> = ({
               </Button>
               <Button
                 type="submit"
-                size="sm"
+                className="cursor-pointer"
                 disabled={!commentText.trim() || isLoading}
               >
                 {isLoading && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
@@ -277,8 +275,10 @@ interface CommentMarkerProps {
   onClick: () => void
   onEdit: () => void
   onDelete: () => void
+  onReply: (parentId: number, text: string) => void
   isDeleting?: boolean
   isActive?: boolean
+  isReplying?: boolean
 }
 
 const CommentMarker: FC<CommentMarkerProps> = ({
@@ -286,10 +286,88 @@ const CommentMarker: FC<CommentMarkerProps> = ({
   onClick,
   onEdit,
   onDelete,
+  onReply,
   isDeleting = false,
   isActive = false,
+  isReplying = false,
 }) => {
   const [isHovered, setIsHovered] = useState(false)
+  const [replyText, setReplyText] = useState('')
+  const [mentionSuggestions, setMentionSuggestions] = useState<User[]>([])
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0)
+  const replyInputRef = useRef<HTMLInputElement>(null)
+
+  const handleReplyTextChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const text = e.target.value
+    setReplyText(text)
+
+    const cursorPos = e.target.selectionStart || 0
+    const textUpToCursor = text.substring(0, cursorPos)
+    const mentionMatch = textUpToCursor.match(/@([\w\s]*)$/)
+
+    if (mentionMatch) {
+      const query = mentionMatch[1].toLowerCase()
+      setMentionSuggestions(
+        mockUsers.filter((u) => u.name.toLowerCase().includes(query))
+      )
+      setActiveSuggestionIndex(0)
+    } else {
+      setMentionSuggestions([])
+    }
+  }
+
+  const handleSelectMention = (user: User) => {
+    if (!replyInputRef.current) return
+
+    const currentText = replyInputRef.current.value
+    const cursorPos = replyInputRef.current.selectionStart || 0
+    const atIndex = currentText.slice(0, cursorPos).lastIndexOf('@')
+    const textBefore = currentText.substring(0, atIndex)
+    const textAfter = currentText.substring(cursorPos)
+    const newText = `${textBefore}@${user.name} ${textAfter}`
+
+    setReplyText(newText)
+    setMentionSuggestions([])
+
+    setTimeout(() => {
+      replyInputRef.current?.focus()
+      const newCursorPos = (textBefore + `@${user.name} `).length
+      replyInputRef.current?.setSelectionRange(newCursorPos, newCursorPos)
+    }, 0)
+  }
+
+  const handleReplyKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (mentionSuggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setActiveSuggestionIndex(
+          (prev) => (prev + 1) % mentionSuggestions.length
+        )
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setActiveSuggestionIndex(
+          (prev) =>
+            (prev - 1 + mentionSuggestions.length) % mentionSuggestions.length
+        )
+      } else if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault()
+        handleSelectMention(mentionSuggestions[activeSuggestionIndex])
+      } else if (e.key === 'Escape') {
+        setMentionSuggestions([])
+      }
+    } else if (e.key === 'Enter' && replyText.trim()) {
+      e.preventDefault()
+      handleReplySubmit()
+    }
+  }
+
+  const handleReplySubmit = () => {
+    if (replyText.trim()) {
+      onReply(comment.id, replyText)
+      setReplyText('')
+      setMentionSuggestions([])
+    }
+  }
 
   return (
     <div
@@ -309,7 +387,7 @@ const CommentMarker: FC<CommentMarkerProps> = ({
       <Avatar
         className={cn(
           'h-7 w-7 border-2 border-white shadow-md',
-          isActive && 'ring-2 ring-secondary'
+          isActive && 'ring-secondary ring-2'
         )}
       >
         <AvatarFallback className="bg-secondary text-xs text-white">
@@ -317,59 +395,149 @@ const CommentMarker: FC<CommentMarkerProps> = ({
             comment.author.toString().charAt(0)}
         </AvatarFallback>
       </Avatar>
-
       {(isHovered || isActive) && (
-        <Card className="absolute top-0 left-8 z-20 w-64 border-0 bg-white shadow-xl">
-          <CardContent className="p-3">
+        <Card className="absolute top-0 left-8 z-20 max-w-5xl border-0 bg-white shadow-xl">
+          <CardContent className="max-w-5xl p-3">
             <div className="flex items-start gap-2">
-              <Avatar className="h-8 w-8">
+              <Avatar className="h-9 w-9">
                 <AvatarFallback className="bg-secondary text-xs text-white">
                   {comment.authorName?.charAt(0).toUpperCase() ||
                     comment.author.toString().charAt(0)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <div className="mb-1 flex items-center gap-2">
-                  <span className="text-sm font-medium">
+                <div className="mb-1 flex justify-between">
+                  <div className="text-md font-semibold">
                     {comment.authorName || `User ${comment.author}`}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    {comment.timestamp}
-                  </span>
-                </div>
-                <p className="mb-2 text-sm text-gray-800">{comment.text}</p>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onEdit()
-                    }}
-                  >
-                    <Edit3 className="mr-1 h-3 w-3" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-xs text-red-600 hover:text-red-700"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onDelete()
-                    }}
-                    disabled={isDeleting}
-                  >
-                    {isDeleting ? (
-                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                    ) : (
-                      <Trash2 className="mr-1 h-3 w-3" />
-                    )}
-                    Delete
-                  </Button>
+                    <p className="text-xs font-medium text-gray-500">
+                      {comment.timestamp}
+                    </p>
+                  </div>
+                  <div className="flex">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="hover:text-primary h-4 cursor-pointer px-2 text-xs text-gray-500"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onEdit()
+                      }}
+                    >
+                      <Pencil className="mr-1 h-2 w-2" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="hover:text-primary h-4 cursor-pointer px-2 text-xs text-gray-500"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onDelete()
+                      }}
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? (
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                      ) : (
+                        <Trash2 className="mr-1 h-3 w-3" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
+            </div>
+            <div className="m-2 w-[300px]">
+              <p className="text-secondary text-sm">{comment.text}</p>
+
+              {/* Display replies */}
+              {comment.children && comment.children.length > 0 && (
+                <div className="mt-3 space-y-2 border-l-2 border-gray-200 pl-3">
+                  {comment.children.map((reply) => (
+                    <div key={reply.id} className="flex items-start gap-2">
+                      <Avatar className="h-6 w-6">
+                        <AvatarFallback className="bg-gray-400 text-xs text-white">
+                          {reply.authorName?.charAt(0).toUpperCase() ||
+                            reply.author.toString().charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="flex-col items-center gap-2">
+                          <p className="text-xs font-medium">
+                            {reply.authorName || `User ${reply.author}`}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {reply.timestamp}
+                          </p>
+                        </div>
+                        <p className="text-sm text-gray-700">{reply.text}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {isActive && (
+                <div className="pt-4">
+                  <div className="relative">
+                    {mentionSuggestions.length > 0 && (
+                      <div className="absolute bottom-full z-30 mb-2 w-full overflow-hidden rounded-lg border border-gray-300 bg-white shadow-xl">
+                        <ul className="max-h-32 overflow-y-auto">
+                          {mentionSuggestions.map((user, index) => (
+                            <li
+                              key={user.id}
+                              className={cn(
+                                'cursor-pointer px-3 py-1 text-xs hover:bg-gray-100',
+                                {
+                                  'bg-gray-200':
+                                    index === activeSuggestionIndex,
+                                }
+                              )}
+                              onMouseDown={(e: MouseEvent) => {
+                                e.preventDefault()
+                                handleSelectMention(user)
+                              }}
+                            >
+                              {user.name}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    <div className="flex-col">
+                      <Input
+                        ref={replyInputRef}
+                        className="h-8 text-xs"
+                        placeholder="Mention user with @"
+                        value={replyText}
+                        onChange={handleReplyTextChange}
+                        onKeyDown={handleReplyKeyDown}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                        }}
+                        disabled={isReplying}
+                      />
+                      <div className="flex gap-3 mt-3">
+                        <Button type="button" variant="outline">
+                          Cancel
+                        </Button>
+                        <Button
+                          className=" cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleReplySubmit()
+                          }}
+                          disabled={!replyText.trim() || isReplying}
+                        >
+                          {isReplying ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <span>Reply</span>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -428,6 +596,9 @@ export function PDFPreviewModal({
     null
   )
   const [activeCommentId, setActiveCommentId] = useState<number | null>(null)
+  const [replyingToCommentId, setReplyingToCommentId] = useState<number | null>(
+    null
+  )
 
   // Comment modal state
   const [isCommentModalOpen, setIsCommentModalOpen] = useState(false)
@@ -471,7 +642,6 @@ export function PDFPreviewModal({
           responseType: 'blob',
         }
       )
-
       const pdfBlob = new Blob([response.data], { type: 'application/pdf' })
       const objectUrl = URL.createObjectURL(pdfBlob)
       setPdfUrl(objectUrl)
@@ -521,6 +691,7 @@ export function PDFPreviewModal({
       setEditingComment(null)
       setComments([])
       setActiveCommentId(null)
+      setReplyingToCommentId(null)
     }
   }, [isOpen])
 
@@ -589,7 +760,6 @@ export function PDFPreviewModal({
         documentId: Number.parseInt(document.id),
         annotation: tempAnnotation,
       })
-
       setComments((prev) => [...prev, newComment])
       setTempAnnotation(null)
       setIsCommentModalOpen(false)
@@ -611,7 +781,6 @@ export function PDFPreviewModal({
         commentId,
         text,
       })
-
       setComments((prev) =>
         prev.map((comment) =>
           comment.id === commentId ? updatedComment : comment
@@ -664,6 +833,39 @@ export function PDFPreviewModal({
     setIsCommentModalOpen(false)
     setTempAnnotation(null)
     setEditingComment(null)
+  }
+
+  const handleReply = async (parentId: number, text: string) => {
+    if (!document || !commentService) return
+
+    setReplyingToCommentId(parentId)
+    try {
+      const newReply = await commentService.createReply({
+        text,
+        documentId: Number.parseInt(document.id),
+        parentId,
+      })
+
+      // Update the comments state to include the new reply
+      setComments((prev) =>
+        prev.map((comment) => {
+          if (comment.id === parentId) {
+            return {
+              ...comment,
+              children: [...(comment.children || []), newReply],
+            }
+          }
+          return comment
+        })
+      )
+
+      toast.success('Reply added successfully')
+    } catch (error) {
+      console.error('Error creating reply:', error)
+      toast.error('Failed to add reply')
+    } finally {
+      setReplyingToCommentId(null)
+    }
   }
 
   // PDF navigation
@@ -747,7 +949,6 @@ export function PDFPreviewModal({
             >
               <FolderInput className="h-3 w-3" />
             </Button>
-           
             <Button
               variant="ghost"
               size="icon"
@@ -830,7 +1031,6 @@ export function PDFPreviewModal({
                     scale={pdfScale}
                     renderTextLayer={true}
                   />
-
                   {/* Annotations overlay */}
                   <div className="pointer-events-none absolute top-0 left-0 h-full w-full">
                     {allAnnotations
@@ -845,7 +1045,6 @@ export function PDFPreviewModal({
                         />
                       ))}
                   </div>
-
                   {/* Comment markers */}
                   <div className="absolute top-0 left-0 h-full w-full">
                     {currentPageComments.map((comment) => (
@@ -855,8 +1054,10 @@ export function PDFPreviewModal({
                           onClick={() => handleCommentClick(comment.id)}
                           onEdit={() => handleCommentEdit(comment)}
                           onDelete={() => handleCommentDelete(comment.id)}
+                          onReply={handleReply}
                           isDeleting={deletingCommentId === comment.id}
                           isActive={activeCommentId === comment.id}
+                          isReplying={replyingToCommentId === comment.id}
                         />
                       </div>
                     ))}
