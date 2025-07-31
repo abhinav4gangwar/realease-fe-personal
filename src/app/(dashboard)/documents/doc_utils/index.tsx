@@ -49,19 +49,22 @@ export const getFileCounts = (documents: Document[]) => {
 
 export const handleDownloadClick = async (document: Document) => {
   try {
-    const response = await apiClient.get(
-      `/dashboard/documents/download/${document.id}`
-    )
+    const payload = {
+      items: [
+        {
+          id: Number.parseInt(document.id),
+          type: document.isFolder ? "folder" : "file"
+        },
+      ]
+    }
+    
+    console.log('Download payload:', payload)
+    
+    const response = await apiClient.get(`/dashboard/documents/download`, {
+      data: payload,
+    })
 
-    const downloadUrl = response?.data?.url
-
-    if (downloadUrl) {
-      const link = window.document.createElement('a')
-      link.href = downloadUrl
-      link.download = document.name || 'download'
-      window.document.body.appendChild(link)
-      link.click()
-      window.document.body.removeChild(link)
+    if (response) {
       toast.success('Download started successfully!')
     } else {
       toast.error('No download URL received')
