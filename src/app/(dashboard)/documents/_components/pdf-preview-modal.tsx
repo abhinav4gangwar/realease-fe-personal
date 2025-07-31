@@ -1,11 +1,21 @@
-"use client"
+'use client'
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import type { Document as DocumentType } from "@/types/document.types"
-import { clsx } from "clsx"
-import { ChevronLeft, ChevronRight, Edit3, Loader2, MessageSquare, Search, Trash2, X } from "lucide-react"
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import type { Document as DocumentType } from '@/types/document.types'
+import { clsx } from 'clsx'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Edit3,
+  FolderInput,
+  Loader2,
+  Search,
+  Trash2,
+  X
+} from 'lucide-react'
 import {
   useEffect,
   useRef,
@@ -15,15 +25,21 @@ import {
   type FormEvent,
   type KeyboardEvent,
   type MouseEvent,
-} from "react"
-import { Document, Page, pdfjs } from "react-pdf"
-import "react-pdf/dist/Page/AnnotationLayer.css"
-import "react-pdf/dist/Page/TextLayer.css"
-import { toast } from "sonner"
-import { twMerge } from "tailwind-merge"
-import { CommentService, type Comment, type CommentAnnotation } from "../doc_utils/comment.services"
+} from 'react'
+import { HiShare } from 'react-icons/hi2'
+import { Document, Page, pdfjs } from 'react-pdf'
+import 'react-pdf/dist/Page/AnnotationLayer.css'
+import 'react-pdf/dist/Page/TextLayer.css'
+import { toast } from 'sonner'
+import { twMerge } from 'tailwind-merge'
+import {
+  CommentService,
+  type Comment,
+  type CommentAnnotation,
+} from '../doc_utils/comment.services'
+import { FileIcon } from './file-icon'
 
-pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js"
+pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 
 interface User {
   id: string
@@ -35,6 +51,10 @@ interface PDFPreviewModalProps {
   onClose: () => void
   document: DocumentType | null
   apiClient: any
+  onEditClick?: (document: Document) => void
+  onMoveClick?: (document: Document) => void
+  onShareClick?: (document: Document) => void
+  onDownloadClick?: (document: Document) => void
 }
 
 // Utility function
@@ -44,10 +64,10 @@ function cn(...inputs: any[]) {
 
 // Mock users data
 const mockUsers: User[] = [
-  { id: "user-1", name: "Ada Lovelace" },
-  { id: "user-2", name: "Grace Hopper" },
-  { id: "user-3", name: "Margaret Hamilton" },
-  { id: "user-4", name: "Katherine Johnson" },
+  { id: 'user-1', name: 'Ada Lovelace' },
+  { id: 'user-2', name: 'Grace Hopper' },
+  { id: 'user-3', name: 'Margaret Hamilton' },
+  { id: 'user-4', name: 'Katherine Johnson' },
 ]
 
 // Sub-components
@@ -57,16 +77,22 @@ interface MentionSuggestionsProps {
   activeIndex: number
 }
 
-const MentionSuggestions: FC<MentionSuggestionsProps> = ({ suggestions, onSelect, activeIndex }) => {
+const MentionSuggestions: FC<MentionSuggestionsProps> = ({
+  suggestions,
+  onSelect,
+  activeIndex,
+}) => {
   if (suggestions.length === 0) return null
 
   return (
-    <div className="absolute bottom-full mb-2 w-full bg-white border border-gray-300 rounded-lg shadow-xl z-20 overflow-hidden">
+    <div className="absolute bottom-full z-20 mb-2 w-full overflow-hidden rounded-lg border border-gray-300 bg-white shadow-xl">
       <ul className="max-h-40 overflow-y-auto">
         {suggestions.map((user, index) => (
           <li
             key={user.id}
-            className={cn("px-4 py-2 cursor-pointer hover:bg-gray-100", { "bg-gray-200": index === activeIndex })}
+            className={cn('cursor-pointer px-4 py-2 hover:bg-gray-100', {
+              'bg-gray-200': index === activeIndex,
+            })}
             onMouseDown={(e: MouseEvent) => {
               e.preventDefault()
               onSelect(user)
@@ -101,14 +127,14 @@ const CommentModal: FC<CommentModalProps> = ({
   isLoading = false,
   editingComment = null,
 }) => {
-  const [commentText, setCommentText] = useState("")
+  const [commentText, setCommentText] = useState('')
   const [mentionSuggestions, setMentionSuggestions] = useState<User[]>([])
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     if (isOpen) {
-      setCommentText(editingComment?.text || "")
+      setCommentText(editingComment?.text || '')
       setMentionSuggestions([])
       setTimeout(() => textareaRef.current?.focus(), 100)
     }
@@ -124,7 +150,9 @@ const CommentModal: FC<CommentModalProps> = ({
 
     if (mentionMatch) {
       const query = mentionMatch[1].toLowerCase()
-      setMentionSuggestions(users.filter((u) => u.name.toLowerCase().includes(query)))
+      setMentionSuggestions(
+        users.filter((u) => u.name.toLowerCase().includes(query))
+      )
       setActiveSuggestionIndex(0)
     } else {
       setMentionSuggestions([])
@@ -137,7 +165,7 @@ const CommentModal: FC<CommentModalProps> = ({
     const currentText = textareaRef.current.value
     const cursorPos = textareaRef.current.selectionStart
 
-    const atIndex = currentText.slice(0, cursorPos).lastIndexOf("@")
+    const atIndex = currentText.slice(0, cursorPos).lastIndexOf('@')
     const textBefore = currentText.substring(0, atIndex)
     const textAfter = currentText.substring(cursorPos)
     const newText = `${textBefore}@${user.name} ${textAfter}`
@@ -154,16 +182,21 @@ const CommentModal: FC<CommentModalProps> = ({
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (mentionSuggestions.length > 0) {
-      if (e.key === "ArrowDown") {
+      if (e.key === 'ArrowDown') {
         e.preventDefault()
-        setActiveSuggestionIndex((prev) => (prev + 1) % mentionSuggestions.length)
-      } else if (e.key === "ArrowUp") {
+        setActiveSuggestionIndex(
+          (prev) => (prev + 1) % mentionSuggestions.length
+        )
+      } else if (e.key === 'ArrowUp') {
         e.preventDefault()
-        setActiveSuggestionIndex((prev) => (prev - 1 + mentionSuggestions.length) % mentionSuggestions.length)
-      } else if (e.key === "Enter" || e.key === "Tab") {
+        setActiveSuggestionIndex(
+          (prev) =>
+            (prev - 1 + mentionSuggestions.length) % mentionSuggestions.length
+        )
+      } else if (e.key === 'Enter' || e.key === 'Tab') {
         e.preventDefault()
         handleSelectMention(mentionSuggestions[activeSuggestionIndex])
-      } else if (e.key === "Escape") {
+      } else if (e.key === 'Escape') {
         setMentionSuggestions([])
       }
     }
@@ -185,7 +218,7 @@ const CommentModal: FC<CommentModalProps> = ({
   return (
     <div className="fixed inset-0 z-50" onClick={onClose}>
       <Card
-        className="absolute bg-white shadow-xl border-0 w-80"
+        className="absolute w-80 border-0 bg-white shadow-xl"
         style={{
           left: Math.min(position.x, window.innerWidth - 320),
           top: Math.min(position.y, window.innerHeight - 200),
@@ -205,19 +238,31 @@ const CommentModal: FC<CommentModalProps> = ({
                 value={commentText}
                 onChange={handleCommentTextChange}
                 onKeyDown={handleKeyDown}
-                placeholder={editingComment ? "Edit comment..." : "Add a comment..."}
-                className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition resize-none text-sm"
+                placeholder={
+                  editingComment ? 'Edit comment...' : 'Add a comment...'
+                }
+                className="w-full resize-none rounded-lg border border-gray-200 p-3 text-sm transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                 rows={3}
                 disabled={isLoading}
               />
             </div>
             <div className="mt-3 flex justify-end gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isLoading}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onClose}
+                disabled={isLoading}
+              >
                 Cancel
               </Button>
-              <Button type="submit" size="sm" disabled={!commentText.trim() || isLoading}>
-                {isLoading && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
-                {editingComment ? "Update" : "Comment"}
+              <Button
+                type="submit"
+                size="sm"
+                disabled={!commentText.trim() || isLoading}
+              >
+                {isLoading && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+                {editingComment ? 'Update' : 'Comment'}
               </Button>
             </div>
           </form>
@@ -248,11 +293,11 @@ const CommentMarker: FC<CommentMarkerProps> = ({
 
   return (
     <div
-      className="absolute cursor-pointer z-10"
+      className="absolute z-10 cursor-pointer"
       style={{
         left: `${comment.annotation.rect.x + comment.annotation.rect.width}%`,
         top: `${comment.annotation.rect.y}%`,
-        transform: "translate(-50%, -50%)",
+        transform: 'translate(-50%, -50%)',
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -261,27 +306,38 @@ const CommentMarker: FC<CommentMarkerProps> = ({
         onClick()
       }}
     >
-      <Avatar className={cn("h-6 w-6 border-2 border-white shadow-md", isActive && "ring-2 ring-blue-500")}>
-        <AvatarFallback className="text-xs bg-blue-500 text-white">
-          {comment.authorName?.charAt(0).toUpperCase() || comment.author.toString().charAt(0)}
+      <Avatar
+        className={cn(
+          'h-7 w-7 border-2 border-white shadow-md',
+          isActive && 'ring-2 ring-secondary'
+        )}
+      >
+        <AvatarFallback className="bg-secondary text-xs text-white">
+          {comment.authorName?.charAt(0).toUpperCase() ||
+            comment.author.toString().charAt(0)}
         </AvatarFallback>
       </Avatar>
 
       {(isHovered || isActive) && (
-        <Card className="absolute left-8 top-0 w-64 bg-white shadow-xl border-0 z-20">
+        <Card className="absolute top-0 left-8 z-20 w-64 border-0 bg-white shadow-xl">
           <CardContent className="p-3">
             <div className="flex items-start gap-2">
               <Avatar className="h-8 w-8">
-                <AvatarFallback className="text-xs bg-gray-500 text-white">
-                  {comment.authorName?.charAt(0).toUpperCase() || comment.author.toString().charAt(0)}
+                <AvatarFallback className="bg-secondary text-xs text-white">
+                  {comment.authorName?.charAt(0).toUpperCase() ||
+                    comment.author.toString().charAt(0)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-medium text-sm">{comment.authorName || `User ${comment.author}`}</span>
-                  <span className="text-xs text-gray-500">{comment.timestamp}</span>
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="text-sm font-medium">
+                    {comment.authorName || `User ${comment.author}`}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {comment.timestamp}
+                  </span>
                 </div>
-                <p className="text-sm text-gray-800 mb-2">{comment.text}</p>
+                <p className="mb-2 text-sm text-gray-800">{comment.text}</p>
                 <div className="flex gap-1">
                   <Button
                     variant="ghost"
@@ -292,7 +348,7 @@ const CommentMarker: FC<CommentMarkerProps> = ({
                       onEdit()
                     }}
                   >
-                    <Edit3 className="h-3 w-3 mr-1" />
+                    <Edit3 className="mr-1 h-3 w-3" />
                     Edit
                   </Button>
                   <Button
@@ -306,9 +362,9 @@ const CommentMarker: FC<CommentMarkerProps> = ({
                     disabled={isDeleting}
                   >
                     {isDeleting ? (
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
                     ) : (
-                      <Trash2 className="h-3 w-3 mr-1" />
+                      <Trash2 className="mr-1 h-3 w-3" />
                     )}
                     Delete
                   </Button>
@@ -327,11 +383,14 @@ interface AnnotationProps {
   isHighlighted?: boolean
 }
 
-const Annotation: FC<AnnotationProps> = ({ annotation, isHighlighted = false }) => (
+const Annotation: FC<AnnotationProps> = ({
+  annotation,
+  isHighlighted = false,
+}) => (
   <div
     className={cn(
-      "absolute pointer-events-none",
-      isHighlighted ? "bg-yellow-200 bg-opacity-60" : "bg-yellow-400 bg-opacity-40",
+      'pointer-events-none absolute',
+      isHighlighted ? 'bg-blue-300/40' : 'bg-blue-300/50'
     )}
     style={{
       left: `${annotation.rect.x}%`,
@@ -342,7 +401,15 @@ const Annotation: FC<AnnotationProps> = ({ annotation, isHighlighted = false }) 
   />
 )
 
-export function PDFPreviewModal({ isOpen, onClose, document, apiClient }: PDFPreviewModalProps) {
+export function PDFPreviewModal({
+  isOpen,
+  onClose,
+  document,
+  apiClient,
+  onMoveClick,
+  onShareClick,
+  onDownloadClick,
+}: PDFPreviewModalProps) {
   // PDF and data state
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
   const [numPages, setNumPages] = useState<number | null>(null)
@@ -353,19 +420,27 @@ export function PDFPreviewModal({ isOpen, onClose, document, apiClient }: PDFPre
   // Comments and annotations state
   const [comments, setComments] = useState<Comment[]>([])
   const [users] = useState<User[]>(mockUsers)
-  const [tempAnnotation, setTempAnnotation] = useState<CommentAnnotation | null>(null)
+  const [tempAnnotation, setTempAnnotation] =
+    useState<CommentAnnotation | null>(null)
   const [isLoadingComments, setIsLoadingComments] = useState<boolean>(false)
   const [isCreatingComment, setIsCreatingComment] = useState<boolean>(false)
-  const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null)
+  const [deletingCommentId, setDeletingCommentId] = useState<number | null>(
+    null
+  )
   const [activeCommentId, setActiveCommentId] = useState<number | null>(null)
 
   // Comment modal state
   const [isCommentModalOpen, setIsCommentModalOpen] = useState(false)
-  const [commentModalPosition, setCommentModalPosition] = useState({ x: 0, y: 0 })
+  const [commentModalPosition, setCommentModalPosition] = useState({
+    x: 0,
+    y: 0,
+  })
   const [editingComment, setEditingComment] = useState<Comment | null>(null)
 
   // Services
-  const [commentService, setCommentService] = useState<CommentService | null>(null)
+  const [commentService, setCommentService] = useState<CommentService | null>(
+    null
+  )
 
   // Refs
   const pageRef = useRef<HTMLDivElement>(null)
@@ -390,16 +465,19 @@ export function PDFPreviewModal({ isOpen, onClose, document, apiClient }: PDFPre
 
     setIsLoading(true)
     try {
-      const response = await apiClient.get(`/dashboard/documents/view/${document.id}`, {
-        responseType: "blob",
-      })
+      const response = await apiClient.get(
+        `/dashboard/documents/view/${document.id}`,
+        {
+          responseType: 'blob',
+        }
+      )
 
-      const pdfBlob = new Blob([response.data], { type: "application/pdf" })
+      const pdfBlob = new Blob([response.data], { type: 'application/pdf' })
       const objectUrl = URL.createObjectURL(pdfBlob)
       setPdfUrl(objectUrl)
     } catch (error) {
-      console.error("Error loading PDF:", error)
-      toast.error("Failed to load PDF document")
+      console.error('Error loading PDF:', error)
+      toast.error('Failed to load PDF document')
     } finally {
       setIsLoading(false)
     }
@@ -410,11 +488,13 @@ export function PDFPreviewModal({ isOpen, onClose, document, apiClient }: PDFPre
 
     setIsLoadingComments(true)
     try {
-      const fetchedComments = await commentService.getComments(Number.parseInt(document.id))
+      const fetchedComments = await commentService.getComments(
+        Number.parseInt(document.id)
+      )
       setComments(fetchedComments)
     } catch (error) {
-      console.error("Error loading comments:", error)
-      toast.error("Failed to load comments")
+      console.error('Error loading comments:', error)
+      toast.error('Failed to load comments')
       setComments([])
     } finally {
       setIsLoadingComments(false)
@@ -448,24 +528,28 @@ export function PDFPreviewModal({ isOpen, onClose, document, apiClient }: PDFPre
   useEffect(() => {
     const handleClickOutside = (e: Event) => {
       const target = e.target as Element
-      if (activeCommentId && !target?.closest(".comment-marker")) {
+      if (activeCommentId && !target?.closest('.comment-marker')) {
         setActiveCommentId(null)
       }
     }
 
     if (activeCommentId) {
-      window.document.addEventListener("click", handleClickOutside)
-      return () => window.document.removeEventListener("click", handleClickOutside)
+      window.document.addEventListener('click', handleClickOutside)
+      return () =>
+        window.document.removeEventListener('click', handleClickOutside)
     }
   }, [activeCommentId])
 
   // Text selection and annotation logic
   const handleMouseUp = (e: MouseEvent): void => {
     const selection = window.getSelection()
-    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed)
+      return
 
     const range = selection.getRangeAt(0)
-    const pageContent = pageRef.current?.querySelector(".react-pdf__Page__textContent")
+    const pageContent = pageRef.current?.querySelector(
+      '.react-pdf__Page__textContent'
+    )
     if (!pageContent) return
 
     if (!pageContent.contains(range.commonAncestorContainer)) return
@@ -509,10 +593,10 @@ export function PDFPreviewModal({ isOpen, onClose, document, apiClient }: PDFPre
       setComments((prev) => [...prev, newComment])
       setTempAnnotation(null)
       setIsCommentModalOpen(false)
-      toast.success("Comment added successfully")
+      toast.success('Comment added successfully')
     } catch (error) {
-      console.error("Error creating comment:", error)
-      toast.error("Failed to add comment")
+      console.error('Error creating comment:', error)
+      toast.error('Failed to add comment')
     } finally {
       setIsCreatingComment(false)
     }
@@ -528,14 +612,18 @@ export function PDFPreviewModal({ isOpen, onClose, document, apiClient }: PDFPre
         text,
       })
 
-      setComments((prev) => prev.map((comment) => (comment.id === commentId ? updatedComment : comment)))
+      setComments((prev) =>
+        prev.map((comment) =>
+          comment.id === commentId ? updatedComment : comment
+        )
+      )
       setEditingComment(null)
       setIsCommentModalOpen(false)
       setActiveCommentId(null)
-      toast.success("Comment updated successfully")
+      toast.success('Comment updated successfully')
     } catch (error) {
-      console.error("Error updating comment:", error)
-      toast.error("Failed to update comment")
+      console.error('Error updating comment:', error)
+      toast.error('Failed to update comment')
     } finally {
       setIsCreatingComment(false)
     }
@@ -549,10 +637,10 @@ export function PDFPreviewModal({ isOpen, onClose, document, apiClient }: PDFPre
       await commentService.deleteComment(commentId)
       setComments((prev) => prev.filter((comment) => comment.id !== commentId))
       setActiveCommentId(null)
-      toast.success("Comment deleted successfully")
+      toast.success('Comment deleted successfully')
     } catch (error) {
-      console.error("Error deleting comment:", error)
-      toast.error("Failed to delete comment")
+      console.error('Error deleting comment:', error)
+      toast.error('Failed to delete comment')
     } finally {
       setDeletingCommentId(null)
     }
@@ -560,7 +648,10 @@ export function PDFPreviewModal({ isOpen, onClose, document, apiClient }: PDFPre
 
   const handleCommentEdit = (comment: Comment) => {
     setEditingComment(comment)
-    setCommentModalPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 })
+    setCommentModalPosition({
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+    })
     setActiveCommentId(null)
     setIsCommentModalOpen(true)
   }
@@ -576,12 +667,17 @@ export function PDFPreviewModal({ isOpen, onClose, document, apiClient }: PDFPre
   }
 
   // PDF navigation
-  const onDocumentLoadSuccess = ({ numPages: nextNumPages }: { numPages: number }): void => {
+  const onDocumentLoadSuccess = ({
+    numPages: nextNumPages,
+  }: {
+    numPages: number
+  }): void => {
     setNumPages(nextNumPages)
   }
 
   const goToPrevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1))
-  const goToNextPage = () => numPages && setCurrentPage((prev) => Math.min(prev + 1, numPages))
+  const goToNextPage = () =>
+    numPages && setCurrentPage((prev) => Math.min(prev + 1, numPages))
 
   if (!isOpen) return null
 
@@ -590,43 +686,99 @@ export function PDFPreviewModal({ isOpen, onClose, document, apiClient }: PDFPre
     ...(tempAnnotation ? [tempAnnotation] : []),
   ]
 
-  const currentPageComments = comments.filter((comment) => comment.annotation.page === currentPage)
+  const currentPageComments = comments.filter(
+    (comment) => comment.annotation.page === currentPage
+  )
 
   return (
-    <div className="fixed inset-0 z-40 bg-black/50 flex items-center justify-center">
-      <div className="bg-white rounded-lg shadow-xl w-full h-full max-w-6xl max-h-[95vh] flex flex-col">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50">
+      <div className="bg-secondary flex h-full w-full max-w-7xl flex-col shadow-xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">PDF</div>
-            <h2 className="text-xl font-semibold text-gray-800">{document?.name || "PDF Preview"}</h2>
+        <div className="flex items-center justify-between p-5">
+          <div className="flex h-12 items-center gap-3">
+            <FileIcon type={document?.icon || ''} />
+            <h2 className="text-lg font-semibold text-white">
+              {document?.name || 'PDF Preview'}
+            </h2>
             {isLoadingComments && (
-              <div className="flex items-center gap-2 text-sm text-gray-500">
+              <div className="flex items-center gap-2 text-sm text-white">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Loading comments...
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MessageSquare className="h-4 w-4" />
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hover:text-primary h-6 w-6 cursor-pointer text-white"
+              onClick={(e) => {
+                e.stopPropagation()
+                if (onShareClick) {
+                  onShareClick(document)
+                }
+              }}
+            >
+              <HiShare className="h-3 w-3" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hover:text-primary h-6 w-6 cursor-pointer text-white"
+              onClick={(e) => {
+                e.stopPropagation()
+                if (onDownloadClick) {
+                  onDownloadClick(document)
+                }
+              }}
+            >
+              <Download className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hover:text-primary h-6 w-6 cursor-pointer text-white"
+              onClick={(e) => {
+                e.stopPropagation()
+                if (onMoveClick) {
+                  onMoveClick(document)
+                }
+              }}
+            >
+              <FolderInput className="h-3 w-3" />
+            </Button>
+           
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="hover:text-primary h-6 w-6 cursor-pointer text-white"
+            >
               <X className="h-4 w-4" />
             </Button>
           </div>
         </div>
 
         {/* PDF Controls */}
-        <div className="flex items-center justify-between p-3 bg-gray-50 border-b border-gray-200">
+        <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 p-3">
           <div className="flex items-center gap-4">
-            <Button variant="outline" size="sm" onClick={goToPrevPage} disabled={currentPage <= 1}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={goToPrevPage}
+              disabled={currentPage <= 1}
+            >
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <span className="text-sm font-medium">
-              Page {currentPage} / {numPages || "--"}
+              Page {currentPage} / {numPages || '--'}
             </span>
-            <Button variant="outline" size="sm" onClick={goToNextPage} disabled={!numPages || currentPage >= numPages}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={goToNextPage}
+              disabled={!numPages || currentPage >= numPages}
+            >
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -638,48 +790,64 @@ export function PDFPreviewModal({ isOpen, onClose, document, apiClient }: PDFPre
               max="2.0"
               step="0.1"
               value={pdfScale}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setPdfScale(Number.parseFloat(e.target.value))}
+              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                setPdfScale(Number.parseFloat(e.target.value))
+              }
               className="w-24"
             />
-            <span className="text-sm text-gray-600 min-w-[45px]">{Math.round(pdfScale * 100)}%</span>
+            <span className="min-w-[45px] text-sm text-gray-600">
+              {Math.round(pdfScale * 100)}%
+            </span>
           </div>
         </div>
 
         {/* PDF Content */}
-        <div className="flex-1 overflow-auto bg-gray-100 p-6" onMouseUp={handleMouseUp}>
+        <div
+          className="flex-1 overflow-auto bg-gray-100 p-6"
+          onMouseUp={handleMouseUp}
+        >
           {isLoading ? (
-            <div className="flex items-center justify-center h-full">
+            <div className="flex h-full items-center justify-center">
               <div className="text-center">
-                <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
                 <p className="mt-4 text-gray-600">Loading PDF document...</p>
               </div>
             </div>
           ) : pdfUrl ? (
-            <div className="max-w-4xl mx-auto">
+            <div className="mx-auto max-w-4xl">
               <Document
                 file={pdfUrl}
                 onLoadSuccess={onDocumentLoadSuccess}
                 onLoadError={console.error}
-                loading={<div className="text-center p-8">Loading document...</div>}
+                loading={
+                  <div className="p-8 text-center">Loading document...</div>
+                }
               >
-                <div ref={pageRef} className="relative shadow-lg bg-white">
-                  <Page key={`page_${currentPage}`} pageNumber={currentPage} scale={pdfScale} renderTextLayer={true} />
+                <div ref={pageRef} className="relative bg-white shadow-lg">
+                  <Page
+                    key={`page_${currentPage}`}
+                    pageNumber={currentPage}
+                    scale={pdfScale}
+                    renderTextLayer={true}
+                  />
 
                   {/* Annotations overlay */}
-                  <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
+                  <div className="pointer-events-none absolute top-0 left-0 h-full w-full">
                     {allAnnotations
                       .filter((anno) => anno.page === currentPage)
                       .map((anno) => (
                         <Annotation
                           key={anno.id}
                           annotation={anno}
-                          isHighlighted={comments.some((c) => c.annotation.id === anno.id)}
+                          isHighlighted={comments.some(
+                            (c) => c.annotation.id === anno.id
+                          )}
                         />
                       ))}
                   </div>
 
                   {/* Comment markers */}
-                  <div className="absolute top-0 left-0 w-full h-full">
+                  <div className="absolute top-0 left-0 h-full w-full">
                     {currentPageComments.map((comment) => (
                       <div key={comment.id} className="comment-marker">
                         <CommentMarker
@@ -697,7 +865,7 @@ export function PDFPreviewModal({ isOpen, onClose, document, apiClient }: PDFPre
               </Document>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full">
+            <div className="flex h-full items-center justify-center">
               <p className="text-gray-500">Failed to load PDF</p>
             </div>
           )}

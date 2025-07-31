@@ -667,6 +667,9 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
             setSelectedDocument(null)
           }}
           apiClient={apiClient}
+          onShareClick={handleShareClick}
+          onMoveClick={handleMoveClick}
+          onDownloadClick={handleDownloadClick}
         />
 
         <FilterModal
