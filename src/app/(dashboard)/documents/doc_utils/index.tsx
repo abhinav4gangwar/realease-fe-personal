@@ -189,6 +189,7 @@ export const handleBulkDownload = async (
       toast.success('Download started successfully!')
     } else {
       toast.error('No file data received')
+      toast.error('Something went wrong')
     }
   } catch (error: any) {
     const errorMessage =
