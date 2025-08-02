@@ -116,12 +116,12 @@ export const handleBulkDownload = async (
   allDocuments?: Document[] // Add this parameter to access document details
 ) => {
   if (selectedDocuments.length === 0) return
-  
+
   try {
     // Helper function to find document by ID and determine its type
     const getDocumentType = (docId: string): 'folder' | 'file' => {
       if (!allDocuments) return 'file' // fallback
-      
+
       const findDocumentRecursively = (docs: Document[]): Document | null => {
         for (const doc of docs) {
           if (doc.id === docId) return doc
@@ -132,34 +132,34 @@ export const handleBulkDownload = async (
         }
         return null
       }
-      
+
       const document = findDocumentRecursively(allDocuments)
       return document?.isFolder ? 'folder' : 'file'
     }
-    
-    const payload = selectedDocuments.map((id: string) => ({
+
+    const items = selectedDocuments.map((id: string) => ({
       id: Number.parseInt(id),
-      type: getDocumentType(id)
+      type: getDocumentType(id),
     }))
-    
+
     const response = await apiClient.post(
       `/dashboard/documents/download`,
-      payload,
+      { items: items },
       {
         responseType: 'blob',
       }
     )
-    
+
     if (response && response.data) {
       const contentType =
         response.headers['content-type'] || 'application/octet-stream'
 
       const blob = new Blob([response.data], { type: contentType })
       const url = window.URL.createObjectURL(blob)
-      
+
       // Use documentInfo instead of document
       let filename = documentInfo?.name || 'download'
-      
+
       const contentDisposition = response.headers['content-disposition']
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(
