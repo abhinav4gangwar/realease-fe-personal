@@ -8,30 +8,30 @@ import type {
   SortField,
   SortOrder,
   ViewMode,
-} from "@/types/document.types"
-import { useEffect, useMemo, useState } from "react"
+} from "@/types/document.types";
 import dynamic from 'next/dynamic';
-import { toast } from "sonner"
-import { findFolderById, getAllFolders, getFileCounts, getFolderCounts, handleDownloadClick } from "../doc_utils"
-import { ActionsButton } from "./actions-button"
-import { AddButton, type addType } from "./add-button"
-import { BreadcrumbNavigation } from "./breadcrumb-navigation"
-import BulkDeleteModal from "./bulk-delete-modal"
-import { CancelShareModal } from "./cancel-share-modal"
-import DocumentDeleteModal from "./document-delete-modal"
-import { DocumentDetailModal } from "./document-detail-modal"
-import { DocumentGridView } from "./document-grid-view"
-import { DocumentListView } from "./document-list-view"
-import { FilterButton } from "./filter-button"
-import { FilterModal } from "./filter-modal"
-import { MoveDocumentModal } from "./move-document-modal"
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { findFolderById, getAllFolders, getFileCounts, getFolderCounts, handleBulkDownload, handleDownloadClick } from "../doc_utils";
+import { ActionsButton } from "./actions-button";
+import { AddButton, type addType } from "./add-button";
+import { BreadcrumbNavigation } from "./breadcrumb-navigation";
+import BulkDeleteModal from "./bulk-delete-modal";
+import { CancelShareModal } from "./cancel-share-modal";
+import DocumentDeleteModal from "./document-delete-modal";
+import { DocumentDetailModal } from "./document-detail-modal";
+import { DocumentGridView } from "./document-grid-view";
+import { DocumentListView } from "./document-list-view";
+import { FilterButton } from "./filter-button";
+import { FilterModal } from "./filter-modal";
+import { MoveDocumentModal } from "./move-document-modal";
 
-import ScrollToTop from "./scroll-to-top"
-import { SelectedDocsModal } from "./selected-docs-modal"
-import { ShareEmailModal } from "./share-email-modal"
-import { SortButton } from "./sort-button"
-import { UploadModal } from "./upload-modal"
-import { ViewModeToggle } from "./viewmode-toggle"
+import ScrollToTop from "./scroll-to-top";
+import { SelectedDocsModal } from "./selected-docs-modal";
+import { ShareEmailModal } from "./share-email-modal";
+import { SortButton } from "./sort-button";
+import { UploadModal } from "./upload-modal";
+import { ViewModeToggle } from "./viewmode-toggle";
 
 const PDFPreviewModal = dynamic(
   () => import('./pdf-preview-modal').then((mod) => mod.PDFPreviewModal),
@@ -448,8 +448,7 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
         break
       case "download":
         if (selectedDocuments.length > 0) {
-          console.log("Bulk download:", selectedDocuments)
-          toast.info("Bulk download functionality to be implemented")
+          handleBulkDownload(selectedDocuments)
         }
         break
       case "share":
