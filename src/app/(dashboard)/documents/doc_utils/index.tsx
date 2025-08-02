@@ -112,14 +112,34 @@ export const handleDownloadClick = async (document: Document) => {
 
 export const handleBulkDownload = async (
   selectedDocuments: any,
-  documentInfo?: { name?: string; isFolder?: boolean }
+  documentInfo?: { name?: string; isFolder?: boolean },
+  allDocuments?: Document[] // Add this parameter to access document details
 ) => {
   if (selectedDocuments.length === 0) return
   
   try {
+    // Helper function to find document by ID and determine its type
+    const getDocumentType = (docId: string): 'folder' | 'file' => {
+      if (!allDocuments) return 'file' // fallback
+      
+      const findDocumentRecursively = (docs: Document[]): Document | null => {
+        for (const doc of docs) {
+          if (doc.id === docId) return doc
+          if (doc.children) {
+            const found = findDocumentRecursively(doc.children)
+            if (found) return found
+          }
+        }
+        return null
+      }
+      
+      const document = findDocumentRecursively(allDocuments)
+      return document?.isFolder ? 'folder' : 'file'
+    }
+    
     const payload = selectedDocuments.map((id: string) => ({
       id: Number.parseInt(id),
-      type: 'folder'
+      type: getDocumentType(id)
     }))
     
     const response = await apiClient.post(
