@@ -1,13 +1,13 @@
 "use client"
 
-import { useUploadHandler } from "@/hooks/useUploadHandler"
 import { Button } from "@/components/ui/button"
+import { useUploadHandler } from "@/hooks/useUploadHandler"
 import { X } from "lucide-react"
 import { useEffect, useState } from "react"
 import { CreateFolderForm } from "./CreateFolderForm"
+import { FileDetailsDialog } from "./FileDetailsDialog"
 import { UploadDropzone } from "./UploadDropzone"
 import { UploadQueueDialog } from "./UploadQueueDialog"
-import { FileDetailsDialog } from "./FileDetailsDialog"
 
 interface UploadModalProps {
   isOpen: boolean
@@ -49,14 +49,14 @@ export function UploadModal({ isOpen, addType, onClose, onSuccess }: UploadModal
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/60" />
+      <div className="fixed inset-0 z-40 bg-black/20" />
       <div className="fixed inset-0 z-50 flex items-center justify-center">
-        <div className="mx-4 w-full max-w-2xl rounded-lg border bg-background shadow-lg">
-          <div className="flex items-center justify-between border-b p-4">
-            <h2 className="text-lg font-semibold">
+        <div className="mx-4 w-full max-w-4xl rounded-lg border border-gray-400 bg-background shadow-lg">
+          <div className="flex items-center justify-between  p-4">
+            <h2 className="text-xl font-semibold">
               {addType === 'uploadFile' ? "Upload Documents" : "Create New Folder"}
             </h2>
-            <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8">
+            <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8 hover:text-primary cursor-pointer">
               <X className="h-4 w-4" />
             </Button>
           </div>

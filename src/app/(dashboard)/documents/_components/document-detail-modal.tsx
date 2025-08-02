@@ -42,10 +42,14 @@ export function DocumentDetailModal({
   const [isEditing, setIsEditing] = useState(false)
   const [editedName, setEditedName] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [editedProperty, setEditedProperty] = useState('')
+  const [editedTags, setEditedTags] = useState('')
 
   useEffect(() => {
     if (isOpen && openInEditMode && document) {
       setEditedName(document.name)
+      setEditedProperty(document.linkedProperty)
+      setEditedTags(document.tags)
       setIsEditing(true)
     } else if (isOpen && document) {
       setEditedName(document.name)
@@ -99,7 +103,7 @@ export function DocumentDetailModal({
   }
 
   return (
-    <div className="fixed top-0 right-0 flex h-full w-[380px] flex-col border-l border-none bg-white shadow-lg z-30">
+    <div className="fixed top-0 right-0 z-30 flex h-full w-[380px] flex-col border-l border-none bg-white shadow-lg">
       {/* Header */}
       <div className="flex items-center justify-between p-4 pt-24">
         <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -180,8 +184,8 @@ export function DocumentDetailModal({
                     className="cursor-pointer font-semibold hover:bg-[#A2CFE333]"
                     onClick={(e) => {
                       e.stopPropagation()
-                      if ( onDownloadClick) {
-                         onDownloadClick(document)
+                      if (onDownloadClick) {
+                        onDownloadClick(document)
                       }
                     }}
                   >
@@ -240,7 +244,18 @@ export function DocumentDetailModal({
             <h3 className="mb-1 text-sm font-medium text-gray-500">
               Linked Property
             </h3>
-            <p className="text-sm">{document.linkedProperty}</p>
+            {isEditing ? (
+              <Input
+                value={editedProperty}
+                onChange={(e) => setEditedProperty(e.target.value)}
+                onKeyDown={handleKeyPress}
+                className="h-auto border-gray-400 p-2 text-lg font-semibold focus-visible:ring-0"
+                autoFocus
+                disabled={isSaving}
+              />
+            ) : (
+              <p className="text-sm">{document.linkedProperty}</p>
+            )}
           </div>
           <div>
             <h3 className="mb-1 text-sm font-medium text-gray-500">
@@ -268,7 +283,18 @@ export function DocumentDetailModal({
           </div>
           <div>
             <h3 className="mb-1 text-sm font-medium text-gray-500">Tags</h3>
-            <p className="text-sm">{document.tags}</p>
+            {isEditing ? (
+              <Input
+                value={editedTags}
+                onChange={(e) => setEditedTags(e.target.value)}
+                onKeyDown={handleKeyPress}
+                className="h-auto border-gray-400 p-2 text-lg font-semibold focus-visible:ring-0"
+                autoFocus
+                disabled={isSaving}
+              />
+            ) : (
+              <p className="text-sm">{document.tags}</p>
+            )}
           </div>
           {document.size && (
             <div>

@@ -1,8 +1,7 @@
 "use client"
-
 import { Button } from "@/components/ui/button"
 import type { Document } from "@/types/document.types"
-import { Download, Eye, FolderInput, Info, Loader2, Pencil, Trash2 } from "lucide-react"
+import { Download, FolderInput, Info, Loader2, Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { HiShare } from "react-icons/hi2"
 import { FileIcon } from "./file-icon"
@@ -22,6 +21,8 @@ interface DocumentListViewProps {
   onShareClick?: (document: Document) => void
   onDownloadClick?: (document: Document) => void
   loadingFolders?: Set<string>
+  onSelectAll?: () => void
+  selectAllState?: "none" | "some" | "all"
 }
 
 export function DocumentListView({
@@ -39,12 +40,13 @@ export function DocumentListView({
   onShareClick,
   onDownloadClick,
   loadingFolders = new Set(),
+  onSelectAll,
+  selectAllState = "none",
 }: DocumentListViewProps) {
   const [hoveredRow, setHoveredRow] = useState<string | null>(null)
 
   const handleRowClick = (document: Document) => {
     if (isShareMode) return
-
     if (document.isFolder && onFolderClick) {
       onFolderClick(document)
     } else if (onDocumentPreview) {
@@ -57,25 +59,37 @@ export function DocumentListView({
   return (
     <div className="space-y-1">
       {/* Header */}
-      <div className="text-md text-secondary grid grid-cols-12 gap-4 px-4 py-2 font-semibold">
-        <div className="col-span-3">Name</div>
-        <div className="col-span-4 text-center">Linked Property</div>
-        <div className="col-span-2 text-center">Date Added</div>
-        <div className="col-span-2 text-center">Tags</div>
+      <div className="text-md text-secondary grid grid-cols-13 gap-4 px-4 py-2 font-semibold">
+        <div className="col-span-4 flex gap-3 items-center">
+          <input
+            type="checkbox"
+            className="h-4 w-4 accent-[#f56161]"
+            checked={selectAllState === "all"}
+            ref={(el) => {
+              if (el) {
+                el.indeterminate = selectAllState === "some"
+              }
+            }}
+            onChange={onSelectAll}
+          />
+          <div>Name</div>
+        </div>
+        <div className="col-span-3 text-left">Linked Property</div>
+        <div className="col-span-3 text-left">Date Added</div>
+        <div className="col-span-2 text-left">Tags</div>
       </div>
-
       {/* Document Rows */}
       {documents.map((document) => (
         <div
           key={document.id}
-          className={`grid cursor-pointer grid-cols-12 items-center px-4 py-3 hover:rounded-md hover:bg-[#A2CFE333] ${
+          className={`grid cursor-pointer grid-cols-13 items-center px-4 py-3 hover:rounded-md hover:bg-[#A2CFE333] ${
             selectedDocumentId === document.id ? "border-blue-200 bg-blue-50" : ""
           }`}
           onMouseEnter={() => setHoveredRow(document.id)}
           onMouseLeave={() => setHoveredRow(null)}
           onClick={() => handleRowClick(document)}
         >
-          <div className="col-span-3 flex items-center gap-3">
+          <div className="col-span-4 flex items-center gap-3">
             <input
               type="checkbox"
               checked={selectedDocuments?.includes(document.id) || false}
@@ -89,24 +103,11 @@ export function DocumentListView({
             </div>
             <span className="truncate text-sm font-medium">{document.name}</span>
           </div>
-          <div className="col-span-4 truncate text-center text-sm text-[#9B9B9D]">{document.linkedProperty}</div>
-          <div className="col-span-2 text-center text-sm text-[#9B9B9D]">{document.dateAdded}</div>
-          <div className="col-span-2 truncate text-center text-sm text-[#9B9B9D]">
+          <div className="col-span-3 truncate text-left text-sm text-[#9B9B9D] pl-2">{document.linkedProperty}</div>
+          <div className="col-span-3 text-left text-sm text-[#9B9B9D] pl-2">{document.dateAdded}</div>
+          <div className="col-span-2 truncate text-left text-sm text-[#9B9B9D]">
             {hoveredRow === document.id && !isShareMode ? (
-              <div className="flex items-center justify-center gap-1">
-                {!document.isFolder && onDocumentPreview && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="hover:text-primary h-6 w-6 cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onDocumentPreview(document)
-                    }}
-                  >
-                    <Eye className="h-3 w-3" />
-                  </Button>
-                )}
+              <div className="flex gap-1">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -174,7 +175,7 @@ export function DocumentListView({
                 </Button>
               </div>
             ) : (
-              document.tags
+              <span className="pl-2">{document.tags}</span>
             )}
           </div>
           <div className="col-span-1 flex justify-end">

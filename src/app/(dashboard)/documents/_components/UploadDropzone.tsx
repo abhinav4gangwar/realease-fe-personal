@@ -27,7 +27,7 @@ export function UploadDropzone({
       onDragOver={handleDragOver}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
-      className={`min-h-[200px] border-2 border-dashed rounded-lg p-8 text-center flex flex-col items-center justify-center cursor-pointer transition-colors ${
+      className={`min-h-[300px] border-2 border-dashed rounded-lg p-8 text-center flex flex-col items-center justify-center cursor-pointer transition-colors ${
         isDragActive
           ? "border-primary bg-primary/5"
           : "border-muted-foreground/25 hover:border-primary/50"
@@ -51,10 +51,10 @@ export function UploadDropzone({
       <input ref={folderInputRef} type="file" {...({ webkitdirectory: "" } as any)} multiple onChange={handleFilesFromInput} style={{ display: "none" }} />
 
       <div className="flex gap-3 mt-4">
-        <Button variant="outline" onClick={openFileDialog} className="flex-1">
+        <Button variant="outline" onClick={openFileDialog} className="flex-1 h-11 w-28 cursor-pointer hover:bg-secondary hover:text-white transition ease-in-out">
           <File className="h-4 w-4 mr-2" />Select Files
         </Button>
-        <Button variant="outline" onClick={openFolderDialog} className="flex-1">
+        <Button variant="outline" onClick={openFolderDialog} className="flex-1 h-11 w-28 cursor-pointer hover:bg-secondary hover:text-white transition ease-in-out">
           <Folder className="h-4 w-4 mr-2" />Select Folder
         </Button>
       </div>
