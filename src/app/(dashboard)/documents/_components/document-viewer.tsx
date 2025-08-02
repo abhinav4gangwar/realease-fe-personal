@@ -10,6 +10,7 @@ import type {
   ViewMode,
 } from "@/types/document.types"
 import { useEffect, useMemo, useState } from "react"
+import dynamic from 'next/dynamic';
 import { toast } from "sonner"
 import { findFolderById, getAllFolders, getFileCounts, getFolderCounts, handleDownloadClick } from "../doc_utils"
 import { ActionsButton } from "./actions-button"
@@ -25,13 +26,19 @@ import { FilterButton } from "./filter-button"
 import { FilterModal } from "./filter-modal"
 import { MoveDocumentModal } from "./move-document-modal"
 
-import { PDFPreviewModal } from "./pdf-preview-modal"
 import ScrollToTop from "./scroll-to-top"
 import { SelectedDocsModal } from "./selected-docs-modal"
 import { ShareEmailModal } from "./share-email-modal"
 import { SortButton } from "./sort-button"
 import { UploadModal } from "./upload-modal"
 import { ViewModeToggle } from "./viewmode-toggle"
+
+const PDFPreviewModal = dynamic(
+  () => import('./pdf-preview-modal').then((mod) => mod.PDFPreviewModal),
+  {
+    ssr: false
+  }
+);
 
 interface DocumentViewerProps {
   recentlyAccessed?: Document[]

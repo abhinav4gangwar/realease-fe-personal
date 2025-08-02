@@ -58,11 +58,9 @@ export const handleDownloadClick = async (document: Document) => {
       ]
     }
     
-    console.log('Download payload:', payload)
+    console.log('Download payload:', payload.items)
     
-    const response = await apiClient.get(`/dashboard/documents/download`, {
-      data: payload,
-    })
+    const response = await apiClient.post(`/dashboard/documents/download`, payload)
 
     if (response) {
       toast.success('Download started successfully!')
