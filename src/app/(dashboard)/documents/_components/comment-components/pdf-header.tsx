@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Download, FolderInput, Loader2, X } from "lucide-react"
+import { Download, FolderInput, Loader2, MessageSquare, Pencil, X } from "lucide-react"
 import type { FC } from "react"
 import { HiShare } from "react-icons/hi2"
 import { FileIcon } from "../file-icon"
@@ -9,19 +9,25 @@ import { FileIcon } from "../file-icon"
 interface PDFHeaderProps {
   document: any
   isLoadingComments: boolean
+  hasTextSelection: boolean
   onClose: () => void
   onShareClick?: (document: any) => void
   onDownloadClick?: (document: any) => void
   onMoveClick?: (document: any) => void
+  onEditClick?: () => void
+  onCommentClick: () => void
 }
 
 export const PDFHeader: FC<PDFHeaderProps> = ({
   document,
   isLoadingComments,
+  hasTextSelection,
   onClose,
   onShareClick,
   onDownloadClick,
   onMoveClick,
+  onEditClick,
+  onCommentClick,
 }) => {
   return (
     <div className="flex items-center justify-between p-5">
@@ -35,7 +41,38 @@ export const PDFHeader: FC<PDFHeaderProps> = ({
           </div>
         )}
       </div>
+
       <div className="flex items-center gap-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          className={`h-6 w-6 cursor-pointer text-white transition-all ${
+            hasTextSelection ? "hover:text-primary ring-2 ring-blue-400 bg-blue-500/20" : "hover:text-primary"
+          }`}
+          onClick={(e) => {
+            e.stopPropagation()
+            onCommentClick()
+          }}
+          title={hasTextSelection ? "Add comment to selection" : "Select text to comment"}
+        >
+          <MessageSquare className="h-3 w-3" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hover:text-primary h-6 w-6 cursor-pointer text-white"
+          onClick={(e) => {
+            e.stopPropagation()
+            if (onEditClick) {
+              onEditClick()
+            }
+          }}
+          title="Edit document details"
+        >
+          <Pencil className="h-3 w-3" />
+        </Button>
+
         <Button
           variant="ghost"
           size="icon"
@@ -49,6 +86,7 @@ export const PDFHeader: FC<PDFHeaderProps> = ({
         >
           <HiShare className="h-3 w-3" />
         </Button>
+
         <Button
           variant="ghost"
           size="icon"
@@ -62,6 +100,7 @@ export const PDFHeader: FC<PDFHeaderProps> = ({
         >
           <Download className="h-3 w-3" />
         </Button>
+
         <Button
           variant="ghost"
           size="icon"
@@ -75,6 +114,7 @@ export const PDFHeader: FC<PDFHeaderProps> = ({
         >
           <FolderInput className="h-3 w-3" />
         </Button>
+
         <Button
           variant="ghost"
           size="icon"

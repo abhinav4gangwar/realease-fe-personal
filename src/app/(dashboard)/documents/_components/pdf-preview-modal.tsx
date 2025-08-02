@@ -1,30 +1,27 @@
-'use client'
-import {
-  Comment,
-  CommentAnnotation,
-  PDFPreviewModalProps,
-  User,
-} from '@/types/comment.types'
-import { useEffect, useRef, useState, type MouseEvent } from 'react'
-import { Document, Page, pdfjs } from 'react-pdf'
-import 'react-pdf/dist/Page/AnnotationLayer.css'
-import 'react-pdf/dist/Page/TextLayer.css'
-import { toast } from 'sonner'
-import { CommentService } from '../doc_utils/comment.services'
-import { Annotation } from './comment-components/annotation'
-import { CommentMarker } from './comment-components/comment-marker'
-import { CommentModal } from './comment-components/comment-modal'
-import { PDFControls } from './comment-components/pdf-controls'
-import { PDFHeader } from './comment-components/pdf-header'
+"use client"
 
-pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
+import type { Comment, CommentAnnotation, PDFPreviewModalProps, User } from "@/types/comment.types"
+import { useEffect, useRef, useState, type MouseEvent } from "react"
+import { Document, Page, pdfjs } from "react-pdf"
+import "react-pdf/dist/Page/AnnotationLayer.css"
+import "react-pdf/dist/Page/TextLayer.css"
+import { toast } from "sonner"
+
+import { CommentService } from "../doc_utils/comment.services"
+import { Annotation } from "./comment-components/annotation"
+import { CommentMarker } from "./comment-components/comment-marker"
+import { CommentModal } from "./comment-components/comment-modal"
+import { PDFControls } from "./comment-components/pdf-controls"
+import { PDFHeader } from "./comment-components/pdf-header"
+
+pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js"
 
 // Mock users data
 const mockUsers: User[] = [
-  { id: 'user-1', name: 'Ada Lovelace' },
-  { id: 'user-2', name: 'Grace Hopper' },
-  { id: 'user-3', name: 'Margaret Hamilton' },
-  { id: 'user-4', name: 'Katherine Johnson' },
+  { id: "user-1", name: "Ada Lovelace" },
+  { id: "user-2", name: "Grace Hopper" },
+  { id: "user-3", name: "Margaret Hamilton" },
+  { id: "user-4", name: "Katherine Johnson" },
 ]
 
 export function PDFPreviewModal({
@@ -35,6 +32,7 @@ export function PDFPreviewModal({
   onMoveClick,
   onShareClick,
   onDownloadClick,
+  onEditClick, // Add this new prop
 }: PDFPreviewModalProps) {
   // PDF and data state
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
@@ -46,31 +44,25 @@ export function PDFPreviewModal({
   // Comments and annotations state
   const [comments, setComments] = useState<Comment[]>([])
   const [users] = useState<User[]>(mockUsers)
-  const [tempAnnotation, setTempAnnotation] =
-    useState<CommentAnnotation | null>(null)
+  const [tempAnnotation, setTempAnnotation] = useState<CommentAnnotation | null>(null)
   const [isLoadingComments, setIsLoadingComments] = useState<boolean>(false)
   const [isCreatingComment, setIsCreatingComment] = useState<boolean>(false)
-  const [deletingCommentId, setDeletingCommentId] = useState<number | null>(
-    null
-  )
+  const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null)
   const [deletingReplyId, setDeletingReplyId] = useState<number | null>(null)
   const [activeCommentId, setActiveCommentId] = useState<number | null>(null)
-  const [replyingToCommentId, setReplyingToCommentId] = useState<number | null>(
-    null
-  )
+  const [replyingToCommentId, setReplyingToCommentId] = useState<number | null>(null)
 
   // Comment modal state
   const [isCommentModalOpen, setIsCommentModalOpen] = useState(false)
-  const [commentModalPosition, setCommentModalPosition] = useState({
-    x: 0,
-    y: 0,
-  })
+  const [commentModalPosition, setCommentModalPosition] = useState({ x: 0, y: 0 })
   const [editingComment, setEditingComment] = useState<Comment | null>(null)
 
+  // Text selection state
+  const [hasTextSelection, setHasTextSelection] = useState(false)
+  const [selectionPosition, setSelectionPosition] = useState({ x: 0, y: 0 })
+
   // Services
-  const [commentService, setCommentService] = useState<CommentService | null>(
-    null
-  )
+  const [commentService, setCommentService] = useState<CommentService | null>(null)
 
   // Refs
   const pageRef = useRef<HTMLDivElement>(null)
@@ -92,20 +84,18 @@ export function PDFPreviewModal({
 
   const loadPdf = async () => {
     if (!document) return
+
     setIsLoading(true)
     try {
-      const response = await apiClient.get(
-        `/dashboard/documents/view/${document.id}`,
-        {
-          responseType: 'blob',
-        }
-      )
-      const pdfBlob = new Blob([response.data], { type: 'application/pdf' })
+      const response = await apiClient.get(`/dashboard/documents/view/${document.id}`, {
+        responseType: "blob",
+      })
+      const pdfBlob = new Blob([response.data], { type: "application/pdf" })
       const objectUrl = URL.createObjectURL(pdfBlob)
       setPdfUrl(objectUrl)
     } catch (error) {
-      console.error('Error loading PDF:', error)
-      toast.error('Failed to load PDF document')
+      console.error("Error loading PDF:", error)
+      toast.error("Failed to load PDF document")
     } finally {
       setIsLoading(false)
     }
@@ -113,22 +103,20 @@ export function PDFPreviewModal({
 
   const loadComments = async () => {
     if (!document || !commentService) return
+
     setIsLoadingComments(true)
     try {
-      const fetchedComments = await commentService.getComments(
-        Number.parseInt(document.id)
-      )
+      const fetchedComments = await commentService.getComments(Number.parseInt(document.id))
       setComments(fetchedComments)
     } catch (error) {
-      console.error('Error loading comments:', error)
-      toast.error('Failed to load comments')
+      console.error("Error loading comments:", error)
+      toast.error("Failed to load comments")
       setComments([])
     } finally {
       setIsLoadingComments(false)
     }
   }
 
-  // Cleanup URL when modal closes
   useEffect(() => {
     return () => {
       if (pdfUrl) {
@@ -137,7 +125,6 @@ export function PDFPreviewModal({
     }
   }, [pdfUrl])
 
-  // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
       setPdfUrl(null)
@@ -149,38 +136,41 @@ export function PDFPreviewModal({
       setComments([])
       setActiveCommentId(null)
       setReplyingToCommentId(null)
+      setHasTextSelection(false)
     }
   }, [isOpen])
 
-  // Close active comment when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: Event) => {
       const target = e.target as Element
-      if (activeCommentId && !target?.closest('.comment-marker')) {
+      if (activeCommentId && !target?.closest(".comment-marker")) {
         setActiveCommentId(null)
       }
     }
+
     if (activeCommentId) {
-      window.document.addEventListener('click', handleClickOutside)
-      return () =>
-        window.document.removeEventListener('click', handleClickOutside)
+      window.document.addEventListener("click", handleClickOutside)
+      return () => window.document.removeEventListener("click", handleClickOutside)
     }
   }, [activeCommentId])
 
-  // Text selection and annotation logic
   const handleMouseUp = (e: MouseEvent): void => {
     const selection = window.getSelection()
-    if (!selection || selection.rangeCount === 0 || selection.isCollapsed)
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+      setHasTextSelection(false)
+      setTempAnnotation(null)
       return
+    }
+
     const range = selection.getRangeAt(0)
-    const pageContent = pageRef.current?.querySelector(
-      '.react-pdf__Page__textContent'
-    )
+    const pageContent = pageRef.current?.querySelector(".react-pdf__Page__textContent")
+
     if (!pageContent) return
     if (!pageContent.contains(range.commonAncestorContainer)) return
 
     const pageRect = pageContent.getBoundingClientRect()
     const selectionRect = range.getBoundingClientRect()
+
     const x = ((selectionRect.left - pageRect.left) / pageRect.width) * 100
     const y = ((selectionRect.top - pageRect.top) / pageRect.height) * 100
     const width = (selectionRect.width / pageRect.width) * 100
@@ -192,17 +182,35 @@ export function PDFPreviewModal({
         page: currentPage,
         rect: { x, y, width, height },
       }
+
       setTempAnnotation(newAnnotation)
-      setCommentModalPosition({ x: e.clientX, y: e.clientY })
-      setEditingComment(null)
-      setActiveCommentId(null)
-      setIsCommentModalOpen(true)
+      setSelectionPosition({ x: e.clientX, y: e.clientY })
+      setHasTextSelection(true)
     }
-    selection.removeAllRanges()
+  }
+
+  const handleCommentIconClick = () => {
+    if (!hasTextSelection || !tempAnnotation) {
+      toast.error("Select something to comment")
+      return
+    }
+
+    setCommentModalPosition(selectionPosition)
+    setEditingComment(null)
+    setActiveCommentId(null)
+    setIsCommentModalOpen(true)
+  }
+
+  const handleEditClick = () => {
+    if (document && onEditClick) {
+      onEditClick(document)
+      // Remove this line: onClose() // Don't close here, let parent handle it
+    }
   }
 
   const handleCommentSubmit = async (text: string) => {
     if (!tempAnnotation || !document || !commentService) return
+
     setIsCreatingComment(true)
     try {
       const newComment = await commentService.createComment({
@@ -210,13 +218,15 @@ export function PDFPreviewModal({
         documentId: Number.parseInt(document.id),
         annotation: tempAnnotation,
       })
+
       setComments((prev) => [...prev, newComment])
       setTempAnnotation(null)
+      setHasTextSelection(false)
       setIsCommentModalOpen(false)
-      toast.success('Comment added successfully')
+      toast.success("Comment added successfully")
     } catch (error) {
-      console.error('Error creating comment:', error)
-      toast.error('Failed to add comment')
+      console.error("Error creating comment:", error)
+      toast.error("Failed to add comment")
     } finally {
       setIsCreatingComment(false)
     }
@@ -224,24 +234,22 @@ export function PDFPreviewModal({
 
   const handleCommentUpdate = async (commentId: number, text: string) => {
     if (!commentService) return
+
     setIsCreatingComment(true)
     try {
       const updatedComment = await commentService.updateComment({
         commentId,
         text,
       })
-      setComments((prev) =>
-        prev.map((comment) =>
-          comment.id === commentId ? updatedComment : comment
-        )
-      )
+
+      setComments((prev) => prev.map((comment) => (comment.id === commentId ? updatedComment : comment)))
       setEditingComment(null)
       setIsCommentModalOpen(false)
       setActiveCommentId(null)
-      toast.success('Comment updated successfully')
+      toast.success("Comment updated successfully")
     } catch (error) {
-      console.error('Error updating comment:', error)
-      toast.error('Failed to update comment')
+      console.error("Error updating comment:", error)
+      toast.error("Failed to update comment")
     } finally {
       setIsCreatingComment(false)
     }
@@ -249,15 +257,16 @@ export function PDFPreviewModal({
 
   const handleCommentDelete = async (commentId: number) => {
     if (!commentService) return
+
     setDeletingCommentId(commentId)
     try {
       await commentService.deleteComment(commentId)
       setComments((prev) => prev.filter((comment) => comment.id !== commentId))
       setActiveCommentId(null)
-      toast.success('Comment deleted successfully')
+      toast.success("Comment deleted successfully")
     } catch (error) {
-      console.error('Error deleting comment:', error)
-      toast.error('Failed to delete comment')
+      console.error("Error deleting comment:", error)
+      toast.error("Failed to delete comment")
     } finally {
       setDeletingCommentId(null)
     }
@@ -281,10 +290,17 @@ export function PDFPreviewModal({
     setIsCommentModalOpen(false)
     setTempAnnotation(null)
     setEditingComment(null)
+    setHasTextSelection(false)
+    // Clear any text selection
+    const selection = window.getSelection()
+    if (selection) {
+      selection.removeAllRanges()
+    }
   }
 
   const handleReply = async (parentId: number, text: string) => {
     if (!document || !commentService) return
+
     setReplyingToCommentId(parentId)
     try {
       const response = await commentService.createReply({
@@ -299,12 +315,12 @@ export function PDFPreviewModal({
             return response
           }
           return comment
-        })
+        }),
       )
-      toast.success('Reply added successfully')
+      toast.success("Reply added successfully")
     } catch (error) {
-      console.error('Error creating reply:', error)
-      toast.error('Failed to add reply')
+      console.error("Error creating reply:", error)
+      toast.error("Failed to add reply")
     } finally {
       setReplyingToCommentId(null)
     }
@@ -322,21 +338,20 @@ export function PDFPreviewModal({
 
   const handleDeleteReply = async (replyId: number) => {
     if (!commentService) return
+
     setDeletingReplyId(replyId)
     try {
       await commentService.deleteComment(replyId)
-
       setComments((prev) =>
         prev.map((comment) => ({
           ...comment,
-          children:
-            comment.children?.filter((child) => child.id !== replyId) || [],
-        }))
+          children: comment.children?.filter((child) => child.id !== replyId) || [],
+        })),
       )
-      toast.success('Reply deleted successfully')
+      toast.success("Reply deleted successfully")
     } catch (error) {
-      console.error('Error deleting reply:', error)
-      toast.error('Failed to delete reply')
+      console.error("Error deleting reply:", error)
+      toast.error("Failed to delete reply")
     } finally {
       setDeletingReplyId(null)
     }
@@ -352,9 +367,7 @@ export function PDFPreviewModal({
   }
 
   const goToPrevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1))
-  const goToNextPage = () =>
-    numPages && setCurrentPage((prev) => Math.min(prev + 1, numPages))
-
+  const goToNextPage = () => numPages && setCurrentPage((prev) => Math.min(prev + 1, numPages))
   const zoomIn = () => setPdfScale((prev) => Math.min(prev + 0.2, 3.0))
   const zoomOut = () => setPdfScale((prev) => Math.max(prev - 0.2, 0.5))
 
@@ -365,9 +378,7 @@ export function PDFPreviewModal({
     ...(tempAnnotation ? [tempAnnotation] : []),
   ]
 
-  const currentPageComments = comments.filter(
-    (comment) => comment.annotation.page === currentPage
-  )
+  const currentPageComments = comments.filter((comment) => comment.annotation.page === currentPage)
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50">
@@ -376,17 +387,17 @@ export function PDFPreviewModal({
         <PDFHeader
           document={document}
           isLoadingComments={isLoadingComments}
+          hasTextSelection={hasTextSelection}
           onClose={onClose}
           onShareClick={onShareClick}
           onDownloadClick={onDownloadClick}
           onMoveClick={onMoveClick}
+          onEditClick={handleEditClick}
+          onCommentClick={handleCommentIconClick}
         />
 
         {/* PDF Content */}
-        <div
-          className="relative flex-1 overflow-auto bg-gray-100 p-6"
-          onMouseUp={handleMouseUp}
-        >
+        <div className="relative flex-1 overflow-auto bg-gray-100 p-6" onMouseUp={handleMouseUp}>
           {/* Floating Controls */}
           <PDFControls
             currentPage={currentPage}
@@ -411,17 +422,11 @@ export function PDFPreviewModal({
                 file={pdfUrl}
                 onLoadSuccess={onDocumentLoadSuccess}
                 onLoadError={console.error}
-                loading={
-                  <div className="p-8 text-center">Loading document...</div>
-                }
+                loading={<div className="p-8 text-center">Loading document...</div>}
               >
                 <div ref={pageRef} className="relative bg-white shadow-lg">
-                  <Page
-                    key={`page_${currentPage}`}
-                    pageNumber={currentPage}
-                    scale={pdfScale}
-                    renderTextLayer={true}
-                  />
+                  <Page key={`page_${currentPage}`} pageNumber={currentPage} scale={pdfScale} renderTextLayer={true} />
+
                   {/* Annotations overlay */}
                   <div className="pointer-events-none absolute top-0 left-0 h-full w-full">
                     {allAnnotations
@@ -430,12 +435,11 @@ export function PDFPreviewModal({
                         <Annotation
                           key={anno.id}
                           annotation={anno}
-                          isHighlighted={comments.some(
-                            (c) => c.annotation.id === anno.id
-                          )}
+                          isHighlighted={comments.some((c) => c.annotation.id === anno.id)}
                         />
                       ))}
                   </div>
+
                   {/* Comment markers */}
                   <div className="absolute top-0 left-0 h-full w-full">
                     {currentPageComments.map((comment) => (
@@ -466,6 +470,7 @@ export function PDFPreviewModal({
           )}
         </div>
       </div>
+
       {/* Comment Modal */}
       <CommentModal
         isOpen={isCommentModalOpen}
