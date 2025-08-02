@@ -65,7 +65,7 @@ export const handleDownloadClick = async (document: Document) => {
     if (response) {
       toast.success('Download started successfully!')
     } else {
-      toast.error('No download URL received')
+      toast.error('Something went wrong')
     }
   } catch (error: any) {
     const errorMessage =
