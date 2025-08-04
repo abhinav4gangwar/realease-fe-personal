@@ -8,7 +8,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 
-import { Plus, X } from 'lucide-react'
+import { Plus, Trash2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Tag, tagsApi } from '../doc_utils/tags.services'
 
@@ -104,16 +104,35 @@ export function TagInput({
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <div className="w-full">
-          <Input
-            value={selectedTags.join(', ')}
-            placeholder={placeholder}
-            readOnly
-            className="cursor-pointer bg-transparent h-11"
+          <div
+            className="border-input flex min-h-11 w-full cursor-pointer flex-wrap items-center gap-2 rounded-md border bg-transparent px-3 py-2 text-sm shadow-sm"
             onClick={() => setIsOpen(true)}
-          />
+          >
+            {selectedTags.map((tag) => (
+              <div
+                key={tag}
+                className="bg-muted text-foreground flex items-center gap-1 rounded px-2 py-1 text-sm"
+              >
+                {tag}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleTagRemove(tag)
+                  }}
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+            <span className="text-muted-foreground text-sm">
+              {selectedTags.length === 0 && placeholder}
+            </span>
+          </div>
         </div>
       </PopoverTrigger>
-      <PopoverContent className="w-full border-gray-400 p-0" align="start">
+      <PopoverContent className="w-full border border-gray-300 p-0" align="start">
         <div className="p-2">
           <Input
             placeholder="Search or type new tag..."
@@ -139,18 +158,6 @@ export function TagInput({
           />
 
           <div className="max-h-48 overflow-auto">
-            {shouldShowCreateOption && (
-              <Button
-                variant="ghost"
-                className="text-primary mb-1 w-full justify-start"
-                onClick={handleCreateTag}
-                disabled={isLoading}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Create "{searchValue}"
-              </Button>
-            )}
-
             {filteredTags.length > 0 && (
               <div className="space-y-1">
                 {filteredTags.map((tag) => (
@@ -160,7 +167,7 @@ export function TagInput({
                   >
                     <Button
                       variant="ghost"
-                      className="flex-1 justify-start"
+                      className="flex-1 justify-start cursor-pointer"
                       onClick={() => handleTagSelect(tag.name)}
                     >
                       {tag.name}
@@ -168,13 +175,13 @@ export function TagInput({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-destructive h-8 w-8 p-0 opacity-0 group-hover:opacity-100"
+                      className="text-gray-400 cursor-pointer hover:text-primary h-8 w-8 p-0"
                       onClick={(e) => {
                         e.stopPropagation()
                         handleDeleteTag(tag.id, tag.name)
                       }}
                     >
-                      <X className="h-3 w-3" />
+                      <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
                 ))}
@@ -187,31 +194,16 @@ export function TagInput({
               </div>
             )}
           </div>
-
-          {selectedTags.length > 0 && (
-            <div className="mt-3 border-t pt-2">
-              <div className="text-muted-foreground mb-2 text-xs">
-                Selected tags:
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {selectedTags.map((tag) => (
-                  <div
-                    key={tag}
-                    className="bg-secondary text-secondary-foreground flex items-center gap-1 rounded-md px-2 py-1 text-xs"
-                  >
-                    {tag}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="hover:bg-destructive hover:text-destructive-foreground h-4 w-4 p-0"
-                      onClick={() => handleTagRemove(tag)}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
+          {shouldShowCreateOption && (
+            <Button
+              variant="ghost"
+              className="text-gray-500 cursor-pointer hover:text-primary mb-1 w-full justify-start"
+              onClick={handleCreateTag}
+              disabled={isLoading}
+            >
+              <Plus className="h-4 w-4" />
+              Create New Tag "{searchValue}"
+            </Button>
           )}
         </div>
       </PopoverContent>
