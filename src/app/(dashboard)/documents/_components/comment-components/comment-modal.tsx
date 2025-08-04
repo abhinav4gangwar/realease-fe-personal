@@ -7,8 +7,6 @@ import { Loader2 } from "lucide-react"
 import { useEffect, useRef, useState, type ChangeEvent, type FC, type FormEvent, type KeyboardEvent } from "react"
 import { MentionSuggestions } from "./mention-suggestions"
 
-
-
 interface CommentModalProps {
   isOpen: boolean
   onClose: () => void
@@ -35,6 +33,10 @@ export const CommentModal: FC<CommentModalProps> = ({
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  const getEmailUsername = (email: string): string => {
+    return email.split('@')[0]
+  }
+
   useEffect(() => {
     if (isOpen) {
       setCommentText(editingComment?.text || "")
@@ -51,7 +53,12 @@ export const CommentModal: FC<CommentModalProps> = ({
     const mentionMatch = textUpToCursor.match(/@([\w\s]*)$/)
     if (mentionMatch) {
       const query = mentionMatch[1].toLowerCase()
-      setMentionSuggestions(users.filter((u) => u.name.toLowerCase().includes(query)))
+      setMentionSuggestions(
+        users.filter((u) => {
+          if (!u?.email) return false
+          return u.email.toLowerCase().includes(query) || getEmailUsername(u.email).toLowerCase().includes(query)
+        })
+      )
       setActiveSuggestionIndex(0)
     } else {
       setMentionSuggestions([])
@@ -59,18 +66,19 @@ export const CommentModal: FC<CommentModalProps> = ({
   }
 
   const handleSelectMention = (user: User) => {
-    if (!textareaRef.current) return
+    if (!textareaRef.current || !user?.email) return
     const currentText = textareaRef.current.value
     const cursorPos = textareaRef.current.selectionStart
     const atIndex = currentText.slice(0, cursorPos).lastIndexOf("@")
     const textBefore = currentText.substring(0, atIndex)
     const textAfter = currentText.substring(cursorPos)
-    const newText = `${textBefore}@${user.name} ${textAfter}`
+    const username = getEmailUsername(user.email)
+    const newText = `${textBefore}@${username} ${textAfter}`
     setCommentText(newText)
     setMentionSuggestions([])
     setTimeout(() => {
       textareaRef.current?.focus()
-      const newCursorPos = (textBefore + `@${user.name} `).length
+      const newCursorPos = (textBefore + `@${username} `).length
       textareaRef.current?.setSelectionRange(newCursorPos, newCursorPos)
     }, 0)
   }

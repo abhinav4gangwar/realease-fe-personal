@@ -16,13 +16,19 @@ import { PDFHeader } from "./comment-components/pdf-header"
 
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js"
 
-// Mock users data
-const mockUsers: User[] = [
-  { id: "user-1", name: "Ada Lovelace" },
-  { id: "user-2", name: "Grace Hopper" },
-  { id: "user-3", name: "Margaret Hamilton" },
-  { id: "user-4", name: "Katherine Johnson" },
-]
+// API function to get users
+export const getUsers = async (documentId: number, apiClient: any) => {
+  try {
+    const response = await apiClient.get(
+      `/dashboard/documents/getUsers/${documentId}`
+    )
+    const users = response.data.users
+    return users
+  } catch (error) {
+    console.log(error)
+    return []
+  }
+}
 
 export function PDFPreviewModal({
   isOpen,
@@ -43,7 +49,8 @@ export function PDFPreviewModal({
 
   // Comments and annotations state
   const [comments, setComments] = useState<Comment[]>([])
-  const [users] = useState<User[]>(mockUsers)
+  const [users, setUsers] = useState<User[]>([])
+  const [isLoadingUsers, setIsLoadingUsers] = useState<boolean>(false)
   const [tempAnnotation, setTempAnnotation] = useState<CommentAnnotation | null>(null)
   const [isLoadingComments, setIsLoadingComments] = useState<boolean>(false)
   const [isCreatingComment, setIsCreatingComment] = useState<boolean>(false)
@@ -74,11 +81,12 @@ export function PDFPreviewModal({
     }
   }, [apiClient])
 
-  // Load PDF and comments when document changes
+  // Load PDF, comments, and users when document changes
   useEffect(() => {
     if (isOpen && document && !document.isFolder) {
       loadPdf()
       loadComments()
+      loadUsers()
     }
   }, [isOpen, document])
 
@@ -117,6 +125,22 @@ export function PDFPreviewModal({
     }
   }
 
+  const loadUsers = async () => {
+    if (!document || !apiClient) return
+
+    setIsLoadingUsers(true)
+    try {
+      const fetchedUsers = await getUsers(Number.parseInt(document.id), apiClient)
+      setUsers(fetchedUsers || [])
+    } catch (error) {
+      console.error("Error loading users:", error)
+      toast.error("Failed to load users")
+      setUsers([])
+    } finally {
+      setIsLoadingUsers(false)
+    }
+  }
+
   useEffect(() => {
     return () => {
       if (pdfUrl) {
@@ -134,6 +158,7 @@ export function PDFPreviewModal({
       setIsCommentModalOpen(false)
       setEditingComment(null)
       setComments([])
+      setUsers([])
       setActiveCommentId(null)
       setReplyingToCommentId(null)
       setHasTextSelection(false)
@@ -446,6 +471,7 @@ export function PDFPreviewModal({
                       <div key={comment.id} className="comment-marker">
                         <CommentMarker
                           comment={comment}
+                          users={users}
                           onClick={() => handleCommentClick(comment.id)}
                           onEdit={() => handleCommentEdit(comment)}
                           onDelete={() => handleCommentDelete(comment.id)}

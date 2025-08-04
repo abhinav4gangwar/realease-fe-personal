@@ -1,14 +1,12 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { FileItem } from "@/lib/fileUploadUtils"
-import { cn } from "@/lib/utils"
-import { ArrowLeft, Check, ChevronsUpDown, Plus, X } from "lucide-react"
-import { useState } from "react"
+import { ArrowLeft, X } from "lucide-react"
 import { FileIcon } from "./file-icon"
+import { TagInput } from "./tags-input"
+
 
 interface FileDetailsDialogProps {
   isOpen: boolean
@@ -23,19 +21,6 @@ interface FileDetailsDialogProps {
 }
 
 const properties = [{ id: "0", name: "Test Property" }]
-
-const predefinedTags = [
-  "Document",
-  "Image",
-  "Important",
-  "Archive",
-  "Draft",
-  "Review",
-  "Personal",
-  "Work",
-  "Project",
-  "Reference",
-]
 
 const getFileType = (fileName: string, isDirectory: boolean) => {
   if (isDirectory) return "folder"
@@ -53,55 +38,9 @@ export function FileDetailsDialog({
   handleSave,
   isLoading,
 }: FileDetailsDialogProps) {
-  const [openComboBoxes, setOpenComboBoxes] = useState<Record<string, boolean>>({})
-  const [searchValues, setSearchValues] = useState<Record<string, string>>({})
-
   if (!isOpen) return null
 
   const handleClose = () => onOpenChange(false)
-
-  const toggleComboBox = (itemPath: string) => {
-    setOpenComboBoxes((prev) => ({
-      ...prev,
-      [itemPath]: !prev[itemPath],
-    }))
-    // Reset search value when closing
-    if (openComboBoxes[itemPath]) {
-      setSearchValues((prev) => ({
-        ...prev,
-        [itemPath]: "",
-      }))
-    }
-  }
-
-  const handleTagSelect = (itemPath: string, tag: string) => {
-    updateFileMetadata(itemPath, "tags", tag)
-    setOpenComboBoxes((prev) => ({
-      ...prev,
-      [itemPath]: false,
-    }))
-    setSearchValues((prev) => ({
-      ...prev,
-      [itemPath]: "",
-    }))
-  }
-
-  const handleSearchChange = (itemPath: string, value: string) => {
-    setSearchValues((prev) => ({
-      ...prev,
-      [itemPath]: value,
-    }))
-  }
-
-  const getFilteredTags = (searchValue: string) => {
-    if (!searchValue) return predefinedTags
-    return predefinedTags.filter((tag) => tag.toLowerCase().includes(searchValue.toLowerCase()))
-  }
-
-  const shouldShowCreateOption = (searchValue: string) => {
-    if (!searchValue.trim()) return false
-    return !predefinedTags.some((tag) => tag.toLowerCase() === searchValue.toLowerCase())
-  }
 
   return (
     <>
@@ -138,10 +77,6 @@ export function FileDetailsDialog({
               </div>
               <div className="mt-1 space-y-1">
                 {currentViewItems.map((item) => {
-                  const searchValue = searchValues[item.path] || ""
-                  const filteredTags = getFilteredTags(searchValue)
-                  const showCreateOption = shouldShowCreateOption(searchValue)
-
                   return (
                     <div key={item.path} className="grid grid-cols-3 items-center gap-4 p-2">
                       <div className="flex items-center gap-2 truncate">
@@ -174,80 +109,11 @@ export function FileDetailsDialog({
                               ))}
                             </SelectContent>
                           </Select>
-
-                          <Popover
-                            open={openComboBoxes[item.path] || false}
-                            onOpenChange={() => toggleComboBox(item.path)}
-                          >
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={openComboBoxes[item.path] || false}
-                                className="w-full justify-between bg-transparent"
-                              >
-                                {item.tags || "Select tag..."}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0 border-gray-400" align="start">
-                              <Command shouldFilter={false}>
-                                <CommandInput
-                                  placeholder="Search or type new tag..."
-                                  value={searchValue}
-                                  onValueChange={(value) => handleSearchChange(item.path, value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter" && searchValue.trim()) {
-                                      e.preventDefault()
-                                      handleTagSelect(item.path, searchValue.trim())
-                                    }
-                                  }}
-                                />
-                                <CommandList>
-                                  {filteredTags.length === 0 && !showCreateOption && (
-                                    <CommandEmpty className="p-2">
-                                      <div className="text-sm text-muted-foreground">
-                                        No tags found. Type to create a new one.
-                                      </div>
-                                    </CommandEmpty>
-                                  )}
-
-                                  {showCreateOption && (
-                                    <CommandGroup>
-                                      <CommandItem
-                                        value={`create-${searchValue}`}
-                                        onSelect={() => handleTagSelect(item.path, searchValue.trim())}
-                                        className="text-primary"
-                                      >
-                                        <Plus className="mr-2 h-4 w-4" />
-                                        Create &quot;{searchValue}&quot;
-                                      </CommandItem>
-                                    </CommandGroup>
-                                  )}
-
-                                  {filteredTags.length > 0 && (
-                                    <CommandGroup>
-                                      {filteredTags.map((tag) => (
-                                        <CommandItem
-                                          key={tag}
-                                          value={tag}
-                                          onSelect={() => handleTagSelect(item.path, tag)}
-                                        >
-                                          <Check
-                                            className={cn(
-                                              "mr-2 h-4 w-4",
-                                              item.tags === tag ? "opacity-100" : "opacity-0",
-                                            )}
-                                          />
-                                          {tag}
-                                        </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                                  )}
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
+                          <TagInput
+                            value={item.tags || ""}
+                            onChange={(value) => updateFileMetadata(item.path, "tags", value)}
+                            placeholder="Select tags..."
+                          />
                         </>
                       ) : (
                         <>

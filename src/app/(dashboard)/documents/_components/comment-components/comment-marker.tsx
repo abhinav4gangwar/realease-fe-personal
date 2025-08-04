@@ -9,17 +9,9 @@ import { Comment, User } from "@/types/comment.types"
 import { Loader2, Pencil, Trash2 } from "lucide-react"
 import { useRef, useState, type ChangeEvent, type FC, type KeyboardEvent, type MouseEvent } from "react"
 
-
-// Mock users data - you might want to pass this as props or get from context
-const mockUsers: User[] = [
-  { id: "user-1", name: "Ada Lovelace" },
-  { id: "user-2", name: "Grace Hopper" },
-  { id: "user-3", name: "Margaret Hamilton" },
-  { id: "user-4", name: "Katherine Johnson" },
-]
-
 interface CommentMarkerProps {
   comment: Comment
+  users: User[] 
   onClick: () => void
   onEdit: () => void
   onDelete: () => void
@@ -34,6 +26,7 @@ interface CommentMarkerProps {
 
 export const CommentMarker: FC<CommentMarkerProps> = ({
   comment,
+  users,
   onClick,
   onEdit,
   onDelete,
@@ -52,6 +45,10 @@ export const CommentMarker: FC<CommentMarkerProps> = ({
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0)
   const replyInputRef = useRef<HTMLInputElement>(null)
 
+  const getEmailUsername = (email: string): string => {
+    return email.split('@')[0]
+  }
+
   const handleReplyTextChange = (e: ChangeEvent<HTMLInputElement>) => {
     const text = e.target.value
     setReplyText(text)
@@ -60,7 +57,12 @@ export const CommentMarker: FC<CommentMarkerProps> = ({
     const mentionMatch = textUpToCursor.match(/@([\w\s]*)$/)
     if (mentionMatch) {
       const query = mentionMatch[1].toLowerCase()
-      setMentionSuggestions(mockUsers.filter((u) => u.name.toLowerCase().includes(query)))
+      setMentionSuggestions(
+        users.filter((u) => {
+          if (!u?.email) return false
+          return u.email.toLowerCase().includes(query) || getEmailUsername(u.email).toLowerCase().includes(query)
+        })
+      )
       setActiveSuggestionIndex(0)
     } else {
       setMentionSuggestions([])
@@ -68,18 +70,19 @@ export const CommentMarker: FC<CommentMarkerProps> = ({
   }
 
   const handleSelectMention = (user: User) => {
-    if (!replyInputRef.current) return
+    if (!replyInputRef.current || !user?.email) return
     const currentText = replyInputRef.current.value
     const cursorPos = replyInputRef.current.selectionStart || 0
     const atIndex = currentText.slice(0, cursorPos).lastIndexOf("@")
     const textBefore = currentText.substring(0, atIndex)
     const textAfter = currentText.substring(cursorPos)
-    const newText = `${textBefore}@${user.name} ${textAfter}`
+    const username = getEmailUsername(user.email)
+    const newText = `${textBefore}@${username} ${textAfter}`
     setReplyText(newText)
     setMentionSuggestions([])
     setTimeout(() => {
       replyInputRef.current?.focus()
-      const newCursorPos = (textBefore + `@${user.name} `).length
+      const newCursorPos = (textBefore + `@${username} `).length
       replyInputRef.current?.setSelectionRange(newCursorPos, newCursorPos)
     }, 0)
   }
@@ -268,7 +271,7 @@ export const CommentMarker: FC<CommentMarkerProps> = ({
                                 handleSelectMention(user)
                               }}
                             >
-                              {user.name}
+                              {getEmailUsername(user.email)}
                             </li>
                           ))}
                         </ul>

@@ -1,5 +1,4 @@
 "use client"
-
 import type {
   BreadcrumbItem,
   Document,
@@ -12,7 +11,6 @@ import type {
 import dynamic from "next/dynamic"
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
-
 import {
   findFolderById,
   getAllFolders,
@@ -104,11 +102,8 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
     }
   }
 
-  // New handler for edit from PDF preview
   const handleEditFromPdfPreview = (document: Document) => {
-    // Close PDF preview first
     setIsPdfPreviewOpen(false)
-    // Set the document and open in edit mode
     setSelectedDocument(document)
     setOpenModalInEditMode(true)
     setIsModalOpen(true)
@@ -120,7 +115,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
         itemId: Number.parseInt(documentId),
         newName: newName,
       })
-
       const updateDocumentInArray = (docs: Document[]): Document[] => {
         return docs.map((doc) => {
           if (doc.id === documentId) {
@@ -134,19 +128,75 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
       }
 
       setDocumentsState((prevDocs) => updateDocumentInArray(prevDocs))
-
       if (selectedDocument?.id === documentId) {
         setSelectedDocument((prev) => (prev ? { ...prev, name: newName } : null))
       }
-
       if (currentFolder?.id === documentId) {
         setCurrentFolder((prev) => (prev ? { ...prev, name: newName } : null))
       }
-
       console.log("Document renamed successfully")
     } catch (error: any) {
       console.error("Error renaming document:", error)
       const errorMessage = "Failed to rename document. Please try again."
+      toast.error(errorMessage)
+      throw error
+    }
+  }
+
+  const handleFileEdit = async (documentId: string, data: { name: string; propertyId: string; tags: string[] }) => {
+    try {
+      await apiClient.put(`/dashboard/documents/edit/${documentId}`, {
+        name: data.name,
+        propertyId: Number.parseInt(data.propertyId),
+        tags: data.tags,
+      })
+
+      const updateDocumentInArray = (docs: Document[]): Document[] => {
+        return docs.map((doc) => {
+          if (doc.id === documentId) {
+            return {
+              ...doc,
+              name: data.name,
+              linkedProperty: data.propertyId === "0" ? "Test Property" : data.propertyId,
+              tags: data.tags.join(", "),
+            }
+          }
+          if (doc.children) {
+            return { ...doc, children: updateDocumentInArray(doc.children) }
+          }
+          return doc
+        })
+      }
+
+      setDocumentsState((prevDocs) => updateDocumentInArray(prevDocs))
+      if (selectedDocument?.id === documentId) {
+        setSelectedDocument((prev) =>
+          prev
+            ? {
+                ...prev,
+                name: data.name,
+                linkedProperty: data.propertyId === "0" ? "Test Property" : data.propertyId,
+                tags: data.tags.join(", "),
+              }
+            : null,
+        )
+      }
+      if (currentFolder?.id === documentId) {
+        setCurrentFolder((prev) =>
+          prev
+            ? {
+                ...prev,
+                name: data.name,
+                linkedProperty: data.propertyId === "0" ? "Test Property" : data.propertyId,
+                tags: data.tags.join(", "),
+              }
+            : null,
+        )
+      }
+      console.log("Document updated successfully")
+    } catch (error: any) {
+      console.error("Error updating document:", error)
+      const errorMessage = "Failed to update document. Please try again."
       toast.error(errorMessage)
       throw error
     }
@@ -157,11 +207,9 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
       setLoadingFolders((prev) => new Set(prev).add(folderId))
       const response = await apiClient.get(`/dashboard/documents/list?parentId=${folderId}`)
       const folderContents = transformApiResponse(response.data)
-
       setDocumentsState((prevDocs) =>
         prevDocs.map((doc) => (doc.id === folderId ? { ...doc, children: folderContents } : doc)),
       )
-
       return folderContents
     } catch (error) {
       console.error("Error fetching folder contents:", error)
@@ -183,7 +231,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
     } else {
       setCurrentFolder(folder)
     }
-
     setBreadcrumbs((prev) => [...prev, { name: `${folder.name} (${getFolderCounts(folder)})`, id: folder.id }])
   }
 
@@ -227,7 +274,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
   const sortDocuments = (documents: Document[]) => {
     return documents.sort((a, b) => {
       let comparison = 0
-
       if (sortField === "dateAdded") {
         const dateA = new Date(a.dateAdded)
         const dateB = new Date(b.dateAdded)
@@ -237,7 +283,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
         const bValue = b[sortField]
         comparison = aValue.localeCompare(bValue)
       }
-
       // Apply sort order
       return sortOrder === "asc" ? comparison : -comparison
     })
@@ -247,19 +292,15 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
     if (filterState.type === "none") {
       return documents
     }
-
     if (filterState.type === "property") {
       return documents.filter((doc) => filterState.selectedProperties.includes(doc.linkedProperty))
     }
-
     if (filterState.type === "type") {
       return documents.filter((doc) => filterState.selectedTypes.includes(doc.fileType))
     }
-
     if (filterState.type === "recent") {
       return documents.slice().sort((a, b) => new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime())
     }
-
     return documents
   }
 
@@ -267,7 +308,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
     if (filterState.type === "none") {
       return { [`Files & Folders (${getFileCounts(documents)})`]: documents }
     }
-
     if (filterState.type === "property") {
       return documents.reduce(
         (groups, doc) => {
@@ -279,7 +319,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
         {} as Record<string, Document[]>,
       )
     }
-
     if (filterState.type === "type") {
       return documents.reduce(
         (groups, doc) => {
@@ -291,12 +330,10 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
         {} as Record<string, Document[]>,
       )
     }
-
     return { "Recently Uploaded": documents }
   }
 
   const currentDocuments = currentFolder ? currentFolder.children || [] : documentsState
-
   const processedAllFiles = useMemo(() => {
     const filtered = filterDocuments(currentDocuments)
     const sorted = sortDocuments(filtered)
@@ -345,7 +382,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
 
   const confirmDelete = async () => {
     if (!selectedDocument) return
-
     try {
       const response = await apiClient.delete("/dashboard/documents/delete", {
         data: [
@@ -354,7 +390,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
           },
         ],
       })
-
       const removeDocumentFromArray = (docs: Document[]): Document[] => {
         return docs.filter((doc) => {
           if (doc.id === selectedDocument.id) {
@@ -368,13 +403,11 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
       }
 
       setDocumentsState((prevDocs) => removeDocumentFromArray(prevDocs))
-
       if (currentFolder) {
         const updatedChildren = currentFolder.children?.filter((child) => child.id !== selectedDocument.id) || []
         const updatedFolder = { ...currentFolder, children: updatedChildren }
         setCurrentFolder(updatedFolder)
       }
-
       setOpenDeleteModal(false)
       setSelectedDocument(null)
       const successMessage = response.data?.message || "Document deleted successfully"
@@ -388,16 +421,13 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
 
   const handleBulkDelete = async () => {
     if (selectedDocuments.length === 0) return
-
     try {
       const deletePayload = selectedDocuments.map((id) => ({
         itemId: Number.parseInt(id),
       }))
-
       const response = await apiClient.delete("/dashboard/documents/delete", {
         data: deletePayload,
       })
-
       const removeDocumentsFromArray = (docs: Document[]): Document[] => {
         return docs.filter((doc) => {
           if (selectedDocuments.includes(doc.id)) {
@@ -411,13 +441,11 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
       }
 
       setDocumentsState((prevDocs) => removeDocumentsFromArray(prevDocs))
-
       if (currentFolder) {
         const updatedChildren = currentFolder.children?.filter((child) => !selectedDocuments.includes(child.id)) || []
         const updatedFolder = { ...currentFolder, children: updatedChildren }
         setCurrentFolder(updatedFolder)
       }
-
       resetSelectMode()
       const successMessage = response.data?.message || `${selectedDocuments.length} documents deleted successfully`
       toast.success(successMessage)
@@ -430,13 +458,11 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
 
   const handleBulkMove = async (newParentId: string | null) => {
     if (selectedDocuments.length === 0) return
-
     try {
       const movePayload = selectedDocuments.map((id) => ({
         itemId: Number.parseInt(id),
         newParentId: newParentId ? Number.parseInt(newParentId) : null,
       }))
-
       await apiClient.put("/dashboard/documents/move", movePayload)
       await handleUploadSuccess()
       resetSelectMode()
@@ -503,7 +529,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
     const allDocumentIds = Object.values(processedAllFiles)
       .flat()
       .map((doc) => doc.id)
-
     if (selectedDocuments.length === allDocumentIds.length) {
       setSelectedDocuments([])
     } else {
@@ -515,7 +540,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
     const allDocumentIds = Object.values(processedAllFiles)
       .flat()
       .map((doc) => doc.id)
-
     if (selectedDocuments.length === 0) {
       return "none"
     } else if (selectedDocuments.length === allDocumentIds.length) {
@@ -560,14 +584,12 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
   const getSelectedDocumentObjects = () => {
     const allDocs = [...documentsState]
     const allDocsWithChildren: Document[] = []
-
     allDocs.forEach((doc) => {
       allDocsWithChildren.push(doc)
       if (doc.children) {
         allDocsWithChildren.push(...doc.children)
       }
     })
-
     return selectedDocuments.map((id) => allDocsWithChildren.find((doc) => doc.id === id)).filter(Boolean) as Document[]
   }
 
@@ -580,7 +602,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
       const response = await apiClient.get("/dashboard/documents/list")
       const updatedDocuments = transformApiResponse(response.data)
       setDocumentsState(updatedDocuments)
-
       if (currentFolder) {
         const folderResponse = await apiClient.get(`/dashboard/documents/list?parentId=${currentFolder.id}`)
         const folderContents = transformApiResponse(folderResponse.data)
@@ -588,7 +609,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
         setCurrentFolder(updatedFolder)
         setDocumentsState((prevDocs) => prevDocs.map((doc) => (doc.id === currentFolder.id ? updatedFolder : doc)))
       }
-
       toast.success("Documents updated successfully")
     } catch (error) {
       console.error("Error refreshing documents:", error)
@@ -604,7 +624,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
           newParentId: newParentId ? Number.parseInt(newParentId) : null,
         },
       ]
-
       await apiClient.put("/dashboard/documents/move", movePayload)
       await handleUploadSuccess()
       toast.success(`Document moved successfully`)
@@ -647,7 +666,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
           {Object.entries(processedAllFiles).map(([groupName, documents]) => {
             const paginatedDocuments = documents.slice(0, allFilesPage * itemsPerPage)
             const hasMore = documents.length > allFilesPage * itemsPerPage
-
             return (
               <div key={groupName}>
                 <h2 className="text-secondary text-lg font-semibold lg:text-xl">{groupName}</h2>
@@ -706,9 +724,7 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
             )
           })}
         </div>
-
         <ScrollToTop />
-
         {/* Document Detail Modal */}
         <DocumentDetailModal
           document={selectedDocument}
@@ -720,12 +736,12 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
           }}
           openInEditMode={openModalInEditMode}
           onSave={handleDocumentRename}
+          onEditFile={handleFileEdit}
           onDeleteClick={handleDeleteClick}
           onShareClick={handleShareClick}
           onMoveClick={handleMoveClick}
           onDownloadClick={handleDownloadClick}
         />
-
         {/* PDF Preview Modal */}
         <PDFPreviewModal
           document={selectedDocument}
@@ -743,7 +759,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
           onDownloadClick={handleDownloadClick}
           onEditClick={handleEditFromPdfPreview}
         />
-
         <FilterModal
           isOpen={isFilterModalOpen}
           onClose={() => setIsFilterModalOpen(false)}
@@ -752,33 +767,28 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
           selectedItems={filterModalType === "property" ? filterState.selectedProperties : filterState.selectedTypes}
           onApply={handleFilterApply}
         />
-
         <UploadModal
           isOpen={isUploadModalOpen}
           onClose={() => setUploadModalOpen(false)}
           addType={addModalType}
           onSuccess={handleUploadSuccess}
         />
-
         <ShareEmailModal
           isOpen={isShareEmailModalOpen}
           onClose={handleModalClose}
           selectedDocuments={getSelectedDocumentObjects()}
           onCancel={handleCancelFromModal}
         />
-
         <CancelShareModal
           isOpen={isCancelShareModalOpen}
           onConfirm={confirmCancelShare}
           onCancel={() => setIsCancelShareModalOpen(false)}
         />
-
         <DocumentDeleteModal
           isOpen={openDeleteModal}
           onConfirm={confirmDelete}
           onCancel={() => setOpenDeleteModal(false)}
         />
-
         <SelectedDocsModal
           isOpen={isSelectedDocsModalOpen}
           onClose={handleModalClose}
@@ -791,7 +801,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
           }}
           onCancel={handleCancelFromModal}
         />
-
         <MoveDocumentModal
           isOpen={isMoveModalOpen}
           onClose={() => {
@@ -808,7 +817,6 @@ export function DocumentViewer({ recentlyAccessed, allFiles, apiClient, transfor
             }
           }}
         />
-
         <BulkDeleteModal
           isOpen={openBulkDeleteModal}
           onConfirm={() => {
