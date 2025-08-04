@@ -1,7 +1,4 @@
 'use client'
-
-import type React from 'react'
-
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -10,11 +7,23 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { Document } from '@/types/document.types'
 import { Check, MoreVertical, X } from 'lucide-react'
+import type React from 'react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { FileIcon } from './file-icon'
+import { TagInput } from './tags-input'
+
+//fetch this from an API
+const properties = [{ id: '0', name: 'Test Property' }]
 
 interface DocumentDetailModalProps {
   document: Document | null
@@ -22,6 +31,10 @@ interface DocumentDetailModalProps {
   onClose: () => void
   openInEditMode?: boolean
   onSave?: (documentId: string, newName: string) => Promise<void>
+  onEditFile?: (
+    documentId: string,
+    data: { name: string; propertyId: string; tags: string[] }
+  ) => Promise<void>
   onDeleteClick?: (document: Document) => void
   onShareClick?: (document: Document) => void
   onMoveClick?: (document: Document) => void
@@ -34,6 +47,7 @@ export function DocumentDetailModal({
   onClose,
   openInEditMode = false,
   onSave,
+  onEditFile,
   onDeleteClick,
   onShareClick,
   onMoveClick,
@@ -42,13 +56,19 @@ export function DocumentDetailModal({
   const [isEditing, setIsEditing] = useState(false)
   const [editedName, setEditedName] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [editedProperty, setEditedProperty] = useState('')
+  const [editedTags, setEditedTags] = useState('')
 
   useEffect(() => {
     if (isOpen && openInEditMode && document) {
       setEditedName(document.name)
+      setEditedProperty(document.linkedProperty || '0')
+      setEditedTags(document.tags || '')
       setIsEditing(true)
     } else if (isOpen && document) {
       setEditedName(document.name)
+      setEditedProperty(document.linkedProperty || '0')
+      setEditedTags(document.tags || '')
       setIsEditing(false)
     }
   }, [isOpen, openInEditMode, document])
@@ -57,29 +77,53 @@ export function DocumentDetailModal({
 
   const handleEdit = () => {
     setEditedName(document.name)
+    setEditedProperty(document.linkedProperty || '0')
+    setEditedTags(document.tags || '')
     setIsEditing(true)
   }
 
   const handleSave = async () => {
-    if (!onSave || !document || editedName.trim() === document.name) {
-      setIsEditing(false)
-      return
-    }
-
-    if (editedName.trim() === '') {
+    if (!document || editedName.trim() === '') {
       toast.error('Document name cannot be empty')
       return
     }
 
     try {
       setIsSaving(true)
-      await onSave(document.id, editedName.trim())
+
+      if (document.isFolder) {
+        // For folders, only name can be edited - use rename API
+        if (onSave && editedName.trim() !== document.name) {
+          await onSave(document.id, editedName.trim())
+          toast.success(`Folder renamed to "${editedName.trim()}"`)
+        }
+      } else {
+        // For files, name, property, and tags can be edited - use edit API
+        if (onEditFile) {
+          const tagsArray = editedTags
+            ? editedTags
+                .split(',')
+                .map((tag) => tag.trim())
+                .filter(Boolean)
+            : []
+
+          await onEditFile(document.id, {
+            name: editedName.trim(),
+            propertyId: editedProperty,
+            tags: tagsArray,
+          })
+          toast.success(`Document updated successfully`)
+        }
+      }
+
       setIsEditing(false)
-      toast.success(`Document renamed to "${editedName.trim()}"`)
     } catch (error) {
       console.error('Error saving document:', error)
-      toast.error('Failed to rename document. Please try again.')
+      toast.error('Failed to save changes. Please try again.')
+      // Reset values on error
       setEditedName(document.name)
+      setEditedProperty(document.linkedProperty || '0')
+      setEditedTags(document.tags || '')
     } finally {
       setIsSaving(false)
     }
@@ -88,6 +132,8 @@ export function DocumentDetailModal({
   const handleCancel = () => {
     setIsEditing(false)
     setEditedName(document.name)
+    setEditedProperty(document.linkedProperty || '0')
+    setEditedTags(document.tags || '')
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -98,8 +144,20 @@ export function DocumentDetailModal({
     }
   }
 
+  const hasChanges = () => {
+    if (document.isFolder) {
+      return editedName.trim() !== document.name
+    } else {
+      return (
+        editedName.trim() !== document.name ||
+        editedProperty !== (document.linkedProperty || '0') ||
+        editedTags !== (document.tags || '')
+      )
+    }
+  }
+
   return (
-    <div className="fixed top-0 right-0 flex h-full w-[380px] flex-col border-l border-none bg-white shadow-lg z-30">
+    <div className="fixed top-0 right-0 z-30 flex h-full w-[380px] flex-col border-l border-none bg-white shadow-lg">
       {/* Header */}
       <div className="flex items-center justify-between p-4 pt-24">
         <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -127,11 +185,7 @@ export function DocumentDetailModal({
                 size="icon"
                 className="h-8 w-8"
                 onClick={handleSave}
-                disabled={
-                  isSaving ||
-                  editedName.trim() === '' ||
-                  editedName.trim() === document.name
-                }
+                disabled={isSaving || editedName.trim() === '' || !hasChanges()}
               >
                 <Check className="h-4 w-4" />
               </Button>
@@ -175,13 +229,12 @@ export function DocumentDetailModal({
                   >
                     Move
                   </DropdownMenuItem>
-
                   <DropdownMenuItem
                     className="cursor-pointer font-semibold hover:bg-[#A2CFE333]"
                     onClick={(e) => {
                       e.stopPropagation()
-                      if ( onDownloadClick) {
-                         onDownloadClick(document)
+                      if (onDownloadClick) {
+                        onDownloadClick(document)
                       }
                     }}
                   >
@@ -236,40 +289,77 @@ export function DocumentDetailModal({
 
         {/* Document Details */}
         <div className="space-y-4 p-4">
-          <div>
-            <h3 className="mb-1 text-sm font-medium text-gray-500">
-              Linked Property
-            </h3>
-            <p className="text-sm">{document.linkedProperty}</p>
-          </div>
+          {!document.isFolder && (
+            <div>
+              <h3 className="mb-1 text-sm font-medium text-gray-500">
+                Linked Property
+              </h3>
+              {isEditing ? (
+                <Select
+                  value={editedProperty}
+                  onValueChange={setEditedProperty}
+                  disabled={isSaving}
+                >
+                  <SelectTrigger className="border-gray-400 focus-visible:ring-0 w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {properties.map((property) => (
+                      <SelectItem key={property.id} value={property.id}>
+                        {property.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-sm">{document.linkedProperty}</p>
+              )}
+            </div>
+          )}
+
           <div>
             <h3 className="mb-1 text-sm font-medium text-gray-500">
               Date Added
             </h3>
             <p className="text-sm">{document.dateAdded}</p>
           </div>
+
           <div>
             <h3 className="mb-1 text-sm font-medium text-gray-500">
               Date Modified
             </h3>
             <p className="text-sm">{document.dateModified}</p>
           </div>
+
           <div>
             <h3 className="mb-1 text-sm font-medium text-gray-500">
               Last Opened
             </h3>
             <p className="text-sm">{document.lastOpened}</p>
           </div>
+
           <div>
             <h3 className="mb-1 text-sm font-medium text-gray-500">
               File Type
             </h3>
             <p className="text-sm">{document.fileType}</p>
           </div>
-          <div>
-            <h3 className="mb-1 text-sm font-medium text-gray-500">Tags</h3>
-            <p className="text-sm">{document.tags}</p>
-          </div>
+
+          {!document.isFolder && (
+            <div>
+              <h3 className="mb-1 text-sm font-medium text-gray-500">Tags</h3>
+              {isEditing ? (
+                <TagInput
+                  value={editedTags}
+                  onChange={setEditedTags}
+                  placeholder="Select tags..."
+                />
+              ) : (
+                <p className="text-sm">{document.tags || 'No tags'}</p>
+              )}
+            </div>
+          )}
+
           {document.size && (
             <div>
               <h3 className="mb-1 text-sm font-medium text-gray-500">Size</h3>

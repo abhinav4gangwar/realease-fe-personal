@@ -1,33 +1,38 @@
-"use client"
+'use client'
 
-import { useUploadHandler } from "@/hooks/useUploadHandler"
-import { Button } from "@/components/ui/button"
-import { X } from "lucide-react"
-import { useEffect, useState } from "react"
-import { CreateFolderForm } from "./CreateFolderForm"
-import { UploadDropzone } from "./UploadDropzone"
-import { UploadQueueDialog } from "./UploadQueueDialog"
-import { FileDetailsDialog } from "./FileDetailsDialog"
+import { Button } from '@/components/ui/button'
+import { useUploadHandler } from '@/hooks/useUploadHandler'
+import { X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { CreateFolderForm } from './CreateFolderForm'
+import { FileDetailsDialog } from './FileDetailsDialog'
+import { UploadDropzone } from './UploadDropzone'
+import { UploadQueueDialog } from './UploadQueueDialog'
 
 interface UploadModalProps {
   isOpen: boolean
   onClose: () => void
-  addType: "uploadFile" | "createFolder"
+  addType: 'uploadFile' | 'createFolder'
   onSuccess?: () => void
 }
 
-export function UploadModal({ isOpen, addType, onClose, onSuccess }: UploadModalProps) {
+export function UploadModal({
+  isOpen,
+  addType,
+  onClose,
+  onSuccess,
+}: UploadModalProps) {
   const [showUploadQueue, setShowUploadQueue] = useState(false)
   const [showDetailsDialog, setShowDetailsDialog] = useState(false)
-  
-  const uploader = useUploadHandler({ 
+
+  const uploader = useUploadHandler({
     onSuccess: () => {
-      if(onSuccess) onSuccess();
+      if (onSuccess) onSuccess()
       // Reset state on successful upload
-      uploader.clearQueue();
-      setShowDetailsDialog(false);
-    }, 
-    onClose 
+      uploader.clearQueue()
+      setShowDetailsDialog(false)
+    },
+    onClose,
   })
 
   useEffect(() => {
@@ -39,51 +44,80 @@ export function UploadModal({ isOpen, addType, onClose, onSuccess }: UploadModal
   }, [uploader.uploadedFiles.length, showDetailsDialog])
 
   const handleClose = () => {
-    uploader.clearQueue();
-    setShowUploadQueue(false);
-    setShowDetailsDialog(false);
-    onClose();
+    uploader.clearQueue()
+    setShowUploadQueue(false)
+    setShowDetailsDialog(false)
+    onClose()
   }
 
-  if (!isOpen) return null
+  const handleQueueClose = (isOpen: boolean) => {
+    if (!isOpen) {
+      handleClose()
+    } else {
+      setShowUploadQueue(isOpen)
+    }
+  }
+
+  const handleDetailsClose = (isOpen: boolean) => {
+    if (!isOpen) {
+      handleClose()
+    } else {
+      setShowDetailsDialog(isOpen)
+    }
+  }
+
+  if (!isOpen || showUploadQueue || showDetailsDialog) {
+    return (
+      <>
+        <UploadQueueDialog
+          isOpen={showUploadQueue}
+          onOpenChange={handleQueueClose}
+          uploadedFiles={uploader.uploadedFiles}
+          totalFiles={uploader.totalFiles}
+          totalFolders={uploader.totalFolders}
+          onUploadMore={() => uploader.openFolderDialog()}
+          onContinue={() => {
+            setShowUploadQueue(false)
+            setShowDetailsDialog(true)
+          }}
+        />
+
+        <FileDetailsDialog
+          isOpen={showDetailsDialog}
+          onOpenChange={handleDetailsClose}
+          {...uploader}
+        />
+      </>
+    )
+  }
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/60" />
+      <div className="fixed inset-0 z-40 bg-black/20" />
       <div className="fixed inset-0 z-50 flex items-center justify-center">
-        <div className="mx-4 w-full max-w-2xl rounded-lg border bg-background shadow-lg">
-          <div className="flex items-center justify-between border-b p-4">
-            <h2 className="text-lg font-semibold">
-              {addType === 'uploadFile' ? "Upload Documents" : "Create New Folder"}
+        <div className="bg-background mx-4 w-full max-w-4xl rounded-lg border border-gray-400 shadow-lg">
+          <div className="flex items-center justify-between p-4">
+            <h2 className="text-xl font-semibold">
+              {addType === 'uploadFile'
+                ? 'Upload Documents'
+                : 'Create New Folder'}
             </h2>
-            <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleClose}
+              className="hover:text-primary h-8 w-8 cursor-pointer"
+            >
               <X className="h-4 w-4" />
             </Button>
           </div>
-          
-          {addType === 'createFolder' && <CreateFolderForm onClose={handleClose} onSuccess={onSuccess} />}
+
+          {addType === 'createFolder' && (
+            <CreateFolderForm onClose={handleClose} onSuccess={onSuccess} />
+          )}
           {addType === 'uploadFile' && <UploadDropzone {...uploader} />}
         </div>
       </div>
-      
-      <UploadQueueDialog
-        isOpen={showUploadQueue}
-        onOpenChange={setShowUploadQueue}
-        uploadedFiles={uploader.uploadedFiles}
-        totalFiles={uploader.totalFiles}
-        totalFolders={uploader.totalFolders}
-        onUploadMore={() => uploader.openFolderDialog()}
-        onContinue={() => {
-          setShowUploadQueue(false)
-          setShowDetailsDialog(true)
-        }}
-      />
-      
-      <FileDetailsDialog
-        isOpen={showDetailsDialog}
-        onOpenChange={setShowDetailsDialog}
-        {...uploader}
-      />
     </>
   )
 }

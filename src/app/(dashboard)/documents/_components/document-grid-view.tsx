@@ -1,12 +1,19 @@
-"use client"
+'use client'
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import type { Document } from "@/types/document.types"
-import { Download, Eye, FolderInput, Info, Loader2, Pencil, Trash2 } from "lucide-react"
-import { useState } from "react"
-import { HiShare } from "react-icons/hi2"
-import { FileIcon } from "./file-icon"
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import type { Document } from '@/types/document.types'
+import {
+  Download,
+  FolderInput,
+  Info,
+  Loader2,
+  Pencil,
+  Trash2,
+} from 'lucide-react'
+import { useState } from 'react'
+import { HiShare } from 'react-icons/hi2'
+import { FileIcon } from './file-icon'
 
 interface DocumentGridViewProps {
   documents: Document[]
@@ -61,7 +68,7 @@ export function DocumentGridView({
         <Card
           key={document.id}
           className={`cursor-pointer rounded-sm border-none transition-shadow hover:bg-[#A2CFE333] hover:shadow-md ${
-            selectedDocumentId === document.id ? "bg-[#A2CFE333]" : ""
+            selectedDocumentId === document.id ? 'bg-[#A2CFE333]' : ''
           }`}
           onMouseEnter={() => setHoveredCard(document.id)}
           onMouseLeave={() => setHoveredCard(null)}
@@ -79,24 +86,15 @@ export function DocumentGridView({
                 />
                 <div className="flex items-center gap-2">
                   <FileIcon type={document.icon} className="h-7 w-6" />
-                  {loadingFolders.has(document.id) && document.isFolder && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {loadingFolders.has(document.id) && document.isFolder && (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  )}
                 </div>
-                <h3 className="text-md max-w-[160px] truncate">{document.name}</h3>
+                <h3 className="text-md max-w-[160px] truncate">
+                  {document.name}
+                </h3>
                 {hoveredCard === document.id && !isShareMode && (
                   <div className="ml-2 flex items-center gap-1 text-[#9B9B9D]">
-                    {!document.isFolder && onDocumentPreview && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="hover:text-primary h-5 w-5 cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onDocumentPreview(document)
-                        }}
-                      >
-                        <Eye className="h-3 w-3" />
-                      </Button>
-                    )}
                     <Button
                       variant="ghost"
                       size="icon"
@@ -152,7 +150,7 @@ export function DocumentGridView({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6"
+                      className="hover:text-primary h-5 w-5 cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation()
                         if (onDeleteClick) {
