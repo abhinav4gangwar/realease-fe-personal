@@ -1,9 +1,9 @@
-"use client"
+'use client'
 
-import { cn } from "@/lib/utils"
-import { User } from "@/types/comment.types"
+import { cn } from '@/lib/utils'
+import { User } from '@/types/comment.types'
 
-import type { FC, MouseEvent } from "react"
+import type { FC, MouseEvent } from 'react'
 
 interface MentionSuggestionsProps {
   suggestions: User[]
@@ -11,7 +11,15 @@ interface MentionSuggestionsProps {
   activeIndex: number
 }
 
-export const MentionSuggestions: FC<MentionSuggestionsProps> = ({ suggestions, onSelect, activeIndex }) => {
+const getEmailUsername = (email: string): string => {
+  return email.split('@')[0]
+}
+
+export const MentionSuggestions: FC<MentionSuggestionsProps> = ({
+  suggestions,
+  onSelect,
+  activeIndex,
+}) => {
   if (suggestions.length === 0) return null
 
   return (
@@ -20,15 +28,15 @@ export const MentionSuggestions: FC<MentionSuggestionsProps> = ({ suggestions, o
         {suggestions.map((user, index) => (
           <li
             key={user.id}
-            className={cn("cursor-pointer px-4 py-2 hover:bg-gray-100", {
-              "bg-gray-200": index === activeIndex,
+            className={cn('cursor-pointer px-4 py-2 hover:bg-gray-100', {
+              'bg-gray-200': index === activeIndex,
             })}
             onMouseDown={(e: MouseEvent) => {
               e.preventDefault()
               onSelect(user)
             }}
           >
-            {user.name}
+            {getEmailUsername(user.email)}
           </li>
         ))}
       </ul>
