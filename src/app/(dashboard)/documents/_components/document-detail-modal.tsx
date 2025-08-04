@@ -240,23 +240,25 @@ export function DocumentDetailModal({
 
         {/* Document Details */}
         <div className="space-y-4 p-4">
-          <div>
-            <h3 className="mb-1 text-sm font-medium text-gray-500">
-              Linked Property
-            </h3>
-            {isEditing ? (
-              <Input
-                value={editedProperty}
-                onChange={(e) => setEditedProperty(e.target.value)}
-                onKeyDown={handleKeyPress}
-                className="h-auto border-gray-400 p-2 text-lg font-semibold focus-visible:ring-0"
-                autoFocus
-                disabled={isSaving}
-              />
-            ) : (
-              <p className="text-sm">{document.linkedProperty}</p>
-            )}
-          </div>
+          {!document.isFolder && (
+            <div>
+              <h3 className="mb-1 text-sm font-medium text-gray-500">
+                Linked Property
+              </h3>
+              {isEditing ? (
+                <Input
+                  value={editedProperty}
+                  onChange={(e) => setEditedProperty(e.target.value)}
+                  onKeyDown={handleKeyPress}
+                  className="h-auto border-gray-400 p-2 text-lg font-semibold focus-visible:ring-0"
+                  autoFocus
+                  disabled={isSaving}
+                />
+              ) : (
+                <p className="text-sm">{document.linkedProperty}</p>
+              )}
+            </div>
+          )}
           <div>
             <h3 className="mb-1 text-sm font-medium text-gray-500">
               Date Added
@@ -281,21 +283,23 @@ export function DocumentDetailModal({
             </h3>
             <p className="text-sm">{document.fileType}</p>
           </div>
-          <div>
-            <h3 className="mb-1 text-sm font-medium text-gray-500">Tags</h3>
-            {isEditing ? (
-              <Input
-                value={editedTags}
-                onChange={(e) => setEditedTags(e.target.value)}
-                onKeyDown={handleKeyPress}
-                className="h-auto border-gray-400 p-2 text-lg font-semibold focus-visible:ring-0"
-                autoFocus
-                disabled={isSaving}
-              />
-            ) : (
-              <p className="text-sm">{document.tags}</p>
-            )}
-          </div>
+          {!document.isFolder && (
+            <div>
+              <h3 className="mb-1 text-sm font-medium text-gray-500">Tags</h3>
+              {isEditing ? (
+                <Input
+                  value={editedTags}
+                  onChange={(e) => setEditedTags(e.target.value)}
+                  onKeyDown={handleKeyPress}
+                  className="h-auto border-gray-400 p-2 text-lg font-semibold focus-visible:ring-0"
+                  autoFocus
+                  disabled={isSaving}
+                />
+              ) : (
+                <p className="text-sm">{document.tags}</p>
+              )}
+            </div>
+          )}
           {document.size && (
             <div>
               <h3 className="mb-1 text-sm font-medium text-gray-500">Size</h3>
