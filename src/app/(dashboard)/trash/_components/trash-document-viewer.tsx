@@ -9,6 +9,7 @@ import {
   ViewMode,
 } from '@/types/document.types'
 import { useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import { BreadcrumbNavigation } from '../../documents/_components/breadcrumb-navigation'
 import ScrollToTop from '../../documents/_components/scroll-to-top'
 import {
@@ -16,7 +17,16 @@ import {
   getFileCounts,
   getFolderCounts,
 } from '../../documents/doc_utils'
+import {
+  BulkDocumentPermanentDeleteModal,
+  DocumentPermanentDeleteModal,
+} from './document-permanent-delete-model'
+import {
+  BulkRestoreModal,
+  DocumentRestoreModal,
+} from './document-restore-model'
 import { SortButton } from './sort-button'
+import TrashGridView from './trash-grid-view'
 import TrashListView from './trash-list-view'
 import { TrashActionsButton } from './TrashActionsButton'
 import { ViewModeToggle } from './view-mode-toggle'
@@ -58,6 +68,10 @@ export function TrashDocumentViewer({
 
   const [documentsState, setDocumentsState] = useState<Document[]>(allFiles)
   const [loadingFolders, setLoadingFolders] = useState<Set<string>>(new Set())
+  const [openDeleteModal, setOpenDeleteModal] = useState(false)
+  const [openRestoreModal, setOpenRestoreModal] = useState(false)
+  const [openBulkDeleteModal, setOpenBulkDeleteModal] = useState(false)
+  const [openBulkRestoreModal, setOpenBulkRestoreModal] = useState(false)
 
   const itemsPerPage = 15
 
@@ -205,7 +219,28 @@ export function TrashDocumentViewer({
     return groupDocuments(sorted)
   }, [currentDocuments, filterState, sortField, sortOrder])
 
-  const handleActionSelect = (actionType: string) => {}
+  const handleActionSelect = (actionType: string) => {
+    switch (actionType) {
+      case 'select':
+        setIsSelectMode(!isSelectMode)
+        if (isSelectMode) {
+          setSelectedDocuments([])
+        } else {
+          setViewMode('list')
+        }
+        break
+      case 'delete':
+        if (selectedDocuments.length > 0) {
+          setOpenBulkDeleteModal(true)
+        }
+        break
+      case 'restore':
+        if (selectedDocuments.length > 0) {
+          setOpenBulkRestoreModal(true)
+        }
+        break
+    }
+  }
 
   const handleDocumentSelect = (documentId: string) => {
     setSelectedDocuments((prev) =>
@@ -239,9 +274,214 @@ export function TrashDocumentViewer({
     }
   }
 
+  const handleDeleteClick = (document: Document) => {
+    setSelectedDocument(document)
+    setOpenDeleteModal(true)
+  }
+
+  const handleRestoreClick = (document: Document) => {
+    setSelectedDocument(document)
+    setOpenRestoreModal(true)
+  }
+
   useEffect(() => {
     setDocumentsState(allFiles)
   }, [allFiles])
+
+  const resetSelectMode = () => {
+    setIsSelectMode(false)
+    setSelectedDocuments([])
+  }
+
+  const confirmRestore = async () => {
+    if (!selectedDocument) return
+    try {
+      const response = await apiClient.post(
+        '/dashboard/bin/restore/documents',
+        {
+          data: [
+            {
+              itemId: Number.parseInt(selectedDocument.id),
+            },
+          ],
+        }
+      )
+      const removeDocumentFromArray = (docs: Document[]): Document[] => {
+        return docs.filter((doc) => {
+          if (doc.id === selectedDocument.id) {
+            return false
+          }
+          if (doc.children) {
+            doc.children = removeDocumentFromArray(doc.children)
+          }
+          return true
+        })
+      }
+
+      setDocumentsState((prevDocs) => removeDocumentFromArray(prevDocs))
+      if (currentFolder) {
+        const updatedChildren =
+          currentFolder.children?.filter(
+            (child) => child.id !== selectedDocument.id
+          ) || []
+        const updatedFolder = { ...currentFolder, children: updatedChildren }
+        setCurrentFolder(updatedFolder)
+      }
+      setOpenDeleteModal(false)
+      setSelectedDocument(null)
+      const successMessage =
+        response.data?.message || 'Document restored successfully'
+      toast.success(successMessage)
+    } catch (error: any) {
+      console.error('Error restoring document:', error)
+      const errorMessage =
+        error.response?.data?.message ||
+        'Failed to restore document. Please try again.'
+      toast.error(errorMessage)
+    }
+  }
+
+  const handleBulkRestore = async () => {
+    if (selectedDocuments.length === 0) return
+    try {
+      const deletePayload = selectedDocuments.map((id) => ({
+        itemId: Number.parseInt(id),
+      }))
+      const response = await apiClient.post(
+        '/dashboard/bin/restore/documents',
+        {
+          data: deletePayload,
+        }
+      )
+      const removeDocumentsFromArray = (docs: Document[]): Document[] => {
+        return docs.filter((doc) => {
+          if (selectedDocuments.includes(doc.id)) {
+            return false
+          }
+          if (doc.children) {
+            doc.children = removeDocumentsFromArray(doc.children)
+          }
+          return true
+        })
+      }
+
+      setDocumentsState((prevDocs) => removeDocumentsFromArray(prevDocs))
+      if (currentFolder) {
+        const updatedChildren =
+          currentFolder.children?.filter(
+            (child) => !selectedDocuments.includes(child.id)
+          ) || []
+        const updatedFolder = { ...currentFolder, children: updatedChildren }
+        setCurrentFolder(updatedFolder)
+      }
+      resetSelectMode()
+      const successMessage =
+        response.data?.message ||
+        `${selectedDocuments.length} documents restored successfully`
+      toast.success(successMessage)
+    } catch (error: any) {
+      console.error('Error restoring documents:', error)
+      const errorMessage =
+        error.response?.data?.message ||
+        'Failed to restore documents. Please try again.'
+      toast.error(errorMessage)
+    }
+  }
+
+  const confirmDelete = async () => {
+    if (!selectedDocument) return
+    try {
+      const response = await apiClient.delete(
+        '/dashboard/bin/delete/documents',
+        {
+          data: [
+            {
+              itemId: Number.parseInt(selectedDocument.id),
+            },
+          ],
+        }
+      )
+      const removeDocumentFromArray = (docs: Document[]): Document[] => {
+        return docs.filter((doc) => {
+          if (doc.id === selectedDocument.id) {
+            return false
+          }
+          if (doc.children) {
+            doc.children = removeDocumentFromArray(doc.children)
+          }
+          return true
+        })
+      }
+
+      setDocumentsState((prevDocs) => removeDocumentFromArray(prevDocs))
+      if (currentFolder) {
+        const updatedChildren =
+          currentFolder.children?.filter(
+            (child) => child.id !== selectedDocument.id
+          ) || []
+        const updatedFolder = { ...currentFolder, children: updatedChildren }
+        setCurrentFolder(updatedFolder)
+      }
+      setOpenDeleteModal(false)
+      setSelectedDocument(null)
+      const successMessage =
+        response.data?.message || 'Document delete successfully'
+      toast.success(successMessage)
+    } catch (error: any) {
+      console.error('Error deleting document:', error)
+      const errorMessage =
+        error.response?.data?.message ||
+        'Failed to delete document. Please try again.'
+      toast.error(errorMessage)
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedDocuments.length === 0) return
+    try {
+      const deletePayload = selectedDocuments.map((id) => ({
+        itemId: Number.parseInt(id),
+      }))
+      const response = await apiClient.delete(
+        '/dashboard/bin/delete/documents',
+        {
+          data: deletePayload,
+        }
+      )
+      const removeDocumentsFromArray = (docs: Document[]): Document[] => {
+        return docs.filter((doc) => {
+          if (selectedDocuments.includes(doc.id)) {
+            return false
+          }
+          if (doc.children) {
+            doc.children = removeDocumentsFromArray(doc.children)
+          }
+          return true
+        })
+      }
+
+      setDocumentsState((prevDocs) => removeDocumentsFromArray(prevDocs))
+      if (currentFolder) {
+        const updatedChildren =
+          currentFolder.children?.filter(
+            (child) => !selectedDocuments.includes(child.id)
+          ) || []
+        const updatedFolder = { ...currentFolder, children: updatedChildren }
+        setCurrentFolder(updatedFolder)
+      }
+      resetSelectMode()
+      const successMessage =
+        response.data?.message ||
+        `${selectedDocuments.length} documents deleted successfully`
+      toast.success(successMessage)
+    } catch (error: any) {
+      console.error('Error deleting documents:', error)
+      const errorMessage =
+        error.response?.data?.message ||
+        'Failed to delete documents. Please try again.'
+      toast.error(errorMessage)
+    }
+  }
 
   return (
     <div
@@ -300,9 +540,23 @@ export function TrashDocumentViewer({
                       loadingFolders={loadingFolders}
                       onSelectAll={handleSelectAll}
                       selectAllState={getSelectAllState()}
+                      onRestoreClick={handleRestoreClick}
+                      onDeleteClick={handleDeleteClick}
                     />
                   ) : (
-                    <div></div>
+                    <div>
+                      <TrashGridView
+                        documents={paginatedDocuments}
+                        onFolderClick={handleFolderClick}
+                        selectedDocumentId={selectedDocument?.id}
+                        selectedDocuments={selectedDocuments}
+                        onDocumentSelect={handleDocumentSelect}
+                        loadingFolders={loadingFolders}
+                        onSelectAll={handleSelectAll}
+                        onRestoreClick={handleRestoreClick}
+                        onDeleteClick={handleDeleteClick}
+                      />
+                    </div>
                   )}
                   {hasMore && (
                     <div className="px-4 pt-4">
@@ -320,7 +574,36 @@ export function TrashDocumentViewer({
           })}
         </div>
         <ScrollToTop />
-        {/* Document Detail Modal */}
+        <DocumentRestoreModal
+          isOpen={openRestoreModal}
+          onConfirm={confirmRestore}
+          onCancel={() => setOpenRestoreModal(false)}
+        />
+        <BulkRestoreModal
+          isOpen={openBulkRestoreModal}
+          onConfirm={() => {
+            setOpenBulkDeleteModal(false)
+            handleBulkRestore()
+          }}
+          onCancel={() => setOpenBulkRestoreModal(false)}
+          selectedCount={selectedDocuments.length}
+        />
+
+        <DocumentPermanentDeleteModal
+          isOpen={openDeleteModal}
+          onConfirm={confirmDelete}
+          onCancel={() => setOpenDeleteModal(false)}
+        />
+
+        <BulkDocumentPermanentDeleteModal
+          isOpen={openBulkRestoreModal}
+          onConfirm={() => {
+            setOpenBulkDeleteModal(false)
+            handleBulkDelete()
+          }}
+          onCancel={() => setOpenBulkDeleteModal(false)}
+          selectedCount={selectedDocuments.length}
+        />
       </div>
     </div>
   )

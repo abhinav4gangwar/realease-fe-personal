@@ -12,6 +12,8 @@ interface DocumentListViewProps {
   loadingFolders?: Set<string>
   onSelectAll?: () => void
   selectAllState?: 'none' | 'some' | 'all'
+  onRestoreClick?: (document: Document) => void
+  onDeleteClick?: (document: Document) => void
 }
 
 const TrashListView = ({
@@ -20,8 +22,10 @@ const TrashListView = ({
   selectedDocumentId,
   selectedDocuments,
   onDocumentSelect,
+  onRestoreClick,
   loadingFolders = new Set(),
   onSelectAll,
+  onDeleteClick,
   selectAllState = 'none',
 }: DocumentListViewProps) => {
   const handleRowClick = (document: Document) => {
@@ -92,7 +96,12 @@ const TrashListView = ({
                 variant="ghost"
                 size="icon"
                 className="hover:text-primary h-6 w-6 cursor-pointer"
-                onClick={(e) => {}}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (onRestoreClick) {
+                    onRestoreClick(document)
+                  }
+                }}
               >
                 <RefreshCcw className="h-3 w-3" />
               </Button>
@@ -101,7 +110,12 @@ const TrashListView = ({
                 variant="ghost"
                 size="icon"
                 className="hover:text-primary h-6 w-6 cursor-pointer"
-                onClick={(e) => {}}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (onDeleteClick) {
+                    onDeleteClick(document)
+                  }
+                }}
               >
                 <Trash2 className="h-3 w-3" />
               </Button>
