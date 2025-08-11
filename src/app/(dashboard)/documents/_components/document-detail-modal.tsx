@@ -14,7 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { User } from '@/types'
 import type { Document } from '@/types/document.types'
+import { apiClient } from '@/utils/api'
 import { Check, MoreVertical, X } from 'lucide-react'
 import type React from 'react'
 import { useEffect, useState } from 'react'
@@ -23,7 +25,21 @@ import { FileIcon } from './file-icon'
 import { TagInput } from './tags-input'
 
 //fetch this from an API
-const properties = [{ id: '0', name: 'Test Property' }]
+const properties = [{ id: '0', name: 'No Property' }]
+
+// API function to get users (same as in PDFPreviewModal)
+export const getUsers = async (documentId: number) => {
+  try {
+    const response = await apiClient.get(
+      `/dashboard/documents/getUsers/${documentId}`
+    )
+    const users = response.data.users
+    return users
+  } catch (error) {
+    console.log(error)
+    return []
+  }
+}
 
 interface DocumentDetailModalProps {
   document: Document | null
@@ -58,26 +74,70 @@ export function DocumentDetailModal({
   const [isSaving, setIsSaving] = useState(false)
   const [editedProperty, setEditedProperty] = useState('')
   const [editedTags, setEditedTags] = useState('')
+  
+  // Add states for shared users
+  const [users, setUsers] = useState<User[]>([])
+  const [isLoadingUsers, setIsLoadingUsers] = useState<boolean>(false)
 
   useEffect(() => {
     if (isOpen && openInEditMode && document) {
+      const propertyId = properties.find(
+      (p) => p.name === document.linkedProperty
+    )?.id || '0'
       setEditedName(document.name)
-      setEditedProperty(document.linkedProperty || '0')
+      setEditedProperty(propertyId || '0')
       setEditedTags(document.tags || '')
       setIsEditing(true)
     } else if (isOpen && document) {
+      const propertyId = properties.find(
+      (p) => p.name === document.linkedProperty
+    )?.id || '0'
       setEditedName(document.name)
-      setEditedProperty(document.linkedProperty || '0')
+      setEditedProperty(propertyId || '0')
       setEditedTags(document.tags || '')
       setIsEditing(false)
     }
   }, [isOpen, openInEditMode, document])
 
+
+  // Load users when document changes
+  useEffect(() => {
+    if (isOpen && document && !document.isFolder) {
+      loadUsers()
+    }
+  }, [isOpen, document, apiClient])
+
+  const loadUsers = async () => {
+    if (!document || !apiClient) return
+
+    setIsLoadingUsers(true)
+    try {
+      const fetchedUsers = await getUsers(Number.parseInt(document.id))
+      setUsers(fetchedUsers || [])
+    } catch (error) {
+      console.error("Error loading users:", error)
+      toast.error("Failed to load shared users")
+      setUsers([])
+    } finally {
+      setIsLoadingUsers(false)
+    }
+  }
+
+  // Reset users when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setUsers([])
+    }
+  }, [isOpen])
+
   if (!document || !isOpen) return null
 
   const handleEdit = () => {
+    const propertyId = properties.find(
+      (p) => p.name === document.linkedProperty
+    )?.id || '0'
     setEditedName(document.name)
-    setEditedProperty(document.linkedProperty || '0')
+    setEditedProperty(propertyId)
     setEditedTags(document.tags || '')
     setIsEditing(true)
   }
@@ -92,13 +152,11 @@ export function DocumentDetailModal({
       setIsSaving(true)
 
       if (document.isFolder) {
-        // For folders, only name can be edited - use rename API
         if (onSave && editedName.trim() !== document.name) {
           await onSave(document.id, editedName.trim())
           toast.success(`Folder renamed to "${editedName.trim()}"`)
         }
       } else {
-        // For files, name, property, and tags can be edited - use edit API
         if (onEditFile) {
           const tagsArray = editedTags
             ? editedTags
@@ -120,7 +178,6 @@ export function DocumentDetailModal({
     } catch (error) {
       console.error('Error saving document:', error)
       toast.error('Failed to save changes. Please try again.')
-      // Reset values on error
       setEditedName(document.name)
       setEditedProperty(document.linkedProperty || '0')
       setEditedTags(document.tags || '')
@@ -300,7 +357,7 @@ export function DocumentDetailModal({
                   onValueChange={setEditedProperty}
                   disabled={isSaving}
                 >
-                  <SelectTrigger className="border-gray-400 focus-visible:ring-0 w-full">
+                  <SelectTrigger className="w-full border-gray-400 focus-visible:ring-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -360,6 +417,34 @@ export function DocumentDetailModal({
             </div>
           )}
 
+          
+            <div>
+              <h3 className="mb-2 text-sm font-medium text-gray-500">
+                Shared With
+              </h3>
+              {isLoadingUsers ? (
+                <div className="flex items-center text-sm text-gray-500">
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-primary"></div>
+                  Loading shared users...
+                </div>
+              ) : users && users.length > 0 ? (
+                <div className="space-y-2">
+                  {users.map((user) => (
+                    <div key={user.id} className="flex items-center gap-2 text-sm">
+                      <div className="flex flex-col">
+                        {user.email && (
+                          <span className="text-xs">{user.email}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm">Not shared with anyone</p>
+              )}
+            </div>
+        
+          
           {document.size && (
             <div>
               <h3 className="mb-1 text-sm font-medium text-gray-500">Size</h3>
