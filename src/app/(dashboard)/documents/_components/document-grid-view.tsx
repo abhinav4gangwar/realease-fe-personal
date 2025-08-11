@@ -82,7 +82,7 @@ export function DocumentGridView({
                   checked={selectedDocuments?.includes(document.id) || false}
                   onChange={() => onDocumentSelect?.(document.id)}
                   onClick={(e) => e.stopPropagation()}
-                  className="h-4 w-4 flex-shrink-0 cursor-pointer accent-[#f56161]"
+                  className="h-4 w-4 flex-shrink-0 cursor-pointer accent-[#f16969]"
                 />
                 <div className="flex items-center gap-2">
                   <FileIcon type={document.icon} className="h-7 w-6" />

@@ -63,7 +63,7 @@ export function DocumentListView({
         <div className="col-span-4 flex gap-3 items-center">
           <input
             type="checkbox"
-            className="h-4 w-4 accent-[#f56161]"
+            className="h-4 w-4 accent-[#f16969]"
             checked={selectAllState === "all"}
             ref={(el) => {
               if (el) {
@@ -95,7 +95,7 @@ export function DocumentListView({
               checked={selectedDocuments?.includes(document.id) || false}
               onChange={() => onDocumentSelect?.(document.id)}
               onClick={(e) => e.stopPropagation()}
-              className="h-4 w-4 accent-[#f56161]"
+              className="h-4 w-4 accent-[#f16969]"
             />
             <div className="flex items-center gap-2">
               <FileIcon type={document.icon} />
