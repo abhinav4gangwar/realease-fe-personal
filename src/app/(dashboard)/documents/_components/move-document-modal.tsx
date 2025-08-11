@@ -13,6 +13,7 @@ interface MoveDocumentModalProps {
   availableFolders: Document[]
   onMove: (documentId: string, newParentId: string | null) => Promise<void>
   onCreateFolder?: () => void
+  selectedDocumentIds?: string[]
 }
 
 export function MoveDocumentModal({
@@ -22,6 +23,7 @@ export function MoveDocumentModal({
   availableFolders,
   onMove,
   onCreateFolder,
+  selectedDocumentIds = [] 
 }: MoveDocumentModalProps) {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const [isMoving, setIsMoving] = useState(false)
@@ -111,7 +113,21 @@ export function MoveDocumentModal({
 
             {/* Folder Rows */}
             {availableFolders
-              .filter((folder) => folder.isFolder && folder.id !== document.id)
+              .filter((folder) => {
+                if (!folder.isFolder) return false
+                
+                if (document.id !== "bulk" && folder.id === document.id) return false
+                
+                if (document.id === "bulk" && selectedDocumentIds.length > 0) {
+                  return !selectedDocumentIds.includes(folder.id)
+                }
+              
+                if (selectedDocumentIds.length > 0 && selectedDocumentIds.includes(folder.id)) {
+                  return false
+                }
+                
+                return true
+              })
               .map((folder) => (
                 <div
                   key={folder.id}

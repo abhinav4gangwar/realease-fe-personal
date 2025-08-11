@@ -918,6 +918,7 @@ export function DocumentViewer({
             }
           }}
           onCreateFolder={handleCreateFolderFromMove}
+          selectedDocumentIds={selectedDocuments}
         />
         <BulkDeleteModal
           isOpen={openBulkDeleteModal}
