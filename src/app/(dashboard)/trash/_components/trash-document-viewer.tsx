@@ -327,7 +327,8 @@ export function TrashDocumentViewer({
         const updatedFolder = { ...currentFolder, children: updatedChildren }
         setCurrentFolder(updatedFolder)
       }
-      setOpenDeleteModal(false)
+
+      setOpenRestoreModal(false)
       setSelectedDocument(null)
       const successMessage =
         response.data?.message || 'Document restored successfully'
@@ -344,13 +345,13 @@ export function TrashDocumentViewer({
   const handleBulkRestore = async () => {
     if (selectedDocuments.length === 0) return
     try {
-      const deletePayload = selectedDocuments.map((id) => ({
+      const restorePayload = selectedDocuments.map((id) => ({
         itemId: Number.parseInt(id),
       }))
       const response = await apiClient.post(
         '/dashboard/bin/restore/documents',
         {
-          data: deletePayload,
+          data: restorePayload,
         }
       )
       const removeDocumentsFromArray = (docs: Document[]): Document[] => {
@@ -374,7 +375,10 @@ export function TrashDocumentViewer({
         const updatedFolder = { ...currentFolder, children: updatedChildren }
         setCurrentFolder(updatedFolder)
       }
+
+      setOpenBulkRestoreModal(false)
       resetSelectMode()
+
       const successMessage =
         response.data?.message ||
         `${selectedDocuments.length} documents restored successfully`
@@ -422,10 +426,12 @@ export function TrashDocumentViewer({
         const updatedFolder = { ...currentFolder, children: updatedChildren }
         setCurrentFolder(updatedFolder)
       }
+
       setOpenDeleteModal(false)
       setSelectedDocument(null)
+
       const successMessage =
-        response.data?.message || 'Document delete successfully'
+        response.data?.message || 'Document deleted successfully'
       toast.success(successMessage)
     } catch (error: any) {
       console.error('Error deleting document:', error)
@@ -469,7 +475,10 @@ export function TrashDocumentViewer({
         const updatedFolder = { ...currentFolder, children: updatedChildren }
         setCurrentFolder(updatedFolder)
       }
+
+      setOpenBulkDeleteModal(false)
       resetSelectMode()
+
       const successMessage =
         response.data?.message ||
         `${selectedDocuments.length} documents deleted successfully`
@@ -574,34 +583,40 @@ export function TrashDocumentViewer({
           })}
         </div>
         <ScrollToTop />
+
         <DocumentRestoreModal
           isOpen={openRestoreModal}
           onConfirm={confirmRestore}
-          onCancel={() => setOpenRestoreModal(false)}
+          onCancel={() => {
+            setOpenRestoreModal(false)
+            setSelectedDocument(null)
+          }}
         />
+
         <BulkRestoreModal
           isOpen={openBulkRestoreModal}
-          onConfirm={() => {
-            setOpenBulkDeleteModal(false)
-            handleBulkRestore()
+          onConfirm={handleBulkRestore}
+          onCancel={() => {
+            setOpenBulkRestoreModal(false)
           }}
-          onCancel={() => setOpenBulkRestoreModal(false)}
           selectedCount={selectedDocuments.length}
         />
 
         <DocumentPermanentDeleteModal
           isOpen={openDeleteModal}
           onConfirm={confirmDelete}
-          onCancel={() => setOpenDeleteModal(false)}
+          onCancel={() => {
+            setOpenDeleteModal(false)
+            setSelectedDocument(null)
+          }}
         />
 
         <BulkDocumentPermanentDeleteModal
-          isOpen={openBulkRestoreModal}
-          onConfirm={() => {
+          isOpen={openBulkDeleteModal}
+          onConfirm={handleBulkDelete}
+          onCancel={() => {
             setOpenBulkDeleteModal(false)
-            handleBulkDelete()
           }}
-          onCancel={() => setOpenBulkDeleteModal(false)}
           selectedCount={selectedDocuments.length}
         />
       </div>

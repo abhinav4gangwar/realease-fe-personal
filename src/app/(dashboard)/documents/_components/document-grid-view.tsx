@@ -90,20 +90,20 @@ export function DocumentGridView({
                     <Loader2 className="h-4 w-4 animate-spin" />
                   )}
                 </div>
-                <h3 className="text-md max-w-[160px] truncate">
+                <h3 className="text-md max-w-[170px] truncate">
                   {document.name}
                 </h3>
+              </div>
+              <div className="flex items-center gap-1 text-[#9B9B9D]">
                 {hoveredCard === document.id && !isShareMode && (
-                  <div className="ml-2 flex items-center gap-1 text-[#9B9B9D]">
+                  <>
                     <Button
                       variant="ghost"
                       size="icon"
                       className="hover:text-primary h-5 w-5 cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation()
-                        if (onEditClick) {
-                          onEditClick(document)
-                        }
+                        onEditClick?.(document)
                       }}
                     >
                       <Pencil className="h-3 w-3" />
@@ -114,9 +114,7 @@ export function DocumentGridView({
                       className="hover:text-primary h-5 w-5 cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation()
-                        if (onMoveClick) {
-                          onMoveClick(document)
-                        }
+                        onMoveClick?.(document)
                       }}
                     >
                       <FolderInput className="h-3 w-3" />
@@ -127,9 +125,7 @@ export function DocumentGridView({
                       className="hover:text-primary h-5 w-5 cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation()
-                        if (onDownloadClick) {
-                          onDownloadClick(document)
-                        }
+                        onDownloadClick?.(document)
                       }}
                     >
                       <Download className="h-3 w-3" />
@@ -140,9 +136,7 @@ export function DocumentGridView({
                       className="hover:text-primary h-5 w-5 cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation()
-                        if (onShareClick) {
-                          onShareClick(document)
-                        }
+                        onShareClick?.(document)
                       }}
                     >
                       <HiShare className="h-3 w-3" />
@@ -153,30 +147,30 @@ export function DocumentGridView({
                       className="hover:text-primary h-5 w-5 cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation()
-                        if (onDeleteClick) {
-                          onDeleteClick(document)
-                        }
+                        onDeleteClick?.(document)
                       }}
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
-                  </div>
+                  </>
+                )}
+
+                {!isShareMode && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 flex-shrink-0"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onDocumentInfo(document)
+                    }}
+                  >
+                    <Info className="h-4 w-4" />
+                  </Button>
                 )}
               </div>
-              {!isShareMode && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 flex-shrink-0"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onDocumentInfo(document)
-                  }}
-                >
-                  <Info className="h-4 w-4" />
-                </Button>
-              )}
             </div>
+
             <div className="space-y-1 text-sm text-[#9B9B9D]">
               <p className="truncate">{document.linkedProperty}</p>
               <p>{document.dateAdded}</p>
