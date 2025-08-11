@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ChevronDown, ChevronUp } from "lucide-react"
 import { useState } from "react"
+import { toast } from "sonner"
 
 export type actionType = "select" | "move" | "download" | "share" | "delete"
 
@@ -24,6 +25,11 @@ export function ActionsButton({ onActionSelect, isSelectMode = false, selectedCo
   const [selected, setSelected] = useState<actionType | null>(null)
 
   const handleSelect = (value: actionType) => {
+    if ( selectedCount === 0 ) {
+      toast.error("Please select at least one document to perform this action")
+      setOpen(false)
+      return
+    }
     setSelected(value)
     onActionSelect(value)
     setOpen(false)
@@ -75,8 +81,8 @@ export function ActionsButton({ onActionSelect, isSelectMode = false, selectedCo
             onClick={() => handleSelect(value)}
             className={`cursor-pointer font-semibold hover:bg-[#A2CFE33D] ${
               selected === value ? "text-primary" : ""
-            } ${value !== "select" && isSelectMode && selectedCount === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
-            disabled={value !== "select" && isSelectMode && selectedCount === 0}
+            } ${ selectedCount === 0 ? "opacity-50" : ""}`}
+            
           >
             {label}
           </DropdownMenuItem>

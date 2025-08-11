@@ -4,7 +4,8 @@ import {
   FileText,
   Home,
   MapPin,
-  Settings
+  Settings,
+  Trash,
 } from 'lucide-react'
 
 export const APP_CONFIG = {
@@ -84,6 +85,7 @@ export const navigationItems = [
   { icon: MapPin, label: 'Properties', href: '/properties' },
   { icon: BarChart3, label: 'Analytics', href: '/analytics' },
   { icon: FileText, label: 'Documents', href: '/documents' },
+  { icon: Trash, label: 'Trash', href: '/trash' },
 ]
 
 export const navigationItemSection = [
