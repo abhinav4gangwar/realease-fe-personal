@@ -38,7 +38,7 @@ export function PDFPreviewModal({
   onMoveClick,
   onShareClick,
   onDownloadClick,
-  onEditClick, // Add this new prop
+  onEditClick,
 }: PDFPreviewModalProps) {
   // PDF and data state
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
@@ -229,7 +229,6 @@ export function PDFPreviewModal({
   const handleEditClick = () => {
     if (document && onEditClick) {
       onEditClick(document)
-      // Remove this line: onClose() // Don't close here, let parent handle it
     }
   }
 
@@ -316,7 +315,6 @@ export function PDFPreviewModal({
     setTempAnnotation(null)
     setEditingComment(null)
     setHasTextSelection(false)
-    // Clear any text selection
     const selection = window.getSelection()
     if (selection) {
       selection.removeAllRanges()
