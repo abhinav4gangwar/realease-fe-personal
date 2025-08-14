@@ -707,13 +707,6 @@ export function DocumentViewer({
     }
   }
 
-  const handleCreateFolderFromMove = () => {
-    setIsMoveModalOpen(false)
-    setDocumentToMove(null)
-    setAddModaltype('createFolder')
-    setUploadModalOpen(true)
-  }
-
   return (
     <div
       className={`transition-all duration-300 ${isModalOpen ? 'mr-[343px]' : ''}`}
@@ -873,6 +866,7 @@ export function DocumentViewer({
           onClose={() => setUploadModalOpen(false)}
           addType={addModalType}
           onSuccess={handleUploadSuccess}
+          currentFolderId={currentFolder?.id || null}
         />
         <ShareEmailModal
           isOpen={isShareEmailModalOpen}
@@ -917,8 +911,9 @@ export function DocumentViewer({
               await handleMoveDocument(documentId, newParentId)
             }
           }}
-          onCreateFolder={handleCreateFolderFromMove}
           selectedDocumentIds={selectedDocuments}
+          apiClient={apiClient}
+          transformApiResponse={transformApiResponse}
         />
         <BulkDeleteModal
           isOpen={openBulkDeleteModal}

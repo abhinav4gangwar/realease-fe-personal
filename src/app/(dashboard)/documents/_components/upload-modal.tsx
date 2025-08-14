@@ -14,6 +14,7 @@ interface UploadModalProps {
   onClose: () => void
   addType: 'uploadFile' | 'createFolder'
   onSuccess?: () => void
+  currentFolderId?: string | null
 }
 
 export function UploadModal({
@@ -21,6 +22,7 @@ export function UploadModal({
   addType,
   onClose,
   onSuccess,
+  currentFolderId,
 }: UploadModalProps) {
   const [showUploadQueue, setShowUploadQueue] = useState(false)
   const [showDetailsDialog, setShowDetailsDialog] = useState(false)
@@ -113,7 +115,7 @@ export function UploadModal({
           </div>
 
           {addType === 'createFolder' && (
-            <CreateFolderForm onClose={handleClose} onSuccess={onSuccess} />
+            <CreateFolderForm onClose={handleClose} onSuccess={onSuccess} currentFolderId={currentFolderId}/>
           )}
           {addType === 'uploadFile' && <UploadDropzone {...uploader} />}
         </div>

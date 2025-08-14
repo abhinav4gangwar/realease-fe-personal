@@ -22,13 +22,17 @@ const createFolderSchema = z.object({
 type CreateFolderFormValues = z.infer<typeof createFolderSchema>
 
 interface CreateFolderFormProps {
-  onSuccess?: () => void
+  onSuccess?: () => Promise<void> | void
   onClose: () => void
+  currentFolderId?: string | null
+  onFolderCreated?: (id: string, name: string) => void
 }
 
 export function CreateFolderForm({
   onClose,
   onSuccess,
+  currentFolderId,
+  onFolderCreated,
 }: CreateFolderFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const form = useForm<CreateFolderFormValues>({
@@ -41,10 +45,12 @@ export function CreateFolderForm({
     try {
       const response = await apiClient.post('/dashboard/documents/new-folder', {
         name: values.name,
-        parentId: '',
+        parentId: currentFolderId || null,
       })
+      const newFolderId = response.data.folder.id.toString()
       toast.success(response.data.message || 'Folder created successfully')
       if (onSuccess) await onSuccess()
+      if (onFolderCreated) onFolderCreated(newFolderId, values.name)
       onClose()
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Folder creation failed.')
@@ -69,7 +75,11 @@ export function CreateFolderForm({
           )}
         />
         <div className="flex justify-end gap-2 pt-4">
-          <Button variant="outline" onClick={onClose} className="px-6 bg-transparent h-11 hover:bg-secondary hover:text-white cursor-pointer w-28">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="hover:bg-secondary h-11 w-28 cursor-pointer bg-transparent px-6 hover:text-white"
+          >
             Cancel
           </Button>
           <Button
