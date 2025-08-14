@@ -873,6 +873,7 @@ export function DocumentViewer({
           onClose={() => setUploadModalOpen(false)}
           addType={addModalType}
           onSuccess={handleUploadSuccess}
+          currentFolderId={currentFolder?.id || null}
         />
         <ShareEmailModal
           isOpen={isShareEmailModalOpen}

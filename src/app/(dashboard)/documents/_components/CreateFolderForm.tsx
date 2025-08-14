@@ -24,11 +24,13 @@ type CreateFolderFormValues = z.infer<typeof createFolderSchema>
 interface CreateFolderFormProps {
   onSuccess?: () => void
   onClose: () => void
+  currentFolderId?: string | null
 }
 
 export function CreateFolderForm({
   onClose,
   onSuccess,
+  currentFolderId,
 }: CreateFolderFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const form = useForm<CreateFolderFormValues>({
@@ -41,7 +43,7 @@ export function CreateFolderForm({
     try {
       const response = await apiClient.post('/dashboard/documents/new-folder', {
         name: values.name,
-        parentId: '',
+       parentId: currentFolderId || null,
       })
       toast.success(response.data.message || 'Folder created successfully')
       if (onSuccess) await onSuccess()
