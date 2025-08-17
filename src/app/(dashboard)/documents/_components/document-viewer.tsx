@@ -38,8 +38,8 @@ import { SortButton } from './sort-button'
 import { UploadModal } from './upload-modal'
 import { ViewModeToggle } from './viewmode-toggle'
 
-const PDFPreviewModal = dynamic(
-  () => import('./pdf-preview-modal').then((mod) => mod.PDFPreviewModal),
+const UnifiedDocumentViewer = dynamic(
+  () => import('./unified-document-viewer').then((mod) => mod.UnifiedDocumentViewer),
   {
     ssr: false,
   }
@@ -833,8 +833,8 @@ export function DocumentViewer({
           onMoveClick={handleMoveClick}
           onDownloadClick={handleDownloadClick}
         />
-        {/* PDF Preview Modal */}
-        <PDFPreviewModal
+        {/* Document Preview Modal */}
+        <UnifiedDocumentViewer
           document={selectedDocument}
           isOpen={isPdfPreviewOpen}
           onClose={() => {

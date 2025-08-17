@@ -1,0 +1,500 @@
+"use client"
+
+import type { Comment, CommentAnnotation, User } from "@/types/comment.types"
+import type { Document } from "@/types/document.types"
+import { useEffect, useRef, useState, type MouseEvent } from "react"
+import { Document as PDFDocument, Page, pdfjs } from "react-pdf"
+import "react-pdf/dist/Page/AnnotationLayer.css"
+import "react-pdf/dist/Page/TextLayer.css"
+import { toast } from "sonner"
+
+import { CommentService } from "../doc_utils/comment.services"
+import { isImageFile, isPdfFile } from "../doc_utils"
+import { Annotation } from "./comment-components/annotation"
+import { CommentMarker } from "./comment-components/comment-marker"
+import { CommentModal } from "./comment-components/comment-modal"
+import { PDFControls } from "./comment-components/pdf-controls"
+import { PDFHeader } from "./comment-components/pdf-header"
+
+// Set up PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`
+
+interface UnifiedDocumentViewerProps {
+  isOpen: boolean
+  onClose: () => void
+  document: Document | null
+  apiClient: any
+  onMoveClick?: (document: Document) => void
+  onShareClick?: (document: Document) => void
+  onDownloadClick?: (document: Document) => void
+  onEditClick?: (document: Document) => void
+}
+
+export function UnifiedDocumentViewer({
+  isOpen,
+  onClose,
+  document,
+  apiClient,
+  onMoveClick,
+  onShareClick,
+  onDownloadClick,
+  onEditClick,
+}: UnifiedDocumentViewerProps) {
+  // Document state
+  const [documentUrl, setDocumentUrl] = useState<string | null>(null)
+  const [documentType, setDocumentType] = useState<'pdf' | 'image' | null>(null)
+  const [numPages, setNumPages] = useState<number | null>(null)
+  const [scale, setScale] = useState<number>(1.2)
+  const [isLoading, setIsLoading] = useState<boolean>(false)
+
+  // Comment and annotation state
+  const [comments, setComments] = useState<Comment[]>([])
+  const [users, setUsers] = useState<User[]>([])
+  const [isLoadingUsers, setIsLoadingUsers] = useState<boolean>(false)
+  const [tempAnnotation, setTempAnnotation] = useState<CommentAnnotation | null>(null)
+  const [isLoadingComments, setIsLoadingComments] = useState<boolean>(false)
+  const [isCreatingComment, setIsCreatingComment] = useState<boolean>(false)
+  const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null)
+  const [deletingReplyId, setDeletingReplyId] = useState<number | null>(null)
+  const [activeCommentId, setActiveCommentId] = useState<number | null>(null)
+  const [replyingToCommentId, setReplyingToCommentId] = useState<number | null>(null)
+
+  // UI state
+  const [hasTextSelection, setHasTextSelection] = useState<boolean>(false)
+  const [selectionPosition, setSelectionPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+  const [isCommentModalOpen, setIsCommentModalOpen] = useState<boolean>(false)
+  const [commentModalPosition, setCommentModalPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+  const [editingComment, setEditingComment] = useState<Comment | null>(null)
+
+  // Refs
+  const pageRef = useRef<HTMLDivElement>(null)
+  const imageRef = useRef<HTMLImageElement>(null)
+  const commentService = useRef<CommentService | null>(null)
+
+  // Initialize comment service
+  useEffect(() => {
+    if (apiClient) {
+      commentService.current = new CommentService(apiClient)
+    }
+  }, [apiClient])
+
+  // Load document, comments, and users when document changes
+  useEffect(() => {
+    if (isOpen && document && !document.isFolder) {
+      loadDocument()
+      loadComments()
+      loadUsers()
+    }
+  }, [isOpen, document])
+
+  const loadDocument = async () => {
+    if (!document) return
+
+    setIsLoading(true)
+    try {
+      // Determine document type
+      const isImage = isImageFile(document)
+      const isPdf = isPdfFile(document)
+      
+      if (isImage) {
+        setDocumentType('image')
+        // For images, get the original file
+        const response = await apiClient.get(`/dashboard/documents/view/${document.id}?original=true`, {
+          responseType: "blob",
+        })
+        const imageBlob = new Blob([response.data])
+        const objectUrl = URL.createObjectURL(imageBlob)
+        setDocumentUrl(objectUrl)
+        setNumPages(1) // Images are single page
+      } else {
+        setDocumentType('pdf')
+        // For PDFs and other files, get the PDF conversion
+        const response = await apiClient.get(`/dashboard/documents/view/${document.id}`, {
+          responseType: "blob",
+        })
+        const pdfBlob = new Blob([response.data], { type: "application/pdf" })
+        const objectUrl = URL.createObjectURL(pdfBlob)
+        setDocumentUrl(objectUrl)
+      }
+    } catch (error) {
+      console.error("Error loading document:", error)
+      toast.error("Failed to load document")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const loadComments = async () => {
+    if (!document || !commentService.current) return
+
+    setIsLoadingComments(true)
+    try {
+      const fetchedComments = await commentService.current.getComments(Number.parseInt(document.id))
+      setComments(fetchedComments)
+    } catch (error) {
+      console.error("Error loading comments:", error)
+    } finally {
+      setIsLoadingComments(false)
+    }
+  }
+
+  const loadUsers = async () => {
+    setIsLoadingUsers(true)
+    try {
+      const response = await apiClient.get("/dashboard/users/list")
+      setUsers(response.data || [])
+    } catch (error) {
+      console.error("Error loading users:", error)
+    } finally {
+      setIsLoadingUsers(false)
+    }
+  }
+
+  // Handle text selection for PDFs
+  const handleMouseUp = (e: MouseEvent): void => {
+    if (documentType !== 'pdf') return
+
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+      setHasTextSelection(false)
+      setTempAnnotation(null)
+      return
+    }
+
+    const range = selection.getRangeAt(0)
+
+    // Find which page the selection is on
+    const pageElements = pageRef.current?.querySelectorAll('.react-pdf__Page')
+    let targetPage = 1 // Default to page 1
+    let pageContent: Element | null = null
+
+    if (pageElements) {
+      for (let i = 0; i < pageElements.length; i++) {
+        const pageElement = pageElements[i]
+        const textContent = pageElement.querySelector('.react-pdf__Page__textContent')
+        if (textContent && textContent.contains(range.commonAncestorContainer)) {
+          targetPage = i + 1
+          pageContent = textContent
+          break
+        }
+      }
+    }
+
+    if (!pageContent) return
+
+    const pageRect = pageContent.getBoundingClientRect()
+    const selectionRect = range.getBoundingClientRect()
+
+    // Improved coordinate calculation with bounds checking
+    const x = Math.max(0, Math.min(100, ((selectionRect.left - pageRect.left) / pageRect.width) * 100))
+    const y = Math.max(0, Math.min(100, ((selectionRect.top - pageRect.top) / pageRect.height) * 100))
+    const width = Math.max(0.1, Math.min(100 - x, (selectionRect.width / pageRect.width) * 100))
+    const height = Math.max(0.1, Math.min(100 - y, (selectionRect.height / pageRect.height) * 100))
+
+    if (width > 0 && height > 0) {
+      const newAnnotation: CommentAnnotation = {
+        id: `temp-${Date.now()}`,
+        page: targetPage,
+        rect: { x, y, width, height },
+      }
+
+      setTempAnnotation(newAnnotation)
+      setSelectionPosition({ x: e.clientX, y: e.clientY })
+      setHasTextSelection(true)
+
+      // Clear the selection to prevent interference
+      setTimeout(() => {
+        selection.removeAllRanges()
+      }, 100)
+    }
+  }
+
+  // Handle click-to-annotate for both PDFs and images
+  const handleClick = (e: MouseEvent): void => {
+    // Only handle clicks if no text is selected and not clicking on existing annotations
+    if (hasTextSelection) return
+
+    const target = e.target as HTMLElement
+    if (target.closest('.comment-marker') || target.closest('.annotation')) return
+
+    let pageElement: HTMLElement | null = null
+    let targetPage = 1 // Default to page 1
+
+    if (documentType === 'pdf') {
+      // Find which page was clicked
+      pageElement = target.closest('.react-pdf__Page') as HTMLElement
+      if (pageElement) {
+        const pageElements = pageRef.current?.querySelectorAll('.react-pdf__Page')
+        if (pageElements) {
+          targetPage = Array.from(pageElements).indexOf(pageElement) + 1
+        }
+      }
+    } else {
+      pageElement = imageRef.current
+      targetPage = 1
+    }
+
+    if (!pageElement) return
+
+    const rect = pageElement.getBoundingClientRect()
+    const x = ((e.clientX - rect.left) / rect.width) * 100
+    const y = ((e.clientY - rect.top) / rect.height) * 100
+
+    const newAnnotation: CommentAnnotation = {
+      id: `temp-${Date.now()}`,
+      page: targetPage,
+      rect: { x, y, width: 2, height: 2 }, // Small point annotation
+    }
+
+    setTempAnnotation(newAnnotation)
+    setSelectionPosition({ x: e.clientX, y: e.clientY })
+    setHasTextSelection(true)
+
+    // Auto-open comment modal for click-to-annotate (no text selection)
+    setCommentModalPosition({ x: e.clientX, y: e.clientY })
+    setEditingComment(null)
+    setActiveCommentId(null)
+    setIsCommentModalOpen(true)
+  }
+
+  const handleCommentIconClick = () => {
+    if (!hasTextSelection || !tempAnnotation) {
+      toast.error("Select text to comment")
+      return
+    }
+
+    // Only open modal for text selections (click-to-annotate auto-opens)
+    // Check if this is a text selection (width/height > 2) vs point annotation (width/height = 2)
+    if (tempAnnotation.rect.width <= 2 && tempAnnotation.rect.height <= 2) {
+      toast.error("Click annotation already active - modal should be open")
+      return
+    }
+
+    setCommentModalPosition(selectionPosition)
+    setEditingComment(null)
+    setActiveCommentId(null)
+    setIsCommentModalOpen(true)
+  }
+
+  const handleEditClick = () => {
+    if (document && onEditClick) {
+      onEditClick(document)
+    }
+  }
+
+  const handleCommentSubmit = async (text: string) => {
+    if (!tempAnnotation || !document || !commentService.current) return
+
+    setIsCreatingComment(true)
+    try {
+      const newComment = await commentService.current.createComment({
+        text,
+        documentId: Number.parseInt(document.id),
+        annotation: tempAnnotation,
+      })
+
+      setComments((prev) => [...prev, newComment])
+      setTempAnnotation(null)
+      setHasTextSelection(false)
+      setIsCommentModalOpen(false)
+      toast.success("Comment added successfully")
+    } catch (error) {
+      console.error("Error creating comment:", error)
+      toast.error("Failed to add comment")
+    } finally {
+      setIsCreatingComment(false)
+    }
+  }
+
+  // PDF navigation and zoom
+  const onDocumentLoadSuccess = ({ numPages: nextNumPages }: { numPages: number }): void => {
+    setNumPages(nextNumPages)
+  }
+
+  const zoomIn = () => setScale((prev) => Math.min(prev + 0.2, 3.0))
+  const zoomOut = () => setScale((prev) => Math.max(prev - 0.2, 0.5))
+
+  if (!isOpen) return null
+
+  const allAnnotations: CommentAnnotation[] = [
+    ...comments.map((c) => c.annotation),
+    ...(tempAnnotation ? [tempAnnotation] : []),
+  ]
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50">
+      <div className="bg-secondary flex h-full w-full max-w-7xl flex-col shadow-xl">
+        {/* Header */}
+        <PDFHeader
+          document={document}
+          isLoadingComments={isLoadingComments}
+          hasTextSelection={hasTextSelection}
+          onClose={onClose}
+          onShareClick={onShareClick}
+          onDownloadClick={onDownloadClick}
+          onMoveClick={onMoveClick}
+          onEditClick={handleEditClick}
+          onCommentClick={handleCommentIconClick}
+        />
+
+        {/* Document Content */}
+        <div 
+          className="relative flex-1 overflow-auto bg-gray-100 p-6" 
+          onMouseUp={handleMouseUp}
+          onClick={handleClick}
+        >
+          {/* Zoom Controls - only show zoom for documents */}
+          {documentUrl && (
+            <div className="fixed bottom-6 right-6 z-30 flex items-center gap-1 rounded-lg bg-[#9B9B9D] shadow-lg p-1 text-white">
+              <button
+                onClick={zoomOut}
+                disabled={scale <= 0.5}
+                className="h-8 w-8 p-0 rounded hover:bg-white/20 disabled:opacity-50"
+              >
+                <span className="text-sm">-</span>
+              </button>
+              <span className="text-sm font-medium px-2 min-w-[50px] text-center">{Math.round(scale * 100)}%</span>
+              <button
+                onClick={zoomIn}
+                disabled={scale >= 3.0}
+                className="h-8 w-8 p-0 rounded hover:bg-white/20 disabled:opacity-50"
+              >
+                <span className="text-sm">+</span>
+              </button>
+            </div>
+          )}
+
+          {isLoading ? (
+            <div className="flex h-full items-center justify-center">
+              <div className="text-center">
+                <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+                <p className="mt-4 text-gray-600">Loading document...</p>
+              </div>
+            </div>
+          ) : documentUrl ? (
+            <div className="mx-auto max-w-4xl">
+              {documentType === 'pdf' ? (
+                <PDFDocument
+                  file={documentUrl}
+                  onLoadSuccess={onDocumentLoadSuccess}
+                  onLoadError={console.error}
+                  loading={<div className="p-8 text-center">Loading document...</div>}
+                >
+                  <div ref={pageRef} className="space-y-4">
+                    {/* Render all pages for scroll functionality */}
+                    {Array.from({ length: numPages || 1 }, (_, index) => {
+                      const pageNumber = index + 1
+                      const pageComments = comments.filter((comment) => comment.annotation.page === pageNumber)
+                      const pageAnnotations = allAnnotations.filter((anno) => anno.page === pageNumber)
+
+                      return (
+                        <div key={`page_${pageNumber}`} className="relative bg-white shadow-lg mb-4">
+                          <Page pageNumber={pageNumber} scale={scale} renderTextLayer={true} />
+
+                          {/* Annotations overlay */}
+                          <div className="pointer-events-none absolute top-0 left-0 h-full w-full">
+                            {pageAnnotations.map((anno) => (
+                              <Annotation
+                                key={anno.id}
+                                annotation={anno}
+                                isHighlighted={comments.some((c) => c.annotation.id === anno.id)}
+                              />
+                            ))}
+                          </div>
+
+                          {/* Comment markers */}
+                          <div className="absolute top-0 left-0 h-full w-full">
+                            {pageComments.map((comment) => (
+                              <div key={comment.id} className="comment-marker">
+                                <CommentMarker
+                                  comment={comment}
+                                  users={users}
+                                  onClick={() => setActiveCommentId(comment.id)}
+                                  onEdit={() => setEditingComment(comment)}
+                                  onDelete={() => setDeletingCommentId(comment.id)}
+                                  onReply={() => setReplyingToCommentId(comment.id)}
+                                  onEditReply={() => {}}
+                                  onDeleteReply={() => {}}
+                                  isDeleting={deletingCommentId === comment.id}
+                                  isActive={activeCommentId === comment.id}
+                                  isReplying={replyingToCommentId === comment.id}
+                                  deletingReplyId={deletingReplyId}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </PDFDocument>
+              ) : (
+                // Image viewer
+                <div ref={imageRef} className="relative bg-white shadow-lg inline-block">
+                  <img
+                    src={documentUrl}
+                    alt={document?.name || "Document"}
+                    style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
+                    className="max-w-full h-auto"
+                  />
+
+                  {/* Annotations overlay for images */}
+                  <div className="pointer-events-none absolute top-0 left-0 h-full w-full">
+                    {allAnnotations.map((anno) => (
+                      <Annotation
+                        key={anno.id}
+                        annotation={anno}
+                        isHighlighted={comments.some((c) => c.annotation.id === anno.id)}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Comment markers for images */}
+                  <div className="absolute top-0 left-0 h-full w-full">
+                    {comments.map((comment) => (
+                      <div key={comment.id} className="comment-marker">
+                        <CommentMarker
+                          comment={comment}
+                          users={users}
+                          onClick={() => setActiveCommentId(comment.id)}
+                          onEdit={() => setEditingComment(comment)}
+                          onDelete={() => setDeletingCommentId(comment.id)}
+                          onReply={() => setReplyingToCommentId(comment.id)}
+                          onEditReply={() => {}}
+                          onDeleteReply={() => {}}
+                          isDeleting={deletingCommentId === comment.id}
+                          isActive={activeCommentId === comment.id}
+                          isReplying={replyingToCommentId === comment.id}
+                          deletingReplyId={deletingReplyId}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex h-full items-center justify-center">
+              <p className="text-gray-600">No document to display</p>
+            </div>
+          )}
+        </div>
+
+        {/* Comment Modal */}
+        <CommentModal
+          isOpen={isCommentModalOpen}
+          onClose={() => {
+            setIsCommentModalOpen(false)
+            setTempAnnotation(null)
+            setHasTextSelection(false)
+          }}
+          onSubmit={handleCommentSubmit}
+          position={commentModalPosition}
+          users={users}
+          isLoading={isCreatingComment}
+          editingComment={editingComment}
+        />
+      </div>
+    </div>
+  )
+}
