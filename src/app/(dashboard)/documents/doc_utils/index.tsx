@@ -2,6 +2,24 @@ import { Document } from '@/types/document.types'
 import { apiClient } from '@/utils/api'
 import { toast } from 'sonner'
 
+// Utility function to check if a file is an image
+export const isImageFile = (document: Document): boolean => {
+  if (!document.fileType) return false
+  return document.fileType.includes('image') ||
+         document.icon === 'img' ||
+         ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff'].some(ext =>
+           document.name.toLowerCase().endsWith(`.${ext}`)
+         )
+}
+
+// Utility function to check if a file is a PDF
+export const isPdfFile = (document: Document): boolean => {
+  if (!document.fileType) return false
+  return document.fileType.includes('pdf') ||
+         document.icon === 'pdf' ||
+         document.name.toLowerCase().endsWith('.pdf')
+}
+
 export const getAllFolders = (documents: Document[]) => {
   const folders: Document[] = []
   const extractFolders = (docs: Document[]) => {

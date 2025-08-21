@@ -2,6 +2,7 @@
 
 import { apiClient } from "@/utils/api"
 import { useEffect, useState } from "react"
+import { getFileTypeFromMime } from "@/utils/fileTypeUtils"
 import { DocumentViewer } from "./_components/document-viewer"
 
 const Documentspage = () => {
@@ -43,14 +44,35 @@ const Documentspage = () => {
     }))
   }
 
-  const getFileTypeFromMimeType = (mimeType: string) => {
+  const getFileTypeFromMimeType = (mimeType: string, fileName?: string) => {
     if (!mimeType) return "file"
-    if (mimeType.includes("pdf")) return "pdf"
-    if (mimeType.includes("word") || mimeType.includes("document")) return "word"
-    if (mimeType.includes("excel") || mimeType.includes("spreadsheet")) return "excel"
-    if (mimeType.includes("powerpoint") || mimeType.includes("presentation")) return "powerpoint"
-    if (mimeType.includes("image")) return "img"
-    return "file"
+
+    // Use our utility function to get user-friendly file type
+    const friendlyType = getFileTypeFromMime(mimeType, fileName)
+
+    // Map friendly types back to icon types for FileIcon component
+    const iconTypeMap: Record<string, string> = {
+      'PDF': 'pdf',
+      'Word Document': 'word',
+      'Excel Spreadsheet': 'excel',
+      'PowerPoint Presentation': 'powerpoint',
+      'JPEG Image': 'img',
+      'PNG Image': 'img',
+      'GIF Image': 'img',
+      'SVG Image': 'img',
+      'WebP Image': 'img',
+      'BMP Image': 'img',
+      'TIFF Image': 'img',
+      'ZIP Archive': 'zip',
+      'RAR Archive': 'rar',
+      'Text File': 'txt',
+      'JSON File': 'json',
+      'HTML File': 'html',
+      'CSS File': 'css',
+      'JavaScript File': 'js',
+    }
+
+    return iconTypeMap[friendlyType] || friendlyType.toLowerCase()
   }
 
   const formatDate = (dateString: string) => {

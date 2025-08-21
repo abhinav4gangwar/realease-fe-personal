@@ -150,7 +150,7 @@ const ScrollToTop = () => {
   return (
     <button
       onClick={handleScrollToTop}
-      className={`fixed right-18 bottom-1/3 z-50 flex h-13 w-13 items-center justify-center bg-[#9B9B9D] text-white shadow-lg transition-all rounded-md duration-300 hover:bg-secondary cursor-pointer hover:shadow-xl ${
+      className={`fixed right-6 bottom-2 z-50 flex h-16 w-16 items-center justify-center bg-[#9B9B9D] text-white shadow-lg transition-all rounded-md duration-300 hover:bg-secondary cursor-pointer hover:shadow-xl ${
         isVisible
           ? 'translate-y-0 opacity-100'
           : 'pointer-events-none translate-y-2 opacity-0'

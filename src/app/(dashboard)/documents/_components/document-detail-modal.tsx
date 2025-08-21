@@ -6,6 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { FileTypeDisplay } from '@/components/ui/file-type-display'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -399,7 +400,12 @@ export function DocumentDetailModal({
             <h3 className="mb-1 text-sm font-medium text-gray-500">
               File Type
             </h3>
-            <p className="text-sm">{document.fileType}</p>
+            <FileTypeDisplay
+              mimeType={document.fileType}
+              fileName={document.name}
+              className="text-sm"
+              fallback="Unknown"
+            />
           </div>
 
           {!document.isFolder && (
