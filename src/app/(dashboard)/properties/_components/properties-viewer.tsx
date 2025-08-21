@@ -4,7 +4,8 @@ import {
   PropertySortField,
   PropertySortOrder,
 } from '@/types/property.types'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import ScrollToTop from '../../documents/_components/scroll-to-top'
 import { PropertiesActionsButton } from './properties-action-button'
 import { PropertiesAddButton } from './properties-add-button'
 import PropertiesDetailsModel from './properties-details-model'
@@ -22,16 +23,19 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
     null
   )
   const [isModalOpen, setIsModalOpen] = useState(false)
+  
+  const [sortField, setSortField] = useState<PropertySortField>('dateAdded')
+  const [sortOrder, setSortOrder] = useState<PropertySortOrder>('desc')
 
   const handleActionSelect = (actionType: string) => {
     console.log(actionType)
   }
-
   const handleSortChange = (
     field: PropertySortField,
     order: PropertySortOrder
   ) => {
-    console.log(field, order)
+    setSortField(field)
+    setSortOrder(order)
   }
 
   const handleAddSelect = () => {
@@ -57,6 +61,48 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
     console.log('Share property model open for', property)
   }
 
+ 
+  const sortProperties = (properties: Properties[]) => {
+    return properties.sort((a, b) => {
+      let comparison = 0
+      
+      switch (sortField) {
+        case 'dateAdded':
+          if (a.dateAdded && b.dateAdded) {
+            const dateA = new Date(a.dateAdded)
+            const dateB = new Date(b.dateAdded)
+            comparison = dateA.getTime() - dateB.getTime()
+          } else {
+            comparison = a.dateAdded ? -1 : b.dateAdded ? 1 : 0
+          }
+          break
+        
+        case 'value':
+
+          const valueA = parseFloat(a.value?.replace(/[^0-9.-]+/g, '') || '0')
+          const valueB = parseFloat(b.value?.replace(/[^0-9.-]+/g, '') || '0')
+          comparison = valueA - valueB
+          break
+        
+        case 'name':
+        case 'owner':
+          const aValue = a[sortField] || ''
+          const bValue = b[sortField] || ''
+          comparison = aValue.localeCompare(bValue)
+          break
+        
+        default:
+          comparison = 0
+      }
+      
+      return sortOrder === 'asc' ? comparison : -comparison
+    })
+  }
+
+  const sortedProperties = useMemo(() => {
+    return sortProperties([...properties])
+  }, [properties, sortField, sortOrder])
+
   return (
     <div>
       <div className="flex justify-between pb-4">
@@ -75,7 +121,7 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
       <div>
         <div className="mt-5 rounded-lg bg-white p-6">
           <PropertiesListView
-            properties={properties}
+            properties={sortedProperties}
             selectedPropertyId={selectedProperty?.id}
             onEditClick={handleEditClick}
             onDownloadClick={handleDownloadClick}
@@ -84,6 +130,8 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
           />
         </div>
       </div>
+
+      <ScrollToTop />
 
       <PropertiesDetailsModel
         property={selectedProperty}
