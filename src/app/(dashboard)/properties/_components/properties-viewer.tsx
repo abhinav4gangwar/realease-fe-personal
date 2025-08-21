@@ -41,7 +41,6 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
   const handlePropertyInfo = (property: Properties) => {
     setSelectedProperty(property)
     setIsModalOpen(true)
-    console.log('Info model open for', property)
   }
 
   const handleEditClick = (property: Properties) => {
@@ -93,6 +92,7 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
           setIsModalOpen(false)
           setSelectedProperty(null)
         }}
+        onEditClick={handleEditClick}
       />
     </div>
   )

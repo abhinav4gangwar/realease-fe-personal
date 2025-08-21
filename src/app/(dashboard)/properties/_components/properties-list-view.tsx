@@ -8,10 +8,10 @@ import { HiShare } from 'react-icons/hi2'
 interface PropertiesListViewProps {
   properties: Properties[]
   selectedPropertyId?: string
-  onEditClick?: (document: Properties) => void
-  onShareClick?: (document: Properties) => void
-  onDownloadClick?: (document: Properties) => void
-  onPropertyInfo: (document: Properties) => void
+  onEditClick?: (property: Properties) => void
+  onShareClick?: (property: Properties) => void
+  onDownloadClick?: (property: Properties) => void
+  onPropertyInfo: (property: Properties) => void
 }
 const PropertiesListView = ({
   properties,

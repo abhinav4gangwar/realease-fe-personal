@@ -1,7 +1,7 @@
 'use client'
 import { Button } from '@/components/ui/button'
 import { Properties } from '@/types/property.types'
-import { Bell, ChevronDown, X } from 'lucide-react'
+import { Bell, ChevronDown, Pencil, X } from 'lucide-react'
 import { useState } from 'react'
 import { FileIcon } from '../../documents/_components/file-icon'
 
@@ -237,6 +237,25 @@ const PropertiesDetailsModel = ({
                       </h3>
                     </div>
                   ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-[#F2F2F2] shadow-md">
+              <div className="flex items-center justify-end p-5">
+                <div className="flex flex-shrink-0 items-center gap-5">
+                  <Button
+                    className="bg-primary hover:bg-secondary h-11 w-[200px] cursor-pointer px-6"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (onEditClick && property) {
+                        onEditClick(property)
+                      }
+                    }}
+                  >
+                    <Pencil /> Edit Property
+                  </Button>
                 </div>
               </div>
             </div>
