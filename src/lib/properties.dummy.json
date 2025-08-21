@@ -1,0 +1,68 @@
+{
+  "allProperties": [
+    {
+      "id": "property1",
+      "name": "Sunset Valley",
+      "location": "Hyderabad, Telangana",
+      "extent": "1200 sq. yrds",
+      "type": "Land",
+      "owner": "Ramesh Kumar"
+    },
+    {
+      "id": "property2",
+      "name": "Green Acres",
+      "location": "Bengaluru, Karnataka",
+      "extent": "850 sq. yrds",
+      "type": "Land",
+      "owner": "Meera Nair"
+    },
+    {
+      "id": "property3",
+      "name": "Lakeview Residency",
+      "location": "Mumbai, Maharashtra",
+      "extent": "3 BHK, 1450 sq. ft",
+      "type": "Apartment",
+      "owner": "Anil Shah"
+    },
+    {
+      "id": "property4",
+      "name": "Palm Heights Villa",
+      "location": "Goa, India",
+      "extent": "3500 sq. ft",
+      "type": "Villa",
+      "owner": "Sophia Fernandes"
+    },
+    {
+      "id": "property5",
+      "name": "City Square",
+      "location": "Delhi NCR",
+      "extent": "5000 sq. ft",
+      "type": "Commercial",
+      "owner": "Urban Developers Pvt. Ltd."
+    },
+    {
+      "id": "property6",
+      "name": "Harmony Heights",
+      "location": "Pune, Maharashtra",
+      "extent": "2 BHK, 1100 sq. ft",
+      "type": "Apartment",
+      "owner": "Priya Deshmukh"
+    },
+    {
+      "id": "property7",
+      "name": "Meadowlands Farm",
+      "location": "Jaipur, Rajasthan",
+      "extent": "5 Acres",
+      "type": "Agricultural",
+      "owner": "Arjun Singh"
+    },
+    {
+      "id": "property8",
+      "name": "Tech Park One",
+      "location": "Chennai, Tamil Nadu",
+      "extent": "12000 sq. ft",
+      "type": "Commercial",
+      "owner": "NextGen Enterprises"
+    }
+  ]
+}
