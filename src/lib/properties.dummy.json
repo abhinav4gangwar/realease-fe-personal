@@ -6,63 +6,620 @@
       "location": "Hyderabad, Telangana",
       "extent": "1200 sq. yrds",
       "type": "Land",
-      "owner": "Ramesh Kumar"
+      "owner": "Ramesh Kumar",
+      "dateAdded": "02 Jul 25 at 01:53 PM",
+      "isDisputed": true,
+      "legalStatus": "Disputed - Ongoing",
+      "legalParties": "Meera Nair vs Anil Shah",
+      "caseNumber": "1234567890",
+      "caseType": "Civil Property Dispute",
+      "nextHearing": "September 23, 2025",
+      "value": "233423434343",
+      "address": "354/ABCD Street, PERTY gaon, Uttarakhand, India-500676",
+      "coordinates": "58.444554 N; 24.64634 E",
+      "valuePerSQ": "102576.45",
+      "documents": [
+        {
+          "doc_id": "p1d1",
+          "name": "Sale Deed",
+          "icon": "pdf",
+          "fileType": "pdf",
+          "size": 245678
+        },
+        {
+          "doc_id": "p1d2",
+          "name": "Ownership Proof",
+          "icon": "word",
+          "fileType": "docx",
+          "size": 55612
+        },
+        {
+          "doc_id": "p1d3",
+          "name": "Land Sketch",
+          "icon": "img",
+          "fileType": "png",
+          "size": 125678
+        },
+        {
+          "doc_id": "p1d4",
+          "name": "Survey Report",
+          "icon": "xls",
+          "fileType": "xlsx",
+          "size": 87654
+        },
+        {
+          "doc_id": "p1d5",
+          "name": "Court Notice",
+          "icon": "pdf",
+          "fileType": "pdf",
+          "size": 65432
+        },
+        {
+          "doc_id": "p1d6",
+          "name": "Encroachment Map",
+          "icon": "kml",
+          "fileType": "kml",
+          "size": 43567
+        },
+        {
+          "doc_id": "p1d7",
+          "name": "Case Summary",
+          "icon": "word",
+          "fileType": "rtf",
+          "size": 33212
+        },
+        {
+          "doc_id": "p1d8",
+          "name": "Property Photo",
+          "icon": "img",
+          "fileType": "jpg",
+          "size": 164567
+        },
+        {
+          "doc_id": "p1d9",
+          "name": "Court Evidence",
+          "icon": "ppt",
+          "fileType": "pptx",
+          "size": 125678
+        },
+        {
+          "doc_id": "p1d10",
+          "name": "Legal Archive",
+          "icon": "zip",
+          "fileType": "zip",
+          "size": 556123
+        }
+      ]
     },
     {
       "id": "property2",
-      "name": "Green Acres",
-      "location": "Bengaluru, Karnataka",
-      "extent": "850 sq. yrds",
-      "type": "Land",
-      "owner": "Meera Nair"
+      "name": "Greenwood Residency",
+      "location": "Bangalore, Karnataka",
+      "extent": "2,400 sq. ft",
+      "type": "Apartment",
+      "owner": "Priya Sharma",
+      "dateAdded": "15 Aug 25 at 11:20 AM",
+      "isDisputed": false,
+      "legalStatus": "Clear Title",
+      "value": "12500000",
+      "address": "12/56 MG Road, Indiranagar, Bangalore, India-560038",
+      "coordinates": "12.9716 N; 77.5946 E",
+      "valuePerSQ": "5208.33",
+      "documents": [
+        {
+          "doc_id": "p2d1",
+          "name": "Sale Agreement",
+          "icon": "pdf",
+          "fileType": "pdf",
+          "size": 225678
+        },
+        {
+          "doc_id": "p2d2",
+          "name": "Utility Bills",
+          "icon": "word",
+          "fileType": "docx",
+          "size": 65612
+        },
+        {
+          "doc_id": "p2d3",
+          "name": "Apartment Layout",
+          "icon": "img",
+          "fileType": "jpg",
+          "size": 115678
+        },
+        {
+          "doc_id": "p2d4",
+          "name": "Tax Records",
+          "icon": "xls",
+          "fileType": "xlsx",
+          "size": 97654
+        },
+        {
+          "doc_id": "p2d5",
+          "name": "Possession Certificate",
+          "icon": "pdf",
+          "fileType": "pdf",
+          "size": 75432
+        },
+        {
+          "doc_id": "p2d6",
+          "name": "Floor Plan",
+          "icon": "img",
+          "fileType": "png",
+          "size": 83567
+        },
+        {
+          "doc_id": "p2d7",
+          "name": "Maintenance Report",
+          "icon": "word",
+          "fileType": "rtf",
+          "size": 41212
+        },
+        {
+          "doc_id": "p2d8",
+          "name": "Building Photo",
+          "icon": "img",
+          "fileType": "jpeg",
+          "size": 124567
+        },
+        {
+          "doc_id": "p2d9",
+          "name": "Parking Allocation",
+          "icon": "ppt",
+          "fileType": "pptx",
+          "size": 135678
+        },
+        {
+          "doc_id": "p2d10",
+          "name": "Flat Docs Archive",
+          "icon": "zip",
+          "fileType": "zip",
+          "size": 436123
+        }
+      ]
     },
     {
       "id": "property3",
-      "name": "Lakeview Residency",
-      "location": "Mumbai, Maharashtra",
-      "extent": "3 BHK, 1450 sq. ft",
-      "type": "Apartment",
-      "owner": "Anil Shah"
+      "name": "Ocean Breeze Villa",
+      "location": "Goa, India",
+      "extent": "1 Acre",
+      "type": "Villa",
+      "owner": "Arjun Mehta",
+      "dateAdded": "01 Jun 25 at 09:45 AM",
+      "isDisputed": true,
+      "legalStatus": "Litigation Pending",
+      "legalParties": "State Govt vs Arjun Mehta",
+      "caseNumber": "GOA-9088776",
+      "caseType": "Land Encroachment",
+      "nextHearing": "October 10, 2025",
+      "value": "65000000",
+      "address": "Beach Road, Anjuna, Goa, India-403509",
+      "coordinates": "15.5873 N; 73.7491 E",
+      "valuePerSQ": "1500.00",
+      "documents": [
+        {
+          "doc_id": "p3d1",
+          "name": "Villa Deed",
+          "icon": "pdf",
+          "fileType": "pdf",
+          "size": 285678
+        },
+        {
+          "doc_id": "p3d2",
+          "name": "NOC Certificate",
+          "icon": "word",
+          "fileType": "docx",
+          "size": 55612
+        },
+        {
+          "doc_id": "p3d3",
+          "name": "Site Photo",
+          "icon": "img",
+          "fileType": "jpg",
+          "size": 165678
+        },
+        {
+          "doc_id": "p3d4",
+          "name": "Tax Dues",
+          "icon": "xls",
+          "fileType": "xlsx",
+          "size": 88654
+        },
+        {
+          "doc_id": "p3d5",
+          "name": "Court Orders",
+          "icon": "pdf",
+          "fileType": "pdf",
+          "size": 45432
+        },
+        {
+          "doc_id": "p3d6",
+          "name": "Google Map KML",
+          "icon": "kml",
+          "fileType": "kml",
+          "size": 63567
+        },
+        {
+          "doc_id": "p3d7",
+          "name": "Case File",
+          "icon": "word",
+          "fileType": "rtf",
+          "size": 55212
+        },
+        {
+          "doc_id": "p3d8",
+          "name": "Property Image",
+          "icon": "img",
+          "fileType": "png",
+          "size": 184567
+        },
+        {
+          "doc_id": "p3d9",
+          "name": "Court PPT",
+          "icon": "ppt",
+          "fileType": "pptx",
+          "size": 115678
+        },
+        {
+          "doc_id": "p3d10",
+          "name": "Archive Zip",
+          "icon": "zip",
+          "fileType": "zip",
+          "size": 666123
+        }
+      ]
     },
     {
       "id": "property4",
-      "name": "Palm Heights Villa",
-      "location": "Goa, India",
-      "extent": "3500 sq. ft",
-      "type": "Villa",
-      "owner": "Sophia Fernandes"
+      "name": "Silverline Tower",
+      "location": "Mumbai, Maharashtra",
+      "extent": "15,000 sq. ft",
+      "type": "Commercial Complex",
+      "owner": "Rajiv Agarwal",
+      "dateAdded": "20 Jul 25 at 03:30 PM",
+      "isDisputed": false,
+      "legalStatus": "Clear Title",
+      "value": "120000000",
+      "address": "Plot 56, BKC, Bandra, Mumbai, India-400051",
+      "coordinates": "19.0673 N; 72.8670 E",
+      "valuePerSQ": "8000.00",
+      "documents": [
+        {
+          "doc_id": "p4d1",
+          "name": "Commercial Deed",
+          "icon": "pdf",
+          "fileType": "pdf",
+          "size": 285000
+        },
+        {
+          "doc_id": "p4d2",
+          "name": "Business NOC",
+          "icon": "word",
+          "fileType": "docx",
+          "size": 55600
+        },
+        {
+          "doc_id": "p4d3",
+          "name": "Building Photo",
+          "icon": "img",
+          "fileType": "jpg",
+          "size": 135678
+        },
+        {
+          "doc_id": "p4d4",
+          "name": "Tenant Records",
+          "icon": "xls",
+          "fileType": "xlsx",
+          "size": 98654
+        },
+        {
+          "doc_id": "p4d5",
+          "name": "Fire Safety Cert",
+          "icon": "pdf",
+          "fileType": "pdf",
+          "size": 42432
+        },
+        {
+          "doc_id": "p4d6",
+          "name": "Blueprint",
+          "icon": "img",
+          "fileType": "png",
+          "size": 73567
+        },
+        {
+          "doc_id": "p4d7",
+          "name": "Inspection Report",
+          "icon": "word",
+          "fileType": "rtf",
+          "size": 48212
+        },
+        {
+          "doc_id": "p4d8",
+          "name": "Site Photos",
+          "icon": "img",
+          "fileType": "jpeg",
+          "size": 144567
+        },
+        {
+          "doc_id": "p4d9",
+          "name": "Investor PPT",
+          "icon": "ppt",
+          "fileType": "pptx",
+          "size": 125678
+        },
+        {
+          "doc_id": "p4d10",
+          "name": "Lease Archives",
+          "icon": "zip",
+          "fileType": "zip",
+          "size": 556123
+        }
+      ]
     },
     {
       "id": "property5",
-      "name": "City Square",
-      "location": "Delhi NCR",
-      "extent": "5000 sq. ft",
-      "type": "Commercial",
-      "owner": "Urban Developers Pvt. Ltd."
+      "name": "Royal Orchards",
+      "location": "Nashik, Maharashtra",
+      "extent": "10 Acres",
+      "type": "Agricultural Land",
+      "owner": "Sunil Patil",
+      "dateAdded": "10 Mar 25 at 08:00 AM",
+      "isDisputed": true,
+      "legalStatus": "Court Stay",
+      "legalParties": "Sunil Patil vs Gram Panchayat",
+      "caseNumber": "NSK-445667",
+      "caseType": "Land Use Dispute",
+      "nextHearing": "November 02, 2025",
+      "value": "25000000",
+      "address": "Village Trimbak, Nashik, India-422212",
+      "coordinates": "19.9975 N; 73.7898 E",
+      "valuePerSQ": "575.00",
+      "documents": [
+        {
+          "doc_id": "p5d1",
+          "name": "Land Deed",
+          "icon": "pdf",
+          "fileType": "pdf",
+          "size": 200000
+        },
+        {
+          "doc_id": "p5d2",
+          "name": "Gram Panchayat Docs",
+          "icon": "word",
+          "fileType": "docx",
+          "size": 85612
+        },
+        {
+          "doc_id": "p5d3",
+          "name": "Farm Map",
+          "icon": "img",
+          "fileType": "jpg",
+          "size": 155678
+        },
+        {
+          "doc_id": "p5d4",
+          "name": "Crop Records",
+          "icon": "xls",
+          "fileType": "xlsx",
+          "size": 77654
+        },
+        {
+          "doc_id": "p5d5",
+          "name": "Court Stay Order",
+          "icon": "pdf",
+          "fileType": "pdf",
+          "size": 65432
+        },
+        {
+          "doc_id": "p5d6",
+          "name": "KML Map",
+          "icon": "kml",
+          "fileType": "kml",
+          "size": 53567
+        },
+        {
+          "doc_id": "p5d7",
+          "name": "Dispute Summary",
+          "icon": "word",
+          "fileType": "rtf",
+          "size": 36212
+        },
+        {
+          "doc_id": "p5d8",
+          "name": "Orchard Photos",
+          "icon": "img",
+          "fileType": "jpeg",
+          "size": 184567
+        },
+        {
+          "doc_id": "p5d9",
+          "name": "Case Evidence",
+          "icon": "ppt",
+          "fileType": "pptx",
+          "size": 115678
+        },
+        {
+          "doc_id": "p5d10",
+          "name": "Archive Docs",
+          "icon": "zip",
+          "fileType": "zip",
+          "size": 666123
+        }
+      ]
     },
     {
       "id": "property6",
-      "name": "Harmony Heights",
-      "location": "Pune, Maharashtra",
-      "extent": "2 BHK, 1100 sq. ft",
-      "type": "Apartment",
-      "owner": "Priya Deshmukh"
+      "name": "Skyline Heights",
+      "location": "Delhi NCR",
+      "extent": "3,200 sq. ft",
+      "type": "Penthouse",
+      "owner": "Neha Gupta",
+      "dateAdded": "05 May 25 at 05:15 PM",
+      "isDisputed": false,
+      "legalStatus": "Clear Title",
+      "value": "45000000",
+      "address": "Sec-56, Gurugram, Delhi NCR, India-122011",
+      "coordinates": "28.4595 N; 77.0266 E",
+      "valuePerSQ": "14062.50",
+      "documents": [
+        {
+          "doc_id": "p6d1",
+          "name": "Penthouse Deed",
+          "icon": "pdf",
+          "fileType": "pdf",
+          "size": 200123
+        },
+        {
+          "doc_id": "p6d2",
+          "name": "Electricity Bills",
+          "icon": "word",
+          "fileType": "docx",
+          "size": 44612
+        },
+        {
+          "doc_id": "p6d3",
+          "name": "Interior Photos",
+          "icon": "img",
+          "fileType": "jpg",
+          "size": 125999
+        },
+        {
+          "doc_id": "p6d4",
+          "name": "Tax Receipts",
+          "icon": "xls",
+          "fileType": "xlsx",
+          "size": 77654
+        },
+        {
+          "doc_id": "p6d5",
+          "name": "Clearance Cert",
+          "icon": "pdf",
+          "fileType": "pdf",
+          "size": 55432
+        },
+        {
+          "doc_id": "p6d6",
+          "name": "Floor Plan",
+          "icon": "img",
+          "fileType": "png",
+          "size": 63567
+        },
+        {
+          "doc_id": "p6d7",
+          "name": "Ownership Report",
+          "icon": "word",
+          "fileType": "rtf",
+          "size": 33212
+        },
+        {
+          "doc_id": "p6d8",
+          "name": "Skyline Image",
+          "icon": "img",
+          "fileType": "jpeg",
+          "size": 174567
+        },
+        {
+          "doc_id": "p6d9",
+          "name": "Presentation",
+          "icon": "ppt",
+          "fileType": "pptx",
+          "size": 125678
+        },
+        {
+          "doc_id": "p6d10",
+          "name": "Archive",
+          "icon": "zip",
+          "fileType": "zip",
+          "size": 446123
+        }
+      ]
     },
     {
       "id": "property7",
-      "name": "Meadowlands Farm",
-      "location": "Jaipur, Rajasthan",
-      "extent": "5 Acres",
-      "type": "Agricultural",
-      "owner": "Arjun Singh"
-    },
-    {
-      "id": "property8",
-      "name": "Tech Park One",
-      "location": "Chennai, Tamil Nadu",
-      "extent": "12000 sq. ft",
-      "type": "Commercial",
-      "owner": "NextGen Enterprises"
+      "name": "Emerald Plaza",
+      "location": "Pune, Maharashtra",
+      "extent": "7,500 sq. ft",
+      "type": "Retail Space",
+      "owner": "Kiran Enterprises",
+      "dateAdded": "29 Apr 25 at 10:40 AM",
+      "isDisputed": false,
+      "legalStatus": "Clear Title",
+      "value": "30000000",
+      "address": "Baner High Street, Pune, India-411045",
+      "coordinates": "18.5204 N; 73.8567 E",
+      "valuePerSQ": "4000.00",
+      "documents": [
+        {
+          "doc_id": "p7d1",
+          "name": "Retail Deed",
+          "icon": "pdf",
+          "fileType": "pdf",
+          "size": 285678
+        },
+        {
+          "doc_id": "p7d2",
+          "name": "Shop Layout",
+          "icon": "word",
+          "fileType": "docx",
+          "size": 55612
+        },
+        {
+          "doc_id": "p7d3",
+          "name": "Storefront Photo",
+          "icon": "img",
+          "fileType": "jpg",
+          "size": 165678
+        },
+        {
+          "doc_id": "p7d4",
+          "name": "Tenant Ledger",
+          "icon": "xls",
+          "fileType": "xlsx",
+          "size": 88654
+        },
+        {
+          "doc_id": "p7d5",
+          "name": "Fire Safety",
+          "icon": "pdf",
+          "fileType": "pdf",
+          "size": 45432
+        },
+        {
+          "doc_id": "p7d6",
+          "name": "Blueprints",
+          "icon": "img",
+          "fileType": "png",
+          "size": 63567
+        },
+        {
+          "doc_id": "p7d7",
+          "name": "Inspection Notes",
+          "icon": "word",
+          "fileType": "rtf",
+          "size": 55212
+        },
+        {
+          "doc_id": "p7d8",
+          "name": "Mall Photos",
+          "icon": "img",
+          "fileType": "jpeg",
+          "size": 184567
+        },
+        {
+          "doc_id": "p7d9",
+          "name": "Leasing PPT",
+          "icon": "ppt",
+          "fileType": "pptx",
+          "size": 115678
+        },
+        {
+          "doc_id": "p7d10",
+          "name": "Retail Archive",
+          "icon": "zip",
+          "fileType": "zip",
+          "size": 112233
+        }
+      ]
     }
   ]
 }

@@ -8,10 +8,18 @@ import { HiShare } from 'react-icons/hi2'
 interface PropertiesListViewProps {
   properties: Properties[]
   selectedPropertyId?: string
+  onEditClick?: (document: Properties) => void
+  onShareClick?: (document: Properties) => void
+  onDownloadClick?: (document: Properties) => void
+  onPropertyInfo: (document: Properties) => void
 }
 const PropertiesListView = ({
   properties,
   selectedPropertyId,
+  onEditClick,
+  onDownloadClick,
+  onShareClick,
+  onPropertyInfo,
 }: PropertiesListViewProps) => {
   const [hoveredRow, setHoveredRow] = useState<string | null>(null)
   return (
@@ -61,6 +69,12 @@ const PropertiesListView = ({
                   variant="ghost"
                   size="icon"
                   className="hover:text-primary h-6 w-6 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (onEditClick) {
+                      onEditClick(property)
+                    }
+                  }}
                 >
                   <Pencil className="h-3 w-3" />
                 </Button>
@@ -69,6 +83,12 @@ const PropertiesListView = ({
                   variant="ghost"
                   size="icon"
                   className="hover:text-primary h-6 w-6 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (onDownloadClick) {
+                      onDownloadClick(property)
+                    }
+                  }}
                 >
                   <Download className="h-3 w-3" />
                 </Button>
@@ -77,6 +97,12 @@ const PropertiesListView = ({
                   variant="ghost"
                   size="icon"
                   className="hover:text-primary h-6 w-6 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (onShareClick) {
+                      onShareClick(property)
+                    }
+                  }}
                 >
                   <HiShare className="h-3 w-3" />
                 </Button>
@@ -91,6 +117,10 @@ const PropertiesListView = ({
               variant="ghost"
               size="icon"
               className="hover:text-primary h-7 w-7 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation()
+                onPropertyInfo(property)
+              }}
             >
               <Info className="hover:text-primary h-6 w-6 font-semibold text-[#9B9B9D]" />
             </Button>

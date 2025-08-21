@@ -7,6 +7,7 @@ import {
 import { useState } from 'react'
 import { PropertiesActionsButton } from './properties-action-button'
 import { PropertiesAddButton } from './properties-add-button'
+import PropertiesDetailsModel from './properties-details-model'
 import { PropertiesFilterButton } from './properties-filter-button'
 import PropertiesListView from './properties-list-view'
 import { PropertiesSortButton } from './properties-sort-button'
@@ -20,6 +21,7 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
   const [selectedProperty, setSelectedProperty] = useState<Properties | null>(
     null
   )
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   const handleActionSelect = (actionType: string) => {
     console.log(actionType)
@@ -34,6 +36,26 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
 
   const handleAddSelect = () => {
     console.log('add')
+  }
+
+  const handlePropertyInfo = (property: Properties) => {
+    setSelectedProperty(property)
+    setIsModalOpen(true)
+    console.log('Info model open for', property)
+  }
+
+  const handleEditClick = (property: Properties) => {
+    setSelectedProperty(property)
+    console.log('Edit model open for', property)
+  }
+
+  const handleDownloadClick = (property: Properties) => {
+    console.log('Download', property)
+  }
+
+  const handleShareClick = (property: Properties) => {
+    setSelectedProperty(property)
+    console.log('Share property model open for', property)
   }
 
   return (
@@ -56,9 +78,22 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
           <PropertiesListView
             properties={properties}
             selectedPropertyId={selectedProperty?.id}
+            onEditClick={handleEditClick}
+            onDownloadClick={handleDownloadClick}
+            onShareClick={handleShareClick}
+            onPropertyInfo={handlePropertyInfo}
           />
         </div>
       </div>
+
+      <PropertiesDetailsModel
+        property={selectedProperty}
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false)
+          setSelectedProperty(null)
+        }}
+      />
     </div>
   )
 }
