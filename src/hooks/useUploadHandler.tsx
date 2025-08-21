@@ -7,9 +7,10 @@ import { toast } from "sonner"
 interface UseUploadHandlerProps {
   onSuccess?: () => void
   onClose: () => void
+  currentFolderId?: string | null
 }
 
-export const useUploadHandler = ({ onSuccess, onClose }: UseUploadHandlerProps) => {
+export const useUploadHandler = ({ onSuccess, onClose, currentFolderId }: UseUploadHandlerProps) => {
   const [isLoading, setIsLoading] = useState(false)
   const [isDragActive, setIsDragActive] = useState(false) 
   const [uploadedFiles, setUploadedFiles] = useState<FileItem[]>([])
@@ -125,6 +126,8 @@ export const useUploadHandler = ({ onSuccess, onClose }: UseUploadHandlerProps) 
         return { name: fileItem.name, path: fileItem.path, propertyId: fileItem.propertyId || "0", tags: fileItem.tags || "" }
       })
       formData.append("meta", JSON.stringify(metadata))
+      // Add parentId to the form data
+      formData.append("parentId", currentFolderId || "")
       const response = await apiClient.post("/dashboard/documents/upload", formData, { headers: { "Content-Type": "multipart/form-data" } })
       toast.success(response.data.message || "Upload successful!")
       if (onSuccess) await onSuccess()

@@ -35,6 +35,7 @@ export function UploadModal({
       setShowDetailsDialog(false)
     },
     onClose,
+    currentFolderId,
   })
 
   useEffect(() => {

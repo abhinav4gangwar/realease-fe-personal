@@ -17,7 +17,7 @@ import { PDFControls } from "./comment-components/pdf-controls"
 import { PDFHeader } from "./comment-components/pdf-header"
 
 // Set up PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`
+pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js"
 
 interface UnifiedDocumentViewerProps {
   isOpen: boolean
@@ -47,6 +47,8 @@ export function UnifiedDocumentViewer({
   const [scale, setScale] = useState<number>(1.2)
   const [isLoading, setIsLoading] = useState<boolean>(false)
 
+
+
   // Comment and annotation state
   const [comments, setComments] = useState<Comment[]>([])
   const [users, setUsers] = useState<User[]>([])
@@ -69,6 +71,7 @@ export function UnifiedDocumentViewer({
   // Refs
   const pageRef = useRef<HTMLDivElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
+  const imageContainerRef = useRef<HTMLDivElement>(null)
   const commentService = useRef<CommentService | null>(null)
 
   // Initialize comment service
@@ -106,6 +109,7 @@ export function UnifiedDocumentViewer({
         const objectUrl = URL.createObjectURL(imageBlob)
         setDocumentUrl(objectUrl)
         setNumPages(1) // Images are single page
+        setScale(1) // Reset scale to 100% for images
       } else {
         setDocumentType('pdf')
         // For PDFs and other files, get the PDF conversion
@@ -141,7 +145,7 @@ export function UnifiedDocumentViewer({
   const loadUsers = async () => {
     setIsLoadingUsers(true)
     try {
-      const response = await apiClient.get("/dashboard/users/list")
+      const response = await apiClient.get(`/dashboard/documents/getUsers/${document.id}`)
       setUsers(response.data || [])
     } catch (error) {
       console.error("Error loading users:", error)
@@ -163,6 +167,15 @@ export function UnifiedDocumentViewer({
 
     const range = selection.getRangeAt(0)
 
+    // Check if the selection contains actual text content
+    const selectedText = range.toString().trim()
+    if (!selectedText) {
+      setHasTextSelection(false)
+      setTempAnnotation(null)
+      selection.removeAllRanges()
+      return
+    }
+
     // Find which page the selection is on
     const pageElements = pageRef.current?.querySelectorAll('.react-pdf__Page')
     let targetPage = 1 // Default to page 1
@@ -180,10 +193,23 @@ export function UnifiedDocumentViewer({
       }
     }
 
-    if (!pageContent) return
+    if (!pageContent) {
+      setHasTextSelection(false)
+      setTempAnnotation(null)
+      selection.removeAllRanges()
+      return
+    }
 
     const pageRect = pageContent.getBoundingClientRect()
     const selectionRect = range.getBoundingClientRect()
+
+    // Ensure we have valid selection bounds
+    if (selectionRect.width === 0 || selectionRect.height === 0) {
+      setHasTextSelection(false)
+      setTempAnnotation(null)
+      selection.removeAllRanges()
+      return
+    }
 
     // Improved coordinate calculation with bounds checking
     const x = Math.max(0, Math.min(100, ((selectionRect.left - pageRect.left) / pageRect.width) * 100))
@@ -206,33 +232,29 @@ export function UnifiedDocumentViewer({
       setTimeout(() => {
         selection.removeAllRanges()
       }, 100)
+    } else {
+      setHasTextSelection(false)
+      setTempAnnotation(null)
+      selection.removeAllRanges()
     }
   }
 
-  // Handle click-to-annotate for both PDFs and images
+  // Handle click-to-annotate for images only (PDFs use text selection + comment icon)
   const handleClick = (e: MouseEvent): void => {
+    // Only handle clicks for images, not PDFs
+    if (documentType !== 'image') return
+
     // Only handle clicks if no text is selected and not clicking on existing annotations
     if (hasTextSelection) return
 
     const target = e.target as HTMLElement
     if (target.closest('.comment-marker') || target.closest('.annotation')) return
 
-    let pageElement: HTMLElement | null = null
-    let targetPage = 1 // Default to page 1
+    // Check if clicking on zoom controls
+    if (target.closest('.zoom-controls')) return
 
-    if (documentType === 'pdf') {
-      // Find which page was clicked
-      pageElement = target.closest('.react-pdf__Page') as HTMLElement
-      if (pageElement) {
-        const pageElements = pageRef.current?.querySelectorAll('.react-pdf__Page')
-        if (pageElements) {
-          targetPage = Array.from(pageElements).indexOf(pageElement) + 1
-        }
-      }
-    } else {
-      pageElement = imageRef.current
-      targetPage = 1
-    }
+    const pageElement = imageRef.current
+    const targetPage = 1
 
     if (!pageElement) return
 
@@ -250,7 +272,7 @@ export function UnifiedDocumentViewer({
     setSelectionPosition({ x: e.clientX, y: e.clientY })
     setHasTextSelection(true)
 
-    // Auto-open comment modal for click-to-annotate (no text selection)
+    // Auto-open comment modal for click-to-annotate (images only)
     setCommentModalPosition({ x: e.clientX, y: e.clientY })
     setEditingComment(null)
     setActiveCommentId(null)
@@ -263,13 +285,8 @@ export function UnifiedDocumentViewer({
       return
     }
 
-    // Only open modal for text selections (click-to-annotate auto-opens)
-    // Check if this is a text selection (width/height > 2) vs point annotation (width/height = 2)
-    if (tempAnnotation.rect.width <= 2 && tempAnnotation.rect.height <= 2) {
-      toast.error("Click annotation already active - modal should be open")
-      return
-    }
-
+    // For PDFs, always open modal when comment icon is clicked after text selection
+    // For images, this shouldn't be called as they use click-to-annotate
     setCommentModalPosition(selectionPosition)
     setEditingComment(null)
     setActiveCommentId(null)
@@ -338,16 +355,19 @@ export function UnifiedDocumentViewer({
         />
 
         {/* Document Content */}
-        <div 
-          className="relative flex-1 overflow-auto bg-gray-100 p-6" 
+        <div
+          className="relative flex-1 overflow-auto bg-gray-100"
           onMouseUp={handleMouseUp}
           onClick={handleClick}
         >
           {/* Zoom Controls - only show zoom for documents */}
           {documentUrl && (
-            <div className="fixed bottom-6 right-6 z-30 flex items-center gap-1 rounded-lg bg-[#9B9B9D] shadow-lg p-1 text-white">
+            <div className="zoom-controls fixed bottom-6 right-6 z-30 flex items-center gap-1 rounded-lg bg-[#9B9B9D] shadow-lg p-1 text-white">
               <button
-                onClick={zoomOut}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  zoomOut()
+                }}
                 disabled={scale <= 0.5}
                 className="h-8 w-8 p-0 rounded hover:bg-white/20 disabled:opacity-50"
               >
@@ -355,7 +375,10 @@ export function UnifiedDocumentViewer({
               </button>
               <span className="text-sm font-medium px-2 min-w-[50px] text-center">{Math.round(scale * 100)}%</span>
               <button
-                onClick={zoomIn}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  zoomIn()
+                }}
                 disabled={scale >= 3.0}
                 className="h-8 w-8 p-0 rounded hover:bg-white/20 disabled:opacity-50"
               >
@@ -372,7 +395,7 @@ export function UnifiedDocumentViewer({
               </div>
             </div>
           ) : documentUrl ? (
-            <div className="mx-auto max-w-4xl">
+            <div className="flex justify-center p-6">
               {documentType === 'pdf' ? (
                 <PDFDocument
                   file={documentUrl}
@@ -430,45 +453,53 @@ export function UnifiedDocumentViewer({
                 </PDFDocument>
               ) : (
                 // Image viewer
-                <div ref={imageRef} className="relative bg-white shadow-lg inline-block">
-                  <img
-                    src={documentUrl}
-                    alt={document?.name || "Document"}
-                    style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
-                    className="max-w-full h-auto"
-                  />
+                <div ref={imageContainerRef} className="flex items-center justify-center h-full w-full">
+                  <div ref={imageRef} className="relative bg-white shadow-lg">
+                    <img
+                      src={documentUrl}
+                      alt={document?.name || "Document"}
+                      style={{
+                        transform: `scale(${scale})`,
+                        transformOrigin: 'center',
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        objectFit: 'contain'
+                      }}
+                      className="block"
+                    />
 
-                  {/* Annotations overlay for images */}
-                  <div className="pointer-events-none absolute top-0 left-0 h-full w-full">
-                    {allAnnotations.map((anno) => (
-                      <Annotation
-                        key={anno.id}
-                        annotation={anno}
-                        isHighlighted={comments.some((c) => c.annotation.id === anno.id)}
-                      />
-                    ))}
-                  </div>
-
-                  {/* Comment markers for images */}
-                  <div className="absolute top-0 left-0 h-full w-full">
-                    {comments.map((comment) => (
-                      <div key={comment.id} className="comment-marker">
-                        <CommentMarker
-                          comment={comment}
-                          users={users}
-                          onClick={() => setActiveCommentId(comment.id)}
-                          onEdit={() => setEditingComment(comment)}
-                          onDelete={() => setDeletingCommentId(comment.id)}
-                          onReply={() => setReplyingToCommentId(comment.id)}
-                          onEditReply={() => {}}
-                          onDeleteReply={() => {}}
-                          isDeleting={deletingCommentId === comment.id}
-                          isActive={activeCommentId === comment.id}
-                          isReplying={replyingToCommentId === comment.id}
-                          deletingReplyId={deletingReplyId}
+                    {/* Annotations overlay for images */}
+                    <div className="pointer-events-none absolute top-0 left-0 h-full w-full">
+                      {allAnnotations.map((anno) => (
+                        <Annotation
+                          key={anno.id}
+                          annotation={anno}
+                          isHighlighted={comments.some((c) => c.annotation.id === anno.id)}
                         />
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+
+                    {/* Comment markers for images */}
+                    <div className="absolute top-0 left-0 h-full w-full">
+                      {comments.map((comment) => (
+                        <div key={comment.id} className="comment-marker">
+                          <CommentMarker
+                            comment={comment}
+                            users={users}
+                            onClick={() => setActiveCommentId(comment.id)}
+                            onEdit={() => setEditingComment(comment)}
+                            onDelete={() => setDeletingCommentId(comment.id)}
+                            onReply={() => setReplyingToCommentId(comment.id)}
+                            onEditReply={() => {}}
+                            onDeleteReply={() => {}}
+                            isDeleting={deletingCommentId === comment.id}
+                            isActive={activeCommentId === comment.id}
+                            isReplying={replyingToCommentId === comment.id}
+                            deletingReplyId={deletingReplyId}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
