@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Document } from "@/types/document.types"
+import { getFileTypeFromMime } from "@/utils/fileTypeUtils"
 import { Search, X } from "lucide-react"
 import { useState } from "react"
 
@@ -26,7 +27,14 @@ export function FilterModal({ isOpen, onClose, filterType, documents, selectedIt
     if (filterType === "property") {
       return [...new Set(documents.map((doc) => doc.linkedProperty))]
     } else {
-      return [...new Set(documents.map((doc) => doc.fileType))]
+      const friendlyTypes = documents.map((doc) => {
+        if (doc.isFolder) return "Folder"
+      
+        const friendlyType = getFileTypeFromMime(doc.fileType, doc.name)
+        return friendlyType
+      })
+      
+      return [...new Set(friendlyTypes)].sort()
     }
   }
 
@@ -35,7 +43,6 @@ export function FilterModal({ isOpen, onClose, filterType, documents, selectedIt
   const handleItemToggle = (item: string) => {
     setTempSelected((prev) => (prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]))
   }
-
 
   const handleClearAll = () => {
     setTempSelected([])
