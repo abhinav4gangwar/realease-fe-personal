@@ -1,5 +1,6 @@
 'use client'
 import {
+  FilterState,
   Properties,
   PropertySortField,
   PropertySortOrder,
@@ -21,7 +22,6 @@ interface PropertiesViewerProps {
 }
 
 const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
-  const [properties, setProperties] = useState<Properties[]>(allProperties)
   const [selectedProperty, setSelectedProperty] = useState<Properties | null>(
     null
   )
@@ -33,10 +33,17 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
 
   const [sortField, setSortField] = useState<PropertySortField>('dateAdded')
   const [sortOrder, setSortOrder] = useState<PropertySortOrder>('desc')
+  const [activeFilters, setActiveFilters] = useState<FilterState>({
+    owners: [],
+    locations: [],
+    propertyTypes: [],
+    legalStatuses: [],
+  })
 
   const handleActionSelect = (actionType: string) => {
     console.log(actionType)
   }
+
   const handleSortChange = (
     field: PropertySortField,
     order: PropertySortOrder
@@ -76,6 +83,43 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
     console.log('Share property model open for', property)
   }
 
+  const handleApplyFilters = (filters: FilterState) => {
+    setActiveFilters(filters)
+  }
+
+  const filteredProperties = useMemo(() => {
+    return allProperties.filter((property) => {
+      if (
+        activeFilters.owners.length > 0 &&
+        !activeFilters.owners.includes(property.owner)
+      ) {
+        return false
+      }
+      if (
+        activeFilters.locations.length > 0 &&
+        !activeFilters.locations.includes(property.location)
+      ) {
+        return false
+      }
+      if (
+        activeFilters.propertyTypes.length > 0 &&
+        !activeFilters.propertyTypes.includes(property.type)
+      ) {
+        return false
+      }
+      if (activeFilters.legalStatuses.length > 0) {
+        const isDisputed = property.isDisputed === true
+        const propertyStatus = isDisputed ? 'Disputed' : 'Non Disputed'
+
+        if (!activeFilters.legalStatuses.includes(propertyStatus)) {
+          return false
+        }
+      }
+
+      return true
+    })
+  }, [allProperties, activeFilters])
+
   const sortProperties = (properties: Properties[]) => {
     return properties.sort((a, b) => {
       let comparison = 0
@@ -112,15 +156,17 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
     })
   }
 
-  const sortedProperties = useMemo(() => {
-    return sortProperties([...properties])
-  }, [properties, sortField, sortOrder])
+  const sortedAndFilteredProperties = useMemo(() => {
+    return sortProperties([...filteredProperties])
+  }, [filteredProperties, sortField, sortOrder])
 
   return (
     <div>
       <div className="flex justify-between pb-4">
-        <div className="text-secondary text-2xl font-semibold lg:text-3xl">
-          Properties
+        <div className="flex items-center gap-4">
+          <div className="text-secondary text-2xl font-semibold lg:text-3xl">
+            Properties
+          </div>
         </div>
 
         <div className="flex items-center gap-4">
@@ -134,7 +180,7 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
       <div>
         <div className="mt-5 rounded-lg bg-white p-6">
           <PropertiesListView
-            properties={sortedProperties}
+            properties={sortedAndFilteredProperties}
             selectedPropertyId={selectedProperty?.id}
             onEditClick={handleEditClick}
             onDownloadClick={handleDownloadClick}
@@ -172,11 +218,13 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
       />
 
       <PropertiesFilterModel
-        properties={properties}
+        properties={allProperties}
         isOpen={isFilterModalOpen}
         onClose={() => {
           setisFilterModalOpen(false)
         }}
+        onApplyFilters={handleApplyFilters}
+        initialFilters={activeFilters}
       />
 
       <CreatePropertyModal

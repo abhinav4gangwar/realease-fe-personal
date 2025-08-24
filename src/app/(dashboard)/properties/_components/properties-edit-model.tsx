@@ -103,9 +103,6 @@ const PropertiesEditModel = ({
     onClose()
   }
 
-  const handleSaveAndClose = () => {
-    handleClose()
-  }
 
   const renderStepForm = () => {
     if (isSubmitted) {
