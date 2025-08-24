@@ -6,7 +6,7 @@ export interface uploadedDocuments {
   size?: number | null
 }
 export interface Properties {
-  id: string
+  id?: string
   name: string
   location: string
   extent: string
@@ -21,6 +21,11 @@ export interface Properties {
   nextHearing?: string
   value?: string
   address?: string
+  country?:string
+  district?:string
+  state?:string
+  city?:string
+  zipcode?:string
   coordinates?: string
   valuePerSQ?: string
   documents?: uploadedDocuments[]

@@ -6,6 +6,7 @@ import {
 } from '@/types/property.types'
 import { useMemo, useState } from 'react'
 import ScrollToTop from '../../documents/_components/scroll-to-top'
+import CreatePropertyModal from './create-property-modal'
 import { PropertiesActionsButton } from './properties-action-button'
 import { PropertiesAddButton } from './properties-add-button'
 import PropertiesDetailsModel from './properties-details-model'
@@ -23,7 +24,9 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
     null
   )
   const [isModalOpen, setIsModalOpen] = useState(false)
-  
+  const [isCreatePropertyModalOpen, setisCreatePropertyModalOpen] =
+    useState(false)
+
   const [sortField, setSortField] = useState<PropertySortField>('dateAdded')
   const [sortOrder, setSortOrder] = useState<PropertySortOrder>('desc')
 
@@ -39,7 +42,7 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
   }
 
   const handleAddSelect = () => {
-    console.log('add')
+    setisCreatePropertyModalOpen(true)
   }
 
   const handlePropertyInfo = (property: Properties) => {
@@ -61,11 +64,10 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
     console.log('Share property model open for', property)
   }
 
- 
   const sortProperties = (properties: Properties[]) => {
     return properties.sort((a, b) => {
       let comparison = 0
-      
+
       switch (sortField) {
         case 'dateAdded':
           if (a.dateAdded && b.dateAdded) {
@@ -76,25 +78,24 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
             comparison = a.dateAdded ? -1 : b.dateAdded ? 1 : 0
           }
           break
-        
-        case 'value':
 
+        case 'value':
           const valueA = parseFloat(a.value?.replace(/[^0-9.-]+/g, '') || '0')
           const valueB = parseFloat(b.value?.replace(/[^0-9.-]+/g, '') || '0')
           comparison = valueA - valueB
           break
-        
+
         case 'name':
         case 'owner':
           const aValue = a[sortField] || ''
           const bValue = b[sortField] || ''
           comparison = aValue.localeCompare(bValue)
           break
-        
+
         default:
           comparison = 0
       }
-      
+
       return sortOrder === 'asc' ? comparison : -comparison
     })
   }
@@ -141,6 +142,13 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
           setSelectedProperty(null)
         }}
         onEditClick={handleEditClick}
+      />
+
+      <CreatePropertyModal
+        isOpen={isCreatePropertyModalOpen}
+        onClose={() => {
+          setisCreatePropertyModalOpen(false)
+        }}
       />
     </div>
   )
