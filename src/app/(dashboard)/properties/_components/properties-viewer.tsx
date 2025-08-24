@@ -12,6 +12,7 @@ import { PropertiesAddButton } from './properties-add-button'
 import PropertiesDetailsModel from './properties-details-model'
 import PropertiesEditModel from './properties-edit-model'
 import { PropertiesFilterButton } from './properties-filter-button'
+import PropertiesFilterModel from './properties-filter-model'
 import PropertiesListView from './properties-list-view'
 import { PropertiesSortButton } from './properties-sort-button'
 
@@ -28,6 +29,7 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
   const [isCreatePropertyModalOpen, setisCreatePropertyModalOpen] =
     useState(false)
   const [isEditPropertyModalOpen, setisEditPropertyModalOpen] = useState(false)
+  const [isFilterModalOpen, setisFilterModalOpen] = useState(false)
 
   const [sortField, setSortField] = useState<PropertySortField>('dateAdded')
   const [sortOrder, setSortOrder] = useState<PropertySortOrder>('desc')
@@ -45,6 +47,10 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
 
   const handleAddSelect = () => {
     setisCreatePropertyModalOpen(true)
+  }
+
+  const handleFilterSelect = () => {
+    setisFilterModalOpen(true)
   }
 
   const handlePropertyInfo = (property: Properties) => {
@@ -118,7 +124,7 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
         </div>
 
         <div className="flex items-center gap-4">
-          <PropertiesFilterButton />
+          <PropertiesFilterButton onFilterSelect={handleFilterSelect} />
           <PropertiesSortButton onSortChange={handleSortChange} />
           <PropertiesActionsButton onActionSelect={handleActionSelect} />
           <PropertiesAddButton onAddSelect={handleAddSelect} />
@@ -163,6 +169,14 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
           setSelectedProperty(null)
         }}
         onDeleteClick={handleDeleteClick}
+      />
+
+      <PropertiesFilterModel
+        properties={properties}
+        isOpen={isFilterModalOpen}
+        onClose={() => {
+          setisFilterModalOpen(false)
+        }}
       />
 
       <CreatePropertyModal
