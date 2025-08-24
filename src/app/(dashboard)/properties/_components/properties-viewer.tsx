@@ -1,5 +1,6 @@
 'use client'
 import {
+  FilterState,
   Properties,
   PropertySortField,
   PropertySortOrder,
@@ -10,7 +11,9 @@ import CreatePropertyModal from './create-property-modal'
 import { PropertiesActionsButton } from './properties-action-button'
 import { PropertiesAddButton } from './properties-add-button'
 import PropertiesDetailsModel from './properties-details-model'
+import PropertiesEditModel from './properties-edit-model'
 import { PropertiesFilterButton } from './properties-filter-button'
+import PropertiesFilterModel from './properties-filter-model'
 import PropertiesListView from './properties-list-view'
 import { PropertiesSortButton } from './properties-sort-button'
 
@@ -19,20 +22,28 @@ interface PropertiesViewerProps {
 }
 
 const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
-  const [properties, setProperties] = useState<Properties[]>(allProperties)
   const [selectedProperty, setSelectedProperty] = useState<Properties | null>(
     null
   )
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isCreatePropertyModalOpen, setisCreatePropertyModalOpen] =
     useState(false)
+  const [isEditPropertyModalOpen, setisEditPropertyModalOpen] = useState(false)
+  const [isFilterModalOpen, setisFilterModalOpen] = useState(false)
 
   const [sortField, setSortField] = useState<PropertySortField>('dateAdded')
   const [sortOrder, setSortOrder] = useState<PropertySortOrder>('desc')
+  const [activeFilters, setActiveFilters] = useState<FilterState>({
+    owners: [],
+    locations: [],
+    propertyTypes: [],
+    legalStatuses: [],
+  })
 
   const handleActionSelect = (actionType: string) => {
     console.log(actionType)
   }
+
   const handleSortChange = (
     field: PropertySortField,
     order: PropertySortOrder
@@ -45,6 +56,10 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
     setisCreatePropertyModalOpen(true)
   }
 
+  const handleFilterSelect = () => {
+    setisFilterModalOpen(true)
+  }
+
   const handlePropertyInfo = (property: Properties) => {
     setSelectedProperty(property)
     setIsModalOpen(true)
@@ -52,7 +67,11 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
 
   const handleEditClick = (property: Properties) => {
     setSelectedProperty(property)
-    console.log('Edit model open for', property)
+    setisEditPropertyModalOpen(true)
+  }
+
+  const handleDeleteClick = (property: Properties) => {
+    console.log('open delete model for', property)
   }
 
   const handleDownloadClick = (property: Properties) => {
@@ -63,6 +82,43 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
     setSelectedProperty(property)
     console.log('Share property model open for', property)
   }
+
+  const handleApplyFilters = (filters: FilterState) => {
+    setActiveFilters(filters)
+  }
+
+  const filteredProperties = useMemo(() => {
+    return allProperties.filter((property) => {
+      if (
+        activeFilters.owners.length > 0 &&
+        !activeFilters.owners.includes(property.owner)
+      ) {
+        return false
+      }
+      if (
+        activeFilters.locations.length > 0 &&
+        !activeFilters.locations.includes(property.location)
+      ) {
+        return false
+      }
+      if (
+        activeFilters.propertyTypes.length > 0 &&
+        !activeFilters.propertyTypes.includes(property.type)
+      ) {
+        return false
+      }
+      if (activeFilters.legalStatuses.length > 0) {
+        const isDisputed = property.isDisputed === true
+        const propertyStatus = isDisputed ? 'Disputed' : 'Non Disputed'
+
+        if (!activeFilters.legalStatuses.includes(propertyStatus)) {
+          return false
+        }
+      }
+
+      return true
+    })
+  }, [allProperties, activeFilters])
 
   const sortProperties = (properties: Properties[]) => {
     return properties.sort((a, b) => {
@@ -100,19 +156,21 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
     })
   }
 
-  const sortedProperties = useMemo(() => {
-    return sortProperties([...properties])
-  }, [properties, sortField, sortOrder])
+  const sortedAndFilteredProperties = useMemo(() => {
+    return sortProperties([...filteredProperties])
+  }, [filteredProperties, sortField, sortOrder])
 
   return (
     <div>
       <div className="flex justify-between pb-4">
-        <div className="text-secondary text-2xl font-semibold lg:text-3xl">
-          Properties
+        <div className="flex items-center gap-4">
+          <div className="text-secondary text-2xl font-semibold lg:text-3xl">
+            Properties
+          </div>
         </div>
 
         <div className="flex items-center gap-4">
-          <PropertiesFilterButton />
+          <PropertiesFilterButton onFilterSelect={handleFilterSelect} />
           <PropertiesSortButton onSortChange={handleSortChange} />
           <PropertiesActionsButton onActionSelect={handleActionSelect} />
           <PropertiesAddButton onAddSelect={handleAddSelect} />
@@ -122,7 +180,7 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
       <div>
         <div className="mt-5 rounded-lg bg-white p-6">
           <PropertiesListView
-            properties={sortedProperties}
+            properties={sortedAndFilteredProperties}
             selectedPropertyId={selectedProperty?.id}
             onEditClick={handleEditClick}
             onDownloadClick={handleDownloadClick}
@@ -142,6 +200,31 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
           setSelectedProperty(null)
         }}
         onEditClick={handleEditClick}
+      />
+
+      <PropertiesEditModel
+        property={selectedProperty}
+        isOpen={isEditPropertyModalOpen}
+        onClose={() => {
+          setisEditPropertyModalOpen(false)
+          setSelectedProperty(null)
+        }}
+        handleAddAnother={() => {
+          setisEditPropertyModalOpen(false)
+          setisCreatePropertyModalOpen(true)
+          setSelectedProperty(null)
+        }}
+        onDeleteClick={handleDeleteClick}
+      />
+
+      <PropertiesFilterModel
+        properties={allProperties}
+        isOpen={isFilterModalOpen}
+        onClose={() => {
+          setisFilterModalOpen(false)
+        }}
+        onApplyFilters={handleApplyFilters}
+        initialFilters={activeFilters}
       />
 
       <CreatePropertyModal
