@@ -1,11 +1,12 @@
 import { QuickAction } from '@/types'
 import {
   BarChart3,
+  Building2,
   FileText,
-  Home,
+  LayoutGrid,
   MapPin,
   Settings,
-  Trash,
+  Trash
 } from 'lucide-react'
 
 export const APP_CONFIG = {
@@ -81,8 +82,9 @@ export const PROPERTY_STATUS = [
 ] as const
 
 export const navigationItems = [
-  { icon: Home, label: 'Dashboard', href: '/' },
-  { icon: MapPin, label: 'Properties', href: '/properties' },
+  { icon: LayoutGrid, label: 'Dashboard', href: '/' },
+  { icon: MapPin, label: 'Maps', href: '/maps' },
+  { icon: Building2, label: 'Properties', href: '/properties' },
   { icon: BarChart3, label: 'Analytics', href: '/analytics' },
   { icon: FileText, label: 'Documents', href: '/documents' },
   { icon: Trash, label: 'Trash', href: '/trash' },

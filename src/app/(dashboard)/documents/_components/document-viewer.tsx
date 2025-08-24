@@ -8,6 +8,7 @@ import type {
   SortOrder,
   ViewMode,
 } from '@/types/document.types'
+import { getFileTypeFromMime } from '@/utils/fileTypeUtils'
 import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -38,8 +39,11 @@ import { SortButton } from './sort-button'
 import { UploadModal } from './upload-modal'
 import { ViewModeToggle } from './viewmode-toggle'
 
-const PDFPreviewModal = dynamic(
-  () => import('./pdf-preview-modal').then((mod) => mod.PDFPreviewModal),
+const UnifiedDocumentViewer = dynamic(
+  () =>
+    import('./unified-document-viewer').then(
+      (mod) => mod.UnifiedDocumentViewer
+    ),
   {
     ssr: false,
   }
@@ -329,9 +333,13 @@ export function DocumentViewer({
       )
     }
     if (filterState.type === 'type') {
-      return documents.filter((doc) =>
-        filterState.selectedTypes.includes(doc.fileType)
-      )
+      return documents.filter((doc) => {
+        const friendlyType = doc.isFolder
+          ? 'Folder'
+          : getFileTypeFromMime(doc.fileType, doc.name)
+
+        return filterState.selectedTypes.includes(friendlyType)
+      })
     }
     if (filterState.type === 'recent') {
       return documents
@@ -362,7 +370,11 @@ export function DocumentViewer({
     if (filterState.type === 'type') {
       return documents.reduce(
         (groups, doc) => {
-          const key = doc.fileType
+          // Use friendly file type for grouping
+          const key = doc.isFolder
+            ? 'Folder'
+            : getFileTypeFromMime(doc.fileType, doc.name)
+
           if (!groups[key]) groups[key] = []
           groups[key].push(doc)
           return groups
@@ -833,8 +845,8 @@ export function DocumentViewer({
           onMoveClick={handleMoveClick}
           onDownloadClick={handleDownloadClick}
         />
-        {/* PDF Preview Modal */}
-        <PDFPreviewModal
+        {/* Document Preview Modal */}
+        <UnifiedDocumentViewer
           document={selectedDocument}
           isOpen={isPdfPreviewOpen}
           onClose={() => {

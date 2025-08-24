@@ -47,12 +47,15 @@ export const PDFHeader: FC<PDFHeaderProps> = ({
           variant="ghost"
           size="icon"
           className={`h-6 w-6 cursor-pointer text-white transition-all ${
-            hasTextSelection ? "hover:text-primary ring-2 ring-blue-400 bg-blue-500/20" : "hover:text-primary"
+            hasTextSelection ? "hover:text-primary ring-2 ring-blue-400 bg-blue-500/20" : "opacity-50 cursor-not-allowed"
           }`}
           onClick={(e) => {
             e.stopPropagation()
-            onCommentClick()
+            if (hasTextSelection) {
+              onCommentClick()
+            }
           }}
+          disabled={!hasTextSelection}
           title={hasTextSelection ? "Add comment to selection" : "Select text to comment"}
         >
           <MessageSquare className="h-3 w-3" />
