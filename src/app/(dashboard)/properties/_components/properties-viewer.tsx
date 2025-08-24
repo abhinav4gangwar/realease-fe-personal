@@ -10,6 +10,7 @@ import CreatePropertyModal from './create-property-modal'
 import { PropertiesActionsButton } from './properties-action-button'
 import { PropertiesAddButton } from './properties-add-button'
 import PropertiesDetailsModel from './properties-details-model'
+import PropertiesEditModel from './properties-edit-model'
 import { PropertiesFilterButton } from './properties-filter-button'
 import PropertiesListView from './properties-list-view'
 import { PropertiesSortButton } from './properties-sort-button'
@@ -26,6 +27,7 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isCreatePropertyModalOpen, setisCreatePropertyModalOpen] =
     useState(false)
+  const [isEditPropertyModalOpen, setisEditPropertyModalOpen] = useState(false)
 
   const [sortField, setSortField] = useState<PropertySortField>('dateAdded')
   const [sortOrder, setSortOrder] = useState<PropertySortOrder>('desc')
@@ -52,7 +54,11 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
 
   const handleEditClick = (property: Properties) => {
     setSelectedProperty(property)
-    console.log('Edit model open for', property)
+    setisEditPropertyModalOpen(true)
+  }
+
+  const handleDeleteClick = (property: Properties) => {
+    console.log('open delete model for', property)
   }
 
   const handleDownloadClick = (property: Properties) => {
@@ -142,6 +148,21 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
           setSelectedProperty(null)
         }}
         onEditClick={handleEditClick}
+      />
+
+      <PropertiesEditModel
+        property={selectedProperty}
+        isOpen={isEditPropertyModalOpen}
+        onClose={() => {
+          setisEditPropertyModalOpen(false)
+          setSelectedProperty(null)
+        }}
+        handleAddAnother={() => {
+          setisEditPropertyModalOpen(false)
+          setisCreatePropertyModalOpen(true)
+          setSelectedProperty(null)
+        }}
+        onDeleteClick={handleDeleteClick}
       />
 
       <CreatePropertyModal
