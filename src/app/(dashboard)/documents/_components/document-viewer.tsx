@@ -8,6 +8,7 @@ import type {
   SortOrder,
   ViewMode,
 } from '@/types/document.types'
+import { getFileTypeFromMime } from '@/utils/fileTypeUtils'
 import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -39,7 +40,10 @@ import { UploadModal } from './upload-modal'
 import { ViewModeToggle } from './viewmode-toggle'
 
 const UnifiedDocumentViewer = dynamic(
-  () => import('./unified-document-viewer').then((mod) => mod.UnifiedDocumentViewer),
+  () =>
+    import('./unified-document-viewer').then(
+      (mod) => mod.UnifiedDocumentViewer
+    ),
   {
     ssr: false,
   }
@@ -329,9 +333,13 @@ export function DocumentViewer({
       )
     }
     if (filterState.type === 'type') {
-      return documents.filter((doc) =>
-        filterState.selectedTypes.includes(doc.fileType)
-      )
+      return documents.filter((doc) => {
+        const friendlyType = doc.isFolder
+          ? 'Folder'
+          : getFileTypeFromMime(doc.fileType, doc.name)
+
+        return filterState.selectedTypes.includes(friendlyType)
+      })
     }
     if (filterState.type === 'recent') {
       return documents
@@ -362,7 +370,11 @@ export function DocumentViewer({
     if (filterState.type === 'type') {
       return documents.reduce(
         (groups, doc) => {
-          const key = doc.fileType
+          // Use friendly file type for grouping
+          const key = doc.isFolder
+            ? 'Folder'
+            : getFileTypeFromMime(doc.fileType, doc.name)
+
           if (!groups[key]) groups[key] = []
           groups[key].push(doc)
           return groups

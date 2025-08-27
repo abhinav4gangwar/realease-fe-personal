@@ -6,7 +6,7 @@ export interface uploadedDocuments {
   size?: number | null
 }
 export interface Properties {
-  id: string
+  id?: string
   name: string
   location: string
   extent: string
@@ -21,6 +21,11 @@ export interface Properties {
   nextHearing?: string
   value?: string
   address?: string
+  country?: string
+  district?: string
+  state?: string
+  city?: string
+  zipcode?: string
   coordinates?: string
   valuePerSQ?: string
   documents?: uploadedDocuments[]
@@ -33,3 +38,29 @@ export type PropertySortField =
   | 'owner'
   | 'value'
 export type PropertySortOrder = 'asc' | 'desc'
+
+export interface FilterState {
+  owners: string[]
+  locations: string[]
+  propertyTypes: string[]
+  legalStatuses: string[]
+}
+
+export type FilterCategory =
+  | 'owners'
+  | 'locations'
+  | 'propertyTypes'
+  | 'legalStatuses'
+
+export interface FilterOption {
+  key: FilterCategory
+  label: string
+  field: keyof Properties
+}
+
+export const filterCategories: FilterOption[] = [
+  { key: 'owners', label: 'Owner', field: 'owner' },
+  { key: 'locations', label: 'Location', field: 'location' },
+  { key: 'propertyTypes', label: 'Property Type', field: 'type' },
+  { key: 'legalStatuses', label: 'Legal Status', field: 'legalStatus' },
+]
