@@ -61,7 +61,7 @@ export function TrashDocumentViewer({
 
   const [currentFolder, setCurrentFolder] = useState<Document | null>(null)
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([
-    { name: 'Documents' },
+    { name: 'Trash' },
   ])
   const [isSelectMode, setIsSelectMode] = useState(false)
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([])
@@ -117,7 +117,7 @@ export function TrashDocumentViewer({
   const handleBreadcrumbNavigate = (index: number) => {
     if (index === 0) {
       setCurrentFolder(null)
-      setBreadcrumbs([{ name: 'Documents' }])
+      setBreadcrumbs([{ name: 'Trash' }])
     } else {
       setBreadcrumbs((prev) => prev.slice(0, index + 1))
       const targetBreadcrumb = breadcrumbs[index]
@@ -498,7 +498,7 @@ export function TrashDocumentViewer({
     >
       <div className="flex justify-between pb-4">
         <div className="text-secondary text-2xl font-semibold lg:text-3xl">
-          Documents
+          Trash
         </div>
         <div className="flex items-center gap-4">
           <ViewModeToggle

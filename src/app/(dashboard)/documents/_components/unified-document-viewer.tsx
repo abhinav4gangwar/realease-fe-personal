@@ -1,23 +1,26 @@
-"use client"
+'use client'
 
-import type { Comment, CommentAnnotation, User } from "@/types/comment.types"
-import type { Document } from "@/types/document.types"
-import { useEffect, useRef, useState, type MouseEvent } from "react"
-import { Document as PDFDocument, Page, pdfjs } from "react-pdf"
-import "react-pdf/dist/Page/AnnotationLayer.css"
-import "react-pdf/dist/Page/TextLayer.css"
-import { toast } from "sonner"
+import type { Comment, CommentAnnotation, User } from '@/types/comment.types'
+import type { Document } from '@/types/document.types'
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { Document as PDFDocument, Page, pdfjs } from 'react-pdf'
+import 'react-pdf/dist/Page/AnnotationLayer.css'
+import 'react-pdf/dist/Page/TextLayer.css'
+import { toast } from 'sonner'
 
-import { CommentService } from "../doc_utils/comment.services"
-import { isImageFile, isPdfFile } from "../doc_utils"
-import { Annotation } from "./comment-components/annotation"
-import { CommentMarker } from "./comment-components/comment-marker"
-import { CommentModal } from "./comment-components/comment-modal"
-import { PDFControls } from "./comment-components/pdf-controls"
-import { PDFHeader } from "./comment-components/pdf-header"
+import { Button } from '@/components/ui/button'
+import { Download } from 'lucide-react'
+import Image from 'next/image'
+import { HiShare } from 'react-icons/hi2'
+import { isImageFile, isPdfFile } from '../doc_utils'
+import { CommentService } from '../doc_utils/comment.services'
+import { Annotation } from './comment-components/annotation'
+import { CommentMarker } from './comment-components/comment-marker'
+import { CommentModal } from './comment-components/comment-modal'
+import { PDFHeader } from './comment-components/pdf-header'
 
 // Set up PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js"
+pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 
 interface UnifiedDocumentViewerProps {
   isOpen: boolean
@@ -47,25 +50,34 @@ export function UnifiedDocumentViewer({
   const [scale, setScale] = useState<number>(1.2)
   const [isLoading, setIsLoading] = useState<boolean>(false)
 
-
-
   // Comment and annotation state
   const [comments, setComments] = useState<Comment[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [isLoadingUsers, setIsLoadingUsers] = useState<boolean>(false)
-  const [tempAnnotation, setTempAnnotation] = useState<CommentAnnotation | null>(null)
+  const [tempAnnotation, setTempAnnotation] =
+    useState<CommentAnnotation | null>(null)
   const [isLoadingComments, setIsLoadingComments] = useState<boolean>(false)
   const [isCreatingComment, setIsCreatingComment] = useState<boolean>(false)
-  const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null)
+  const [deletingCommentId, setDeletingCommentId] = useState<number | null>(
+    null
+  )
   const [deletingReplyId, setDeletingReplyId] = useState<number | null>(null)
   const [activeCommentId, setActiveCommentId] = useState<number | null>(null)
-  const [replyingToCommentId, setReplyingToCommentId] = useState<number | null>(null)
+  const [replyingToCommentId, setReplyingToCommentId] = useState<number | null>(
+    null
+  )
 
   // UI state
   const [hasTextSelection, setHasTextSelection] = useState<boolean>(false)
-  const [selectionPosition, setSelectionPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+  const [selectionPosition, setSelectionPosition] = useState<{
+    x: number
+    y: number
+  }>({ x: 0, y: 0 })
   const [isCommentModalOpen, setIsCommentModalOpen] = useState<boolean>(false)
-  const [commentModalPosition, setCommentModalPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+  const [commentModalPosition, setCommentModalPosition] = useState<{
+    x: number
+    y: number
+  }>({ x: 0, y: 0 })
   const [editingComment, setEditingComment] = useState<Comment | null>(null)
 
   // Refs
@@ -98,13 +110,16 @@ export function UnifiedDocumentViewer({
       // Determine document type
       const isImage = isImageFile(document)
       const isPdf = isPdfFile(document)
-      
+
       if (isImage) {
         setDocumentType('image')
         // For images, get the original file
-        const response = await apiClient.get(`/dashboard/documents/view/${document.id}?original=true`, {
-          responseType: "blob",
-        })
+        const response = await apiClient.get(
+          `/dashboard/documents/view/${document.id}?original=true`,
+          {
+            responseType: 'blob',
+          }
+        )
         const imageBlob = new Blob([response.data])
         const objectUrl = URL.createObjectURL(imageBlob)
         setDocumentUrl(objectUrl)
@@ -113,16 +128,19 @@ export function UnifiedDocumentViewer({
       } else {
         setDocumentType('pdf')
         // For PDFs and other files, get the PDF conversion
-        const response = await apiClient.get(`/dashboard/documents/view/${document.id}`, {
-          responseType: "blob",
-        })
-        const pdfBlob = new Blob([response.data], { type: "application/pdf" })
+        const response = await apiClient.get(
+          `/dashboard/documents/view/${document.id}`,
+          {
+            responseType: 'blob',
+          }
+        )
+        const pdfBlob = new Blob([response.data], { type: 'application/pdf' })
         const objectUrl = URL.createObjectURL(pdfBlob)
         setDocumentUrl(objectUrl)
       }
     } catch (error) {
-      console.error("Error loading document:", error)
-      toast.error("Failed to load document")
+      console.error('Error loading document:', error)
+      toast.error('Failed to load document')
     } finally {
       setIsLoading(false)
     }
@@ -133,10 +151,12 @@ export function UnifiedDocumentViewer({
 
     setIsLoadingComments(true)
     try {
-      const fetchedComments = await commentService.current.getComments(Number.parseInt(document.id))
+      const fetchedComments = await commentService.current.getComments(
+        Number.parseInt(document.id)
+      )
       setComments(fetchedComments)
     } catch (error) {
-      console.error("Error loading comments:", error)
+      console.error('Error loading comments:', error)
     } finally {
       setIsLoadingComments(false)
     }
@@ -145,10 +165,12 @@ export function UnifiedDocumentViewer({
   const loadUsers = async () => {
     setIsLoadingUsers(true)
     try {
-      const response = await apiClient.get(`/dashboard/documents/getUsers/${document.id}`)
+      const response = await apiClient.get(
+        `/dashboard/documents/getUsers/${document.id}`
+      )
       setUsers(response.data || [])
     } catch (error) {
-      console.error("Error loading users:", error)
+      console.error('Error loading users:', error)
     } finally {
       setIsLoadingUsers(false)
     }
@@ -184,8 +206,13 @@ export function UnifiedDocumentViewer({
     if (pageElements) {
       for (let i = 0; i < pageElements.length; i++) {
         const pageElement = pageElements[i]
-        const textContent = pageElement.querySelector('.react-pdf__Page__textContent')
-        if (textContent && textContent.contains(range.commonAncestorContainer)) {
+        const textContent = pageElement.querySelector(
+          '.react-pdf__Page__textContent'
+        )
+        if (
+          textContent &&
+          textContent.contains(range.commonAncestorContainer)
+        ) {
           targetPage = i + 1
           pageContent = textContent
           break
@@ -212,10 +239,28 @@ export function UnifiedDocumentViewer({
     }
 
     // Improved coordinate calculation with bounds checking
-    const x = Math.max(0, Math.min(100, ((selectionRect.left - pageRect.left) / pageRect.width) * 100))
-    const y = Math.max(0, Math.min(100, ((selectionRect.top - pageRect.top) / pageRect.height) * 100))
-    const width = Math.max(0.1, Math.min(100 - x, (selectionRect.width / pageRect.width) * 100))
-    const height = Math.max(0.1, Math.min(100 - y, (selectionRect.height / pageRect.height) * 100))
+    const x = Math.max(
+      0,
+      Math.min(
+        100,
+        ((selectionRect.left - pageRect.left) / pageRect.width) * 100
+      )
+    )
+    const y = Math.max(
+      0,
+      Math.min(
+        100,
+        ((selectionRect.top - pageRect.top) / pageRect.height) * 100
+      )
+    )
+    const width = Math.max(
+      0.1,
+      Math.min(100 - x, (selectionRect.width / pageRect.width) * 100)
+    )
+    const height = Math.max(
+      0.1,
+      Math.min(100 - y, (selectionRect.height / pageRect.height) * 100)
+    )
 
     if (width > 0 && height > 0) {
       const newAnnotation: CommentAnnotation = {
@@ -248,7 +293,8 @@ export function UnifiedDocumentViewer({
     if (hasTextSelection) return
 
     const target = e.target as HTMLElement
-    if (target.closest('.comment-marker') || target.closest('.annotation')) return
+    if (target.closest('.comment-marker') || target.closest('.annotation'))
+      return
 
     // Check if clicking on zoom controls
     if (target.closest('.zoom-controls')) return
@@ -281,7 +327,7 @@ export function UnifiedDocumentViewer({
 
   const handleCommentIconClick = () => {
     if (!hasTextSelection || !tempAnnotation) {
-      toast.error("Select text to comment")
+      toast.error('Select text to comment')
       return
     }
 
@@ -314,17 +360,21 @@ export function UnifiedDocumentViewer({
       setTempAnnotation(null)
       setHasTextSelection(false)
       setIsCommentModalOpen(false)
-      toast.success("Comment added successfully")
+      toast.success('Comment added successfully')
     } catch (error) {
-      console.error("Error creating comment:", error)
-      toast.error("Failed to add comment")
+      console.error('Error creating comment:', error)
+      toast.error('Failed to add comment')
     } finally {
       setIsCreatingComment(false)
     }
   }
 
   // PDF navigation and zoom
-  const onDocumentLoadSuccess = ({ numPages: nextNumPages }: { numPages: number }): void => {
+  const onDocumentLoadSuccess = ({
+    numPages: nextNumPages,
+  }: {
+    numPages: number
+  }): void => {
     setNumPages(nextNumPages)
   }
 
@@ -362,25 +412,27 @@ export function UnifiedDocumentViewer({
         >
           {/* Zoom Controls - only show zoom for documents */}
           {documentUrl && (
-            <div className="zoom-controls fixed bottom-6 right-6 z-30 flex items-center gap-1 rounded-lg bg-[#9B9B9D] shadow-lg p-1 text-white">
+            <div className="zoom-controls fixed right-6 bottom-6 z-30 flex items-center gap-1 rounded-lg bg-[#9B9B9D] p-1 text-white shadow-lg">
               <button
                 onClick={(e) => {
                   e.stopPropagation()
                   zoomOut()
                 }}
                 disabled={scale <= 0.5}
-                className="h-8 w-8 p-0 rounded hover:bg-white/20 disabled:opacity-50"
+                className="h-8 w-8 rounded p-0 hover:bg-white/20 disabled:opacity-50"
               >
                 <span className="text-sm">-</span>
               </button>
-              <span className="text-sm font-medium px-2 min-w-[50px] text-center">{Math.round(scale * 100)}%</span>
+              <span className="min-w-[50px] px-2 text-center text-sm font-medium">
+                {Math.round(scale * 100)}%
+              </span>
               <button
                 onClick={(e) => {
                   e.stopPropagation()
                   zoomIn()
                 }}
                 disabled={scale >= 3.0}
-                className="h-8 w-8 p-0 rounded hover:bg-white/20 disabled:opacity-50"
+                className="h-8 w-8 rounded p-0 hover:bg-white/20 disabled:opacity-50"
               >
                 <span className="text-sm">+</span>
               </button>
@@ -401,18 +453,31 @@ export function UnifiedDocumentViewer({
                   file={documentUrl}
                   onLoadSuccess={onDocumentLoadSuccess}
                   onLoadError={console.error}
-                  loading={<div className="p-8 text-center">Loading document...</div>}
+                  loading={
+                    <div className="p-8 text-center">Loading document...</div>
+                  }
                 >
                   <div ref={pageRef} className="space-y-4">
                     {/* Render all pages for scroll functionality */}
                     {Array.from({ length: numPages || 1 }, (_, index) => {
                       const pageNumber = index + 1
-                      const pageComments = comments.filter((comment) => comment.annotation.page === pageNumber)
-                      const pageAnnotations = allAnnotations.filter((anno) => anno.page === pageNumber)
+                      const pageComments = comments.filter(
+                        (comment) => comment.annotation.page === pageNumber
+                      )
+                      const pageAnnotations = allAnnotations.filter(
+                        (anno) => anno.page === pageNumber
+                      )
 
                       return (
-                        <div key={`page_${pageNumber}`} className="relative bg-white shadow-lg mb-4">
-                          <Page pageNumber={pageNumber} scale={scale} renderTextLayer={true} />
+                        <div
+                          key={`page_${pageNumber}`}
+                          className="relative mb-4 bg-white shadow-lg"
+                        >
+                          <Page
+                            pageNumber={pageNumber}
+                            scale={scale}
+                            renderTextLayer={true}
+                          />
 
                           {/* Annotations overlay */}
                           <div className="pointer-events-none absolute top-0 left-0 h-full w-full">
@@ -420,7 +485,9 @@ export function UnifiedDocumentViewer({
                               <Annotation
                                 key={anno.id}
                                 annotation={anno}
-                                isHighlighted={comments.some((c) => c.annotation.id === anno.id)}
+                                isHighlighted={comments.some(
+                                  (c) => c.annotation.id === anno.id
+                                )}
                               />
                             ))}
                           </div>
@@ -434,13 +501,19 @@ export function UnifiedDocumentViewer({
                                   users={users}
                                   onClick={() => setActiveCommentId(comment.id)}
                                   onEdit={() => setEditingComment(comment)}
-                                  onDelete={() => setDeletingCommentId(comment.id)}
-                                  onReply={() => setReplyingToCommentId(comment.id)}
+                                  onDelete={() =>
+                                    setDeletingCommentId(comment.id)
+                                  }
+                                  onReply={() =>
+                                    setReplyingToCommentId(comment.id)
+                                  }
                                   onEditReply={() => {}}
                                   onDeleteReply={() => {}}
                                   isDeleting={deletingCommentId === comment.id}
                                   isActive={activeCommentId === comment.id}
-                                  isReplying={replyingToCommentId === comment.id}
+                                  isReplying={
+                                    replyingToCommentId === comment.id
+                                  }
                                   deletingReplyId={deletingReplyId}
                                 />
                               </div>
@@ -453,17 +526,20 @@ export function UnifiedDocumentViewer({
                 </PDFDocument>
               ) : (
                 // Image viewer
-                <div ref={imageContainerRef} className="flex items-center justify-center h-full w-full">
+                <div
+                  ref={imageContainerRef}
+                  className="flex h-full w-full items-center justify-center"
+                >
                   <div ref={imageRef} className="relative bg-white shadow-lg">
                     <img
                       src={documentUrl}
-                      alt={document?.name || "Document"}
+                      alt={document?.name || 'Document'}
                       style={{
                         transform: `scale(${scale})`,
                         transformOrigin: 'center',
                         maxWidth: '100%',
                         maxHeight: '100%',
-                        objectFit: 'contain'
+                        objectFit: 'contain',
                       }}
                       className="block"
                     />
@@ -474,7 +550,9 @@ export function UnifiedDocumentViewer({
                         <Annotation
                           key={anno.id}
                           annotation={anno}
-                          isHighlighted={comments.some((c) => c.annotation.id === anno.id)}
+                          isHighlighted={comments.some(
+                            (c) => c.annotation.id === anno.id
+                          )}
                         />
                       ))}
                     </div>
@@ -505,8 +583,42 @@ export function UnifiedDocumentViewer({
               )}
             </div>
           ) : (
-            <div className="flex h-full items-center justify-center">
-              <p className="text-gray-600">No document to display</p>
+            <div className="flex h-full items-center justify-center bg-black/75">
+              <div className="bg-secondary flex h-[300px] w-[600px] flex-col items-center justify-center space-y-6 rounded-md">
+                <Image
+                  src={'/assets/no-preview.svg'}
+                  alt="no preview"
+                  height={80}
+                  width={80}
+                />
+                <p className="text-lg font-semibold text-white">
+                  Sorry, no preview available for this file format.
+                </p>
+                <div className="flex justify-center gap-4">
+                  <Button
+                    className="h-12 w-[200px] cursor-pointer bg-white px-6 text-lg font-semibold text-black hover:bg-white"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (onDownloadClick && document) {
+                        onDownloadClick(document)
+                      }
+                    }}
+                  >
+                    Download file <Download className="text-primary h-3 w-3" />
+                  </Button>
+                  <Button
+                    className="h-12 w-[200px] cursor-pointer bg-white px-6 text-lg font-semibold text-black hover:bg-white"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (onShareClick && document) {
+                        onShareClick(document)
+                      }
+                    }}
+                  >
+                    Share file <HiShare className="text-primary h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </div>
