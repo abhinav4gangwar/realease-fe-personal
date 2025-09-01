@@ -4,6 +4,7 @@ import { apiClient } from '@/utils/api'
 import { getFileTypeFromMime } from '@/utils/fileTypeUtils'
 import { useEffect, useState } from 'react'
 import { DocumentViewer } from './_components/document-viewer'
+import MobileDocumentViewer from './_mobile-components/mobile-document-viewer'
 
 const Documentspage = () => {
   const [fetchedDocuments, setFetchedDocuments] = useState(null)
@@ -93,7 +94,7 @@ const Documentspage = () => {
   return (
     <div>
       {/* for desktop */}
-      <div className='lg:block hidden'>
+      <div className="hidden lg:block">
         <DocumentViewer
           // recentlyAccessed={documentsData.recentlyAccessed}
           allFiles={transformedDocuments}
@@ -103,8 +104,12 @@ const Documentspage = () => {
       </div>
 
       {/* for mobile */}
-      <div className='lg:hidden block pt-14'>
-       
+      <div className="block pt-14 lg:hidden">
+        <MobileDocumentViewer // recentlyAccessed={documentsData.recentlyAccessed}
+          allFiles={transformedDocuments}
+          apiClient={apiClient}
+          transformApiResponse={transformApiResponse}
+        />
       </div>
     </div>
   )

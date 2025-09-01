@@ -591,7 +591,7 @@ export function UnifiedDocumentViewer({
                   height={80}
                   width={80}
                 />
-                <p className="text-lg font-semibold text-white">
+                <p className="lg:text-lg font-semibold text-white">
                   Sorry, no preview available for this file format.
                 </p>
                 <div className="flex justify-center gap-4">
@@ -607,7 +607,7 @@ export function UnifiedDocumentViewer({
                     Download file <Download className="text-primary h-3 w-3" />
                   </Button>
                   <Button
-                    className="h-12 w-[200px] cursor-pointer bg-white px-6 text-lg font-semibold text-black hover:bg-white"
+                    className="h-12 w-[200px] cursor-pointer bg-white px-6 text-lg font-semibold text-black hover:bg-white lg:block hidden"
                     onClick={(e) => {
                       e.stopPropagation()
                       if (onShareClick && document) {

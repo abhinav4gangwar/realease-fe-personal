@@ -1,105 +1,70 @@
 'use client'
 import { Button } from '@/components/ui/button'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { FileTypeDisplay } from '@/components/ui/file-type-display'
 import { Input } from '@/components/ui/input'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from '@/components/ui/select'
 import { User } from '@/types'
-import type { Document } from '@/types/document.types'
 import { apiClient } from '@/utils/api'
 import { Check, MoreVertical, X } from 'lucide-react'
-import type React from 'react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { FileIcon } from './file-icon'
-import { TagInput } from './tags-input'
+import {
+    DocumentDetailModalProps,
+    getUsers,
+} from '../_components/document-detail-modal'
+import { FileIcon } from '../_components/file-icon'
+import { TagInput } from '../_components/tags-input'
 
-//fetch this from an API
 const properties = [{ id: '0', name: 'No Property' }]
 
-// API function to get users (same as in PDFPreviewModal)
-export const getUsers = async (documentId: number) => {
-  try {
-    const response = await apiClient.get(
-      `/dashboard/documents/getUsers/${documentId}`
-    )
-    const users = response.data.users
-    return users
-  } catch (error) {
-    console.log(error)
-    return []
-  }
-}
-
-export interface DocumentDetailModalProps {
-  document: Document | null
-  isOpen: boolean
-  onClose: () => void
-  openInEditMode?: boolean
-  onSave?: (documentId: string, newName: string) => Promise<void>
-  onEditFile?: (
-    documentId: string,
-    data: { name: string; propertyId: string; tags: string[] }
-  ) => Promise<void>
-  onDeleteClick?: (document: Document) => void
-  onShareClick?: (document: Document) => void
-  onMoveClick?: (document: Document) => void
-  onDownloadClick?: (document: Document) => void
-}
-
-export function DocumentDetailModal({
+const MobileDocumentDetailsModel = ({
   document,
   isOpen,
   onClose,
   openInEditMode = false,
   onSave,
   onEditFile,
-  onDeleteClick,
-  onShareClick,
-  onMoveClick,
   onDownloadClick,
-}: DocumentDetailModalProps) {
+}: DocumentDetailModalProps) => {
   const [isEditing, setIsEditing] = useState(false)
   const [editedName, setEditedName] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [editedProperty, setEditedProperty] = useState('')
   const [editedTags, setEditedTags] = useState('')
-  
+
   // Add states for shared users
   const [users, setUsers] = useState<User[]>([])
   const [isLoadingUsers, setIsLoadingUsers] = useState<boolean>(false)
 
   useEffect(() => {
     if (isOpen && openInEditMode && document) {
-      const propertyId = properties.find(
-      (p) => p.name === document.linkedProperty
-    )?.id || '0'
+      const propertyId =
+        properties.find((p) => p.name === document.linkedProperty)?.id || '0'
       setEditedName(document.name)
       setEditedProperty(propertyId || '0')
       setEditedTags(document.tags || '')
       setIsEditing(true)
     } else if (isOpen && document) {
-      const propertyId = properties.find(
-      (p) => p.name === document.linkedProperty
-    )?.id || '0'
+      const propertyId =
+        properties.find((p) => p.name === document.linkedProperty)?.id || '0'
       setEditedName(document.name)
       setEditedProperty(propertyId || '0')
       setEditedTags(document.tags || '')
       setIsEditing(false)
     }
   }, [isOpen, openInEditMode, document])
-
 
   // Load users when document changes
   useEffect(() => {
@@ -116,8 +81,8 @@ export function DocumentDetailModal({
       const fetchedUsers = await getUsers(Number.parseInt(document.id))
       setUsers(fetchedUsers || [])
     } catch (error) {
-      console.error("Error loading users:", error)
-      toast.error("Failed to load shared users")
+      console.error('Error loading users:', error)
+      toast.error('Failed to load shared users')
       setUsers([])
     } finally {
       setIsLoadingUsers(false)
@@ -134,9 +99,8 @@ export function DocumentDetailModal({
   if (!document || !isOpen) return null
 
   const handleEdit = () => {
-    const propertyId = properties.find(
-      (p) => p.name === document.linkedProperty
-    )?.id || '0'
+    const propertyId =
+      properties.find((p) => p.name === document.linkedProperty)?.id || '0'
     setEditedName(document.name)
     setEditedProperty(propertyId)
     setEditedTags(document.tags || '')
@@ -215,7 +179,7 @@ export function DocumentDetailModal({
   }
 
   return (
-    <div className="fixed top-0 right-0 z-30 flex h-full w-[380px] flex-col border-l border-none bg-white shadow-lg">
+    <div className="fixed top-0 right-0 z-30 flex h-full flex-col border-l border-none bg-white shadow-lg">
       {/* Header */}
       <div className="flex items-center justify-between p-4 pt-24">
         <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -276,17 +240,7 @@ export function DocumentDetailModal({
                   >
                     Edit
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (onMoveClick) {
-                        onMoveClick(document)
-                      }
-                    }}
-                    className="cursor-pointer font-semibold hover:bg-[#A2CFE333]"
-                  >
-                    Move
-                  </DropdownMenuItem>
+
                   <DropdownMenuItem
                     className="cursor-pointer font-semibold hover:bg-[#A2CFE333]"
                     onClick={(e) => {
@@ -297,28 +251,6 @@ export function DocumentDetailModal({
                     }}
                   >
                     Download
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (onShareClick) {
-                        onShareClick(document)
-                      }
-                    }}
-                    className="cursor-pointer font-semibold hover:bg-[#A2CFE333]"
-                  >
-                    Share
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (onDeleteClick) {
-                        onDeleteClick(document)
-                      }
-                    }}
-                    className="cursor-pointer font-semibold hover:bg-[#A2CFE333]"
-                  >
-                    Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -423,34 +355,35 @@ export function DocumentDetailModal({
             </div>
           )}
 
-          
-            <div>
-              <h3 className="mb-2 text-sm font-medium text-gray-500">
-                Shared With
-              </h3>
-              {isLoadingUsers ? (
-                <div className="flex items-center text-sm text-gray-500">
-                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-primary"></div>
-                  Loading shared users...
-                </div>
-              ) : users && users.length > 0 ? (
-                <div className="space-y-2">
-                  {users.map((user) => (
-                    <div key={user.id} className="flex items-center gap-2 text-sm">
-                      <div className="flex flex-col">
-                        {user.email && (
-                          <span className="text-xs">{user.email}</span>
-                        )}
-                      </div>
+          <div>
+            <h3 className="mb-2 text-sm font-medium text-gray-500">
+              Shared With
+            </h3>
+            {isLoadingUsers ? (
+              <div className="flex items-center text-sm text-gray-500">
+                <div className="border-t-primary mr-2 h-4 w-4 animate-spin rounded-full border-2 border-gray-300"></div>
+                Loading shared users...
+              </div>
+            ) : users && users.length > 0 ? (
+              <div className="space-y-2">
+                {users.map((user) => (
+                  <div
+                    key={user.id}
+                    className="flex items-center gap-2 text-sm"
+                  >
+                    <div className="flex flex-col">
+                      {user.email && (
+                        <span className="text-xs">{user.email}</span>
+                      )}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm">Not shared with anyone</p>
-              )}
-            </div>
-        
-          
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm">Not shared with anyone</p>
+            )}
+          </div>
+
           {document.size && (
             <div>
               <h3 className="mb-1 text-sm font-medium text-gray-500">Size</h3>
@@ -470,3 +403,5 @@ function formatFileSize(bytes: number): string {
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
+
+export default MobileDocumentDetailsModel
