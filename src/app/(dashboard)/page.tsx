@@ -1,7 +1,8 @@
-"use client"
+'use client'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { QUICK_ACTIONS_HOME } from '@/lib/constants'
-import { X } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { useState } from 'react'
 import AddWidgetButton from './_components/add-widget-menu'
 import QuickActionMenu from './_components/quick-action-menu'
@@ -127,20 +128,39 @@ export default function Home() {
   }
 
   return (
-    <div className="">
-      <div className="flex justify-between pb-4">
-        <div className="text-secondary text-2xl font-semibold lg:text-3xl">
-          Dashboard
+    <div>
+      {/* for desktop */}
+      <div className="hidden lg:block">
+        <div className="flex justify-between pb-4">
+          <div className="text-secondary text-2xl font-semibold lg:text-3xl">
+            Dashboard
+          </div>
+
+          <div className="flex gap-6">
+            <AddWidgetButton onAddWidget={addWidget} />
+            <QuickActionMenu quickActionOptions={QUICK_ACTIONS_HOME} />
+          </div>
         </div>
 
-        <div className="flex gap-6">
-          <AddWidgetButton onAddWidget={addWidget} />
-          <QuickActionMenu quickActionOptions={QUICK_ACTIONS_HOME} />
+        <div className="grid grid-cols-1 gap-4 pt-4 md:grid-cols-2">
+          {widgets.map(renderWidget)}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 pt-4">
-        {widgets.map(renderWidget)}
+      {/* for mobile */}
+
+      <div className="block pt-14 lg:hidden">
+        {/* Search Bar */}
+        <div className="flex justify-center">
+          <div className="relative w-full">
+            <Search className="text-secondary absolute top-1/2 left-3 h-6 w-6 -translate-y-1/2 transform" />
+            <Input
+              type="text"
+              placeholder="Anywhere Search"
+              className="h-14 w-full bg-white pl-10"
+            />
+          </div>
+        </div>
       </div>
     </div>
   )

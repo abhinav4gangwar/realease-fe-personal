@@ -29,7 +29,7 @@ export default function DashboardLayout({
         <MobileHeader />
 
         <main className="flex-1 overflow-auto p-6">
-          <div className=" mx-8">{children}</div>
+          <div className="lg:mx-8">{children}</div>
         </main>
         <Bottombar />
       </div>

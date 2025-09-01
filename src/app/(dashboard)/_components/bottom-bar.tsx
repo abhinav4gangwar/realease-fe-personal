@@ -14,14 +14,14 @@ const Bottombar = () => {
           <Link
             key={index}
             href={item.href}
-            className={`flex flex-col items-center rounded-md py-2 px-3.5 text-sm font-medium transition-colors ${
+            className={`flex flex-col items-center rounded-md py-2 px-3.5 text-xs font-medium transition-colors ${
               isActive
-                ? 'text-primary bg-white'
+                ? 'text-primary'
                 : 'text-gray-300 hover:bg-gray-700 hover:text-white'
             }`}
           >
-            <item.icon className="h-7 w-7 flex-shrink-0 text-center" />
-            <p className="">{item.label}</p>
+            <item.icon className="h-6 w-6 flex-shrink-0 text-center" />
+            <p className="pt-1">{item.label}</p>
           </Link>
         )
       })}

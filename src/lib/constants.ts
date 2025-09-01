@@ -93,6 +93,7 @@ export const navigationItems = [
 
 export const MobileNavigationItems = [
   { icon: Search, label: 'Search', href: '/' },
+  { icon: MapPin, label: 'Maps', href: '/maps' },
   { icon: Building2, label: 'Properties', href: '/properties' },
   { icon: BarChart3, label: 'Analytics', href: '/analytics' },
   { icon: FileText, label: 'Documents', href: '/documents' },

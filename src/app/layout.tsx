@@ -50,12 +50,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={inter.variable}>
-      {/* <head>
+      <head>
         <script
           src="https://www.google.com/recaptcha/enterprise.js?render=6Lei03QrAAAAAEK0pH527CXk4N52EtzbbSQ6bc0Z"
           async
         />
-      </head> */}
+      </head>
       <body className="bg-gray-50 font-sans text-gray-900 antialiased">
         <div id="root">
           <QueryProvider>
