@@ -2,7 +2,6 @@ import { Toaster } from '@/components/ui/sonner'
 import QueryProvider from '@/providers/QueryProvider'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import Head from 'next/head'
 import './globals.css'
 
 const inter = Inter({
