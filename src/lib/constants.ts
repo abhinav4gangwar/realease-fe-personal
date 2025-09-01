@@ -5,6 +5,7 @@ import {
   FileText,
   LayoutGrid,
   MapPin,
+  Search,
   Settings,
   Trash
 } from 'lucide-react'
@@ -88,6 +89,13 @@ export const navigationItems = [
   { icon: BarChart3, label: 'Analytics', href: '/analytics' },
   { icon: FileText, label: 'Documents', href: '/documents' },
   { icon: Trash, label: 'Trash', href: '/trash' },
+]
+
+export const MobileNavigationItems = [
+  { icon: Search, label: 'Search', href: '/' },
+  { icon: Building2, label: 'Properties', href: '/properties' },
+  { icon: BarChart3, label: 'Analytics', href: '/analytics' },
+  { icon: FileText, label: 'Documents', href: '/documents' },
 ]
 
 export const navigationItemSection = [
