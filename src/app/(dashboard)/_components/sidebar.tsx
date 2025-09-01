@@ -17,7 +17,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const logout = useLogout()
   return (
     <div
-      className={`bg-secondary text-white transition-all duration-300 ${collapsed ? 'w-18' : 'w-56'} flex flex-col`}
+      className={`bg-secondary text-white transition-all duration-300 ${collapsed ? 'w-18' : 'w-56'} lg:flex flex-col hidden`}
     >
       {/* Logo and Toggle */}
       <div className="flex flex-col items-center gap-5 p-3">

@@ -49,7 +49,7 @@ const UnifiedDocumentViewer = dynamic(
   }
 )
 
-interface DocumentViewerProps {
+export interface DocumentViewerProps {
   recentlyAccessed?: Document[]
   allFiles: Document[]
   apiClient: any
