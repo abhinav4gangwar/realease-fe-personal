@@ -390,7 +390,7 @@ const MobileDocumentViewer = ({
             <Search className="text-secondary absolute top-1/2 left-3 -translate-y-1/2 transform" />
             <Input
               type="text"
-              placeholder="Anywhere Search"
+              placeholder="Search Documents"
               className="h-11 w-full bg-white pl-10"
             />
           </div>

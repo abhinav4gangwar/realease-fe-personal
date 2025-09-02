@@ -1,10 +1,10 @@
 'use client'
 import { Input } from '@/components/ui/input'
 import {
-    FilterState,
-    Properties,
-    PropertySortField,
-    PropertySortOrder,
+  FilterState,
+  Properties,
+  PropertySortField,
+  PropertySortOrder,
 } from '@/types/property.types'
 import { Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -21,9 +21,7 @@ const MobilePropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
     null
   )
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isCreatePropertyModalOpen, setisCreatePropertyModalOpen] =
-    useState(false)
-  const [isEditPropertyModalOpen, setisEditPropertyModalOpen] = useState(false)
+
   const [isFilterModalOpen, setisFilterModalOpen] = useState(false)
 
   const [sortField, setSortField] = useState<PropertySortField>('dateAdded')
@@ -35,20 +33,12 @@ const MobilePropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
     legalStatuses: [],
   })
 
-  const handleActionSelect = (actionType: string) => {
-    console.log(actionType)
-  }
-
   const handleSortChange = (
     field: PropertySortField,
     order: PropertySortOrder
   ) => {
     setSortField(field)
     setSortOrder(order)
-  }
-
-  const handleAddSelect = () => {
-    setisCreatePropertyModalOpen(true)
   }
 
   const handleFilterSelect = () => {
@@ -58,24 +48,6 @@ const MobilePropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
   const handlePropertyInfo = (property: Properties) => {
     setSelectedProperty(property)
     setIsModalOpen(true)
-  }
-
-  const handleEditClick = (property: Properties) => {
-    setSelectedProperty(property)
-    setisEditPropertyModalOpen(true)
-  }
-
-  const handleDeleteClick = (property: Properties) => {
-    console.log('open delete model for', property)
-  }
-
-  const handleDownloadClick = (property: Properties) => {
-    console.log('Download', property)
-  }
-
-  const handleShareClick = (property: Properties) => {
-    setSelectedProperty(property)
-    console.log('Share property model open for', property)
   }
 
   const handleApplyFilters = (filters: FilterState) => {
@@ -163,7 +135,7 @@ const MobilePropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
             <Search className="text-secondary absolute top-1/2 left-3 -translate-y-1/2 transform" />
             <Input
               type="text"
-              placeholder="Anywhere Search"
+              placeholder="Search Properties"
               className="h-11 w-full bg-white pl-10"
             />
           </div>
