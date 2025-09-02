@@ -8,7 +8,7 @@ import {
 import { X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
-interface PropertiesFilterModelProps {
+export interface PropertiesFilterModelProps {
   properties: Properties[]
   isOpen: boolean
   onClose: () => void

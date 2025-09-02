@@ -1,27 +1,22 @@
 'use client'
+import { Input } from '@/components/ui/input'
 import {
-  FilterState,
-  Properties,
-  PropertySortField,
-  PropertySortOrder,
+    FilterState,
+    Properties,
+    PropertySortField,
+    PropertySortOrder,
 } from '@/types/property.types'
+import { Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import ScrollToTop from '../../documents/_components/scroll-to-top'
-import CreatePropertyModal from './create-property-modal'
-import { PropertiesActionsButton } from './properties-action-button'
-import { PropertiesAddButton } from './properties-add-button'
-import PropertiesDetailsModel from './properties-details-model'
-import PropertiesEditModel from './properties-edit-model'
-import { PropertiesFilterButton } from './properties-filter-button'
-import PropertiesFilterModel from './properties-filter-model'
-import PropertiesListView from './properties-list-view'
-import { PropertiesSortButton } from './properties-sort-button'
+import { PropertiesFilterButton } from '../_components/properties-filter-button'
+import { PropertiesSortButton } from '../_components/properties-sort-button'
+import { PropertiesViewerProps } from '../_components/properties-viewer'
+import MobilePropertiesDetailsModel from './mobile-properties-details-model'
+import MobilePropertiesFilterModel from './mobile-properties-filter-model'
+import MobilePropertiesList from './mobile-properties-list'
 
-export interface PropertiesViewerProps {
-  allProperties: Properties[]
-}
-
-const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
+const MobilePropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
   const [selectedProperty, setSelectedProperty] = useState<Properties | null>(
     null
   )
@@ -162,29 +157,28 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
 
   return (
     <div>
-      <div className="flex justify-between pb-4">
-        <div className="flex items-center gap-4">
-          <div className="text-secondary text-2xl font-semibold lg:text-3xl">
-            Properties
+      <div className="flex space-x-4">
+        <div className="flex justify-center">
+          <div className="relative w-full">
+            <Search className="text-secondary absolute top-1/2 left-3 -translate-y-1/2 transform" />
+            <Input
+              type="text"
+              placeholder="Anywhere Search"
+              className="h-11 w-full bg-white pl-10"
+            />
           </div>
         </div>
-
         <div className="flex items-center gap-4">
           <PropertiesFilterButton onFilterSelect={handleFilterSelect} />
           <PropertiesSortButton onSortChange={handleSortChange} />
-          <PropertiesActionsButton onActionSelect={handleActionSelect} />
-          <PropertiesAddButton onAddSelect={handleAddSelect} />
         </div>
       </div>
 
-      <div>
+      <div className="mb-16">
         <div className="mt-5 rounded-lg bg-white p-6">
-          <PropertiesListView
+          <MobilePropertiesList
             properties={sortedAndFilteredProperties}
             selectedPropertyId={selectedProperty?.id}
-            onEditClick={handleEditClick}
-            onDownloadClick={handleDownloadClick}
-            onShareClick={handleShareClick}
             onPropertyInfo={handlePropertyInfo}
           />
         </div>
@@ -192,32 +186,16 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
 
       <ScrollToTop />
 
-      <PropertiesDetailsModel
+      <MobilePropertiesDetailsModel
         property={selectedProperty}
         isOpen={isModalOpen}
         onClose={() => {
           setIsModalOpen(false)
           setSelectedProperty(null)
         }}
-        onEditClick={handleEditClick}
       />
 
-      <PropertiesEditModel
-        property={selectedProperty}
-        isOpen={isEditPropertyModalOpen}
-        onClose={() => {
-          setisEditPropertyModalOpen(false)
-          setSelectedProperty(null)
-        }}
-        handleAddAnother={() => {
-          setisEditPropertyModalOpen(false)
-          setisCreatePropertyModalOpen(true)
-          setSelectedProperty(null)
-        }}
-        onDeleteClick={handleDeleteClick}
-      />
-
-      <PropertiesFilterModel
+      <MobilePropertiesFilterModel
         properties={allProperties}
         isOpen={isFilterModalOpen}
         onClose={() => {
@@ -226,15 +204,8 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
         onApplyFilters={handleApplyFilters}
         initialFilters={activeFilters}
       />
-
-      <CreatePropertyModal
-        isOpen={isCreatePropertyModalOpen}
-        onClose={() => {
-          setisCreatePropertyModalOpen(false)
-        }}
-      />
     </div>
   )
 }
 
-export default PropertiesViewer
+export default MobilePropertiesViewer

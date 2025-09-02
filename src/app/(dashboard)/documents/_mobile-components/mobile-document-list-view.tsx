@@ -52,7 +52,7 @@ const MobileDocumentListView = ({
               {loadingFolders.has(document.id) && document.isFolder && (
                 <Loader2 className="h-4 w-4 animate-spin" />
               )}
-              <span className="w-[150px] truncate text-sm font-medium">
+              <span className="w-[220px] truncate text-sm font-medium">
                 {document.name}
               </span>
             </div>

@@ -2,10 +2,10 @@
 
 import { Button } from '@/components/ui/button'
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
 import { PropertySortField, PropertySortOrder } from '@/types/property.types'
@@ -16,10 +16,14 @@ interface SortButtonProps {
   onSortChange: (field: PropertySortField, order: PropertySortOrder) => void
 }
 
-const sortOptions: { label: string; field: PropertySortField; order: PropertySortOrder }[] = [
+const sortOptions: {
+  label: string
+  field: PropertySortField
+  order: PropertySortOrder
+}[] = [
   { label: 'Owner (A-Z)', field: 'owner', order: 'asc' },
   { label: 'Value High-Low', field: 'value', order: 'asc' },
-   { label: 'Value Low-High', field: 'value', order: 'desc' },
+  { label: 'Value Low-High', field: 'value', order: 'desc' },
   { label: 'Newest to Oldest', field: 'dateAdded', order: 'desc' },
   { label: 'Oldest to Newest', field: 'dateAdded', order: 'asc' },
   { label: 'A to Z', field: 'name', order: 'asc' },
@@ -33,7 +37,10 @@ export function PropertiesSortButton({ onSortChange }: SortButtonProps) {
     order: PropertySortOrder
   } | null>(null)
 
-  const handleSortChange = (field: PropertySortField, order: PropertySortOrder) => {
+  const handleSortChange = (
+    field: PropertySortField,
+    order: PropertySortOrder
+  ) => {
     setSelected({ field, order })
     onSortChange(field, order)
     setOpen(false)
@@ -54,7 +61,7 @@ export function PropertiesSortButton({ onSortChange }: SortButtonProps) {
           }`}
         >
           <ArrowUpDown className="h-4 w-4" />
-          Sort
+          <span className="hidden lg:block">Sort</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="border-none">
