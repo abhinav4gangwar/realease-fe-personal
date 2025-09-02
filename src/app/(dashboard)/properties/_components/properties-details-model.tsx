@@ -5,7 +5,7 @@ import { Bell, ChevronDown, Pencil, X } from 'lucide-react'
 import { useState } from 'react'
 import { FileIcon } from '../../documents/_components/file-icon'
 
-interface PropertiesDetailsModelProps {
+export interface PropertiesDetailsModelProps {
   property: Properties | null
   isOpen: boolean
   onClose: () => void

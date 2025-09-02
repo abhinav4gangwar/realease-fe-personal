@@ -11,7 +11,7 @@ export function PropertiesFilterButton({onFilterSelect}:any) {
       className={`flex h-11 cursor-pointer items-center space-x-1 font-semibold ${'hover:bg-secondary hover:text-white'}`}
     >
       <SlidersHorizontal className="h-4 w-4" />
-      Filter
+      <span className='hidden lg:block'>Filter</span>
     </Button>
   )
 }

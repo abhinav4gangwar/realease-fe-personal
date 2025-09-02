@@ -5,7 +5,7 @@ import { Download, Info, Pencil } from 'lucide-react'
 import { useState } from 'react'
 import { HiShare } from 'react-icons/hi2'
 
-interface PropertiesListViewProps {
+export interface PropertiesListViewProps {
   properties: Properties[]
   selectedPropertyId?: string
   onEditClick?: (property: Properties) => void
