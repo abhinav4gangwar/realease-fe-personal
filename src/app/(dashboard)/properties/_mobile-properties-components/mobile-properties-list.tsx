@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { Ellipsis } from 'lucide-react'
+import { EllipsisVertical, Map, MapPin } from 'lucide-react'
 import { PropertiesListViewProps } from '../_components/properties-list-view'
 
 const MobilePropertiesList = ({
@@ -8,7 +8,7 @@ const MobilePropertiesList = ({
   onPropertyInfo,
 }: PropertiesListViewProps) => {
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {properties.map((property) => (
         <div
           key={property.id}
@@ -25,11 +25,17 @@ const MobilePropertiesList = ({
               </span>
             </div>
 
-            <div className="pt-2 text-left text-sm text-[#9B9B9D]">
-              Extent: {property.extent}
-            </div>
-            <div className="pt-2 text-left text-sm text-[#9B9B9D]">
-              Location: {property.location}
+            <div className="flex items-center pt-2 text-xs text-[#9B9B9D] gap-6">
+              <div className="flex w-[100px] flex-1 items-center gap-2">
+                <MapPin className="size-4" />
+                <span className="truncate">{property.location}</span>
+              </div>
+
+              
+              <div className="flex w-[100px] items-center justify-end gap-2">
+                <Map className="size-4" />
+                <span className="truncate">{property.extent}</span>
+              </div>
             </div>
           </div>
 
@@ -43,7 +49,7 @@ const MobilePropertiesList = ({
                 onPropertyInfo(property)
               }}
             >
-              <Ellipsis className="hover:text-primary h-6 w-6 font-semibold text-[#9B9B9D]" />
+              <EllipsisVertical className="hover:text-primary h-6 w-6 font-semibold text-[#9B9B9D]" />
             </Button>
           </div>
         </div>

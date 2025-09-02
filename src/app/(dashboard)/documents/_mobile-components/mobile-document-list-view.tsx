@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Document } from '@/types/document.types'
-import { Ellipsis, Loader2 } from 'lucide-react'
+import { EllipsisVertical, Link, Loader2, Tag } from 'lucide-react'
 import { FileIcon } from '../_components/file-icon'
 
 interface MobileDocumentListViewProps {
@@ -35,7 +35,7 @@ const MobileDocumentListView = ({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {documents.map((document) => (
         <div
           key={document.id}
@@ -56,8 +56,19 @@ const MobileDocumentListView = ({
                 {document.name}
               </span>
             </div>
-            <div className="pt-2 text-left text-sm text-[#9B9B9D]">
-              Date added: {document.dateAdded}
+
+            <div className="flex items-center gap-6 pt-2 text-xs text-[#9B9B9D]">
+              <div className="flex w-[100px] flex-1 items-center gap-2">
+                <Link className="size-4" />
+                <span className="truncate">{document.linkedProperty}</span>
+              </div>
+
+              {document.tags && (
+                <div className="flex w-[100px] items-center justify-end gap-2">
+                  <Tag className="size-4" />
+                  <span className="truncate">{document.tags}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -71,7 +82,7 @@ const MobileDocumentListView = ({
                 onDocumentInfo(document)
               }}
             >
-              <Ellipsis className="hover:text-primary h-6 w-6 font-semibold text-[#9B9B9D]" />
+              <EllipsisVertical className="hover:text-primary h-6 w-6 font-semibold text-[#9B9B9D]" />
             </Button>
           </div>
         </div>
