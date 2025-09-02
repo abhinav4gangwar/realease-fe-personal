@@ -1,7 +1,6 @@
 "use client"
 import { useAuth } from "@/hooks/useAuth"
 import { useState } from "react"
-import Bottombar from "./_components/bottom-bar"
 import { Header } from "./_components/header"
 import MobileHeader from "./_components/mobile-header"
 import { Sidebar } from "./_components/sidebar"
@@ -31,7 +30,6 @@ export default function DashboardLayout({
         <main className="flex-1 overflow-auto p-6">
           <div className="lg:mx-8">{children}</div>
         </main>
-        <Bottombar />
       </div>
     </div>
   )

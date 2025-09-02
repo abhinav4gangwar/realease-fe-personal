@@ -1,33 +1,33 @@
 'use client'
 
+import { Input } from '@/components/ui/input'
 import {
-    BreadcrumbItem,
-    Document,
-    FilterState,
-    FilterType,
-    SortField,
-    SortOrder,
-    ViewMode,
+  BreadcrumbItem,
+  Document,
+  FilterState,
+  FilterType,
+  SortField,
+  SortOrder,
+  ViewMode,
 } from '@/types/document.types'
 import { getFileTypeFromMime } from '@/utils/fileTypeUtils'
+import { Search } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { BreadcrumbNavigation } from '../_components/breadcrumb-navigation'
 import { DocumentViewerProps } from '../_components/document-viewer'
 import { FilterButton } from '../_components/filter-button'
-import { FilterModal } from '../_components/filter-modal'
 import ScrollToTop from '../_components/scroll-to-top'
 import { SortButton } from '../_components/sort-button'
-import { ViewModeToggle } from '../_components/viewmode-toggle'
 import {
-    findFolderById,
-    getFileCounts,
-    getFolderCounts,
-    handleDownloadClick,
+  findFolderById,
+  getFileCounts,
+  getFolderCounts,
+  handleDownloadClick,
 } from '../doc_utils'
+import { MobileDocsFilterModal } from './mobile-docsfilter-model'
 import MobileDocumentDetailsModel from './mobile-docuement-detail-model'
-import MobileDocumentGridView from './mobile-document-grid-view'
 import MobileDocumentListView from './mobile-document-list-view'
 
 const UnifiedDocumentViewer = dynamic(
@@ -253,10 +253,6 @@ const MobileDocumentViewer = ({
     }
   }
 
-  const handleViewModeChange = (mode: ViewMode) => {
-    setViewMode(mode)
-  }
-
   const handleSortChange = (field: SortField, order: SortOrder) => {
     setSortField(field)
     setSortOrder(order)
@@ -388,13 +384,18 @@ const MobileDocumentViewer = ({
 
   return (
     <div>
-      <div className="flex flex-col space-y-4 pb-4">
-        <div className="text-secondary text-3xl font-semibold">Documents</div>
+      <div className="flex space-x-4 pb-4">
+        <div className="flex justify-center">
+          <div className="relative w-full">
+            <Search className="text-secondary absolute top-1/2 left-3 -translate-y-1/2 transform" />
+            <Input
+              type="text"
+              placeholder="Search Documents"
+              className="h-11 w-full bg-white pl-10"
+            />
+          </div>
+        </div>
         <div className="flex items-center gap-4">
-          <ViewModeToggle
-            viewMode={viewMode}
-            onViewModeChange={handleViewModeChange}
-          />
           <FilterButton onFilterSelect={handleFilterSelect} />
           <SortButton onSortChange={handleSortChange} />
           {isSelectMode && selectedDocuments.length > 0 && (
@@ -444,18 +445,7 @@ const MobileDocumentViewer = ({
                       />
                     </div>
                   ) : (
-                    <div>
-                      <MobileDocumentGridView
-                        documents={paginatedDocuments}
-                        onDocumentInfo={handleDocumentInfo}
-                        onDocumentPreview={handleDocumentPreview}
-                        onFolderClick={handleFolderClick}
-                        selectedDocumentId={selectedDocument?.id}
-                        isShareMode={isSelectMode}
-                        onDocumentSelect={handleDocumentSelect}
-                        loadingFolders={loadingFolders}
-                      />
-                    </div>
+                    <div>grid</div>
                   )}
                   {hasMore && (
                     <div className="px-4 pt-4">
@@ -475,7 +465,7 @@ const MobileDocumentViewer = ({
 
         <ScrollToTop />
 
-        <FilterModal
+        <MobileDocsFilterModal
           isOpen={isFilterModalOpen}
           onClose={() => setIsFilterModalOpen(false)}
           filterType={filterModalType}
