@@ -208,6 +208,7 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
         onClose={() => {
           setisEditPropertyModalOpen(false)
           setSelectedProperty(null)
+          setIsModalOpen(false)
         }}
         handleAddAnother={() => {
           setisEditPropertyModalOpen(false)

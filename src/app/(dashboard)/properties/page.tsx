@@ -1,18 +1,36 @@
-import propertiesData from '../../../lib/properties.dummy.json'
+'use client'
+import { apiClient } from '@/utils/api'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import PropertiesViewer from './_components/properties-viewer'
 import MobilePropertiesViewer from './_mobile-properties-components/mobile-properties-viewer'
 
 const Propertiespage = () => {
+  const [fetchedProperties, setFetchedProperties] = useState([])
+
+  useEffect(() => {
+    const fetchedProperties = async () => {
+      try {
+        const response = await apiClient.get('/dashboard/properties/list')
+        setFetchedProperties(response.data.allProperties)
+      } catch (error) {
+        toast.error(error as string)
+        console.error('Error fetching properties:', error)
+      }
+    }
+    fetchedProperties()
+  }, [])
+
   return (
     <div>
       {/* for desktop */}
       <div className="hidden lg:block">
-        <PropertiesViewer allProperties={propertiesData.allProperties} />
+        <PropertiesViewer allProperties={fetchedProperties} />
       </div>
 
       {/* for mobile */}
       <div className="block pt-14 lg:hidden">
-        <MobilePropertiesViewer allProperties={propertiesData.allProperties} />
+        <MobilePropertiesViewer allProperties={fetchedProperties} />
       </div>
     </div>
   )
