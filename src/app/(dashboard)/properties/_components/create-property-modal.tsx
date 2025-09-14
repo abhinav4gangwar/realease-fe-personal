@@ -5,7 +5,10 @@ import { Properties } from '@/types/property.types'
 import { ArrowLeft, MoveRight, Plus, PlusIcon, Trash2, X } from 'lucide-react'
 import Image from 'next/image'
 import { useState } from 'react'
-import { UploadDropzone } from '../../documents/_components/UploadDropzone'
+
+import { apiClient } from '@/utils/api'
+import { toast } from 'sonner'
+import { PropertyUploadDropzone } from './document-upload'
 
 interface CustomField {
   id: string
@@ -24,6 +27,10 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [isDisputed, setIsDisputed] = useState(false)
   const [customFields, setCustomFields] = useState<CustomField[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [createdPropertyId, setCreatedPropertyId] = useState<string | null>(
+    null
+  )
 
   const [formData, setFormData] = useState<Properties>({
     name: '',
@@ -107,23 +114,87 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     setIsDisputed(false)
     setCurrentStep(1)
     setIsSubmitted(false)
+    setCreatedPropertyId(null)
   }
 
-  const handleNext = () => {
-    if (currentStep < totalSteps) {
+  const createProperty = async () => {
+    try {
+      setIsLoading(true)
+
+      // Build additional details from custom fields
+      const additionalDetails = customFields.reduce(
+        (acc, field) => ({
+          ...acc,
+          [field.label]: field.value,
+        }),
+        {}
+      )
+
+      const requestBody = {
+        name: formData.name,
+        type: formData.type,
+        owner: formData.owner,
+        country: formData.country,
+        zipcode: formData.zipcode,
+        address: formData.address,
+        location: formData.location,
+        locality: formData.location, // Using location as locality
+        district: formData.district,
+        city: formData.city,
+        state: formData.state,
+        coordinates: formData.coordinates,
+        isDisputed: isDisputed,
+        legalStatus: isDisputed ? 'Disputed - Ongoing' : 'Undisputed',
+        legalParties: formData.legalParties,
+        caseNumber: formData.caseNumber,
+        caseType: formData.caseType,
+        nextHearing: formData.nextHearing,
+        extent: formData.extent,
+        valuePerSQ: formData.valuePerSQ,
+        additionalDetails:
+          Object.keys(additionalDetails).length > 0
+            ? additionalDetails
+            : undefined,
+      }
+
+      console.log('🚀 Creating Property - API Call:', requestBody)
+
+      const response = await apiClient.post(
+        '/dashboard/properties/create',
+        requestBody
+      )
+
+      if (
+        response.data &&
+        response.data.properties &&
+        response.data.properties.length > 0
+      ) {
+        setCreatedPropertyId(response.data.properties[0].id.toString())
+        toast.success('Property created successfully!')
+        return true
+      }
+
+      throw new Error('Invalid response format')
+    } catch (error: any) {
+      console.error('Property creation error:', error)
+      toast.error(error.response?.data?.message || 'Failed to create property')
+      return false
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleNext = async () => {
+    if (currentStep === 2) {
+      // Create property after step 2
+      const success = await createProperty()
+      if (success) {
+        setCurrentStep(currentStep + 1)
+      }
+    } else if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1)
     } else {
-      console.log('🚀 Creating Property - API Call:')
-      console.log({
-        ...formData,
-        customFields: customFields.reduce(
-          (acc, field) => ({
-            ...acc,
-            [field.label]: field.value,
-          }),
-          {}
-        ),
-      })
+      // This should not be reached as step 3 will handle completion differently
       setIsSubmitted(true)
     }
   }
@@ -143,9 +214,8 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     resetForm()
   }
 
-  const handleSaveAndAdd = () => {
-    handleNext()
-    handleAddAnother()
+  const handleDocumentUploadComplete = () => {
+    setIsSubmitted(true)
   }
 
   const renderStepForm = () => {
@@ -211,10 +281,10 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
               </label>
               <div>
                 {[
-                  { value: 'land', label: 'Land' },
-                  { value: 'plot', label: 'Plot' },
-                  { value: 'commercial', label: 'Commercial' },
-                  { value: 'residential', label: 'Residential' },
+                  { value: 'Land', label: 'Land' },
+                  { value: 'Plot', label: 'Plot' },
+                  { value: 'Commercial', label: 'Commercial' },
+                  { value: 'Residential', label: 'Residential' },
                 ].map((type) => (
                   <label
                     key={type.value}
@@ -577,7 +647,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                       variant="ghost"
                       size="sm"
                       onClick={() => removeCustomField(field.id)}
-                      className="mt-6 text-primary cursor-pointer"
+                      className="text-primary mt-6 cursor-pointer"
                     >
                       <Trash2 className="size-4" />
                     </Button>
@@ -619,7 +689,10 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
         return (
           <div>
             <p className="font-semibold">Upload Documents</p>
-            <UploadDropzone />
+            <PropertyUploadDropzone
+              propertyId={createdPropertyId}
+              onUploadComplete={handleDocumentUploadComplete}
+            />
           </div>
         )
     }
@@ -682,34 +755,22 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
             </div>
 
             <div className="flex gap-4">
-              {currentStep === 3 && (
+              {currentStep < 3 && (
                 <Button
-                  className="hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 border border-gray-400 bg-white px-6 font-semibold text-black hover:text-white"
-                  onClick={handleSaveAndAdd}
+                  className="bg-primary hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 px-6"
+                  onClick={handleNext}
+                  disabled={isLoading}
                 >
-                  <>
-                    Save and Add Another
-                    <Plus className="size-4" />
-                  </>
+                  {currentStep === 2 && isLoading ? (
+                    <>Creating Property...</>
+                  ) : (
+                    <>
+                      Next
+                      <MoveRight className="size-4" />
+                    </>
+                  )}
                 </Button>
               )}
-
-              <Button
-                className="bg-primary hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 px-6"
-                onClick={handleNext}
-              >
-                {currentStep === totalSteps ? (
-                  <>
-                    Save & Finish
-                    <MoveRight className="size-4" />
-                  </>
-                ) : (
-                  <>
-                    Next
-                    <MoveRight className="size-4" />
-                  </>
-                )}
-              </Button>
             </div>
           </div>
         )}
