@@ -2,20 +2,29 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Properties } from '@/types/property.types'
-import { ArrowLeft, MoveRight, Plus, X } from 'lucide-react'
+import { ArrowLeft, MoveRight, Plus, PlusIcon, Trash2, X } from 'lucide-react'
 import Image from 'next/image'
 import { useState } from 'react'
 import { UploadDropzone } from '../../documents/_components/UploadDropzone'
+
+interface CustomField {
+  id: string
+  label: string
+  value: string
+}
 
 interface CreatePropertyModalProps {
   isOpen: boolean
   onClose: () => void
 }
+
 const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
   const [currentStep, setCurrentStep] = useState(1)
   const totalSteps = 3
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [isDisputed, setIsDisputed] = useState(false)
+  const [customFields, setCustomFields] = useState<CustomField[]>([])
+
   const [formData, setFormData] = useState<Properties>({
     name: '',
     type: '',
@@ -45,6 +54,33 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     }))
   }
 
+  const addCustomField = () => {
+    const newField: CustomField = {
+      id: `custom-${Date.now()}`,
+      label: 'Custom Field',
+      value: '',
+    }
+    setCustomFields((prev) => [...prev, newField])
+  }
+
+  const updateCustomField = (
+    id: string,
+    field: 'label' | 'value',
+    newValue: string
+  ) => {
+    setCustomFields((prev) =>
+      prev.map((customField) =>
+        customField.id === id
+          ? { ...customField, [field]: newValue }
+          : customField
+      )
+    )
+  }
+
+  const removeCustomField = (id: string) => {
+    setCustomFields((prev) => prev.filter((field) => field.id !== id))
+  }
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -67,6 +103,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
       valuePerSQ: '',
       value: '',
     })
+    setCustomFields([])
     setIsDisputed(false)
     setCurrentStep(1)
     setIsSubmitted(false)
@@ -77,7 +114,16 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
       setCurrentStep(currentStep + 1)
     } else {
       console.log('🚀 Creating Property - API Call:')
-      console.log({ ...formData })
+      console.log({
+        ...formData,
+        customFields: customFields.reduce(
+          (acc, field) => ({
+            ...acc,
+            [field.label]: field.value,
+          }),
+          {}
+        ),
+      })
       setIsSubmitted(true)
     }
   }
@@ -503,6 +549,69 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                 />
               </div>
             </div>
+
+            {/* Custom Fields Section */}
+            <div className="flex flex-col space-y-3">
+              {/* Existing custom fields */}
+              {customFields.map((field) => (
+                <div
+                  key={field.id}
+                  className="flex flex-col space-y-3 rounded-md bg-[#F8F8F8] p-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="mr-3 flex flex-1 flex-col space-y-1">
+                      <label className="text-md text-secondary block font-semibold">
+                        Field Label
+                      </label>
+                      <Input
+                        type="text"
+                        value={field.label}
+                        onChange={(e) =>
+                          updateCustomField(field.id, 'label', e.target.value)
+                        }
+                        className="w-full rounded-md border border-gray-300 px-3 py-2"
+                        placeholder="Enter field label"
+                      />
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeCustomField(field.id)}
+                      className="mt-6 text-primary cursor-pointer"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-md text-secondary block font-semibold">
+                      Value
+                    </label>
+                    <Input
+                      type="text"
+                      value={field.value}
+                      onChange={(e) =>
+                        updateCustomField(field.id, 'value', e.target.value)
+                      }
+                      className="w-full rounded-md border border-gray-300 px-3 py-2"
+                      placeholder="Enter value"
+                    />
+                  </div>
+                </div>
+              ))}
+
+              {/* Add more information button */}
+              <div className="flex flex-col space-y-1">
+                <div
+                  className="flex cursor-pointer justify-between rounded-md bg-[#F2F2F2] p-3 transition-colors hover:bg-[#E8E8E8]"
+                  onClick={addCustomField}
+                >
+                  <p className="text-secondary font-semibold">
+                    Add more information
+                  </p>
+                  <PlusIcon className="size-5" />
+                </div>
+              </div>
+            </div>
           </div>
         )
 
@@ -575,7 +684,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
             <div className="flex gap-4">
               {currentStep === 3 && (
                 <Button
-                  className="hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 bg-white px-6 text-black hover:text-white font-semibold border border-gray-400"
+                  className="hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 border border-gray-400 bg-white px-6 font-semibold text-black hover:text-white"
                   onClick={handleSaveAndAdd}
                 >
                   <>

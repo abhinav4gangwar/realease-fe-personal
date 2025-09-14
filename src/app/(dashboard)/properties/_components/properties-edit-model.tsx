@@ -171,10 +171,10 @@ const PropertiesEditModel = ({
               </label>
               <div>
                 {[
-                  { value: 'land', label: 'Land' },
-                  { value: 'plot', label: 'Plot' },
-                  { value: 'commercial', label: 'Commercial' },
-                  { value: 'residential', label: 'Residential' },
+                  { value: 'Land', label: 'Land' },
+                  { value: 'Plot', label: 'Plot' },
+                  { value: 'Commercial', label: 'Commercial' },
+                  { value: 'Residential', label: 'Residential' },
                 ].map((type) => (
                   <label
                     key={type.value}
