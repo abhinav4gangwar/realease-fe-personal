@@ -217,7 +217,7 @@ const ArchivedPropertiesViewer = ({
 
     try {
       const response = await apiClient.delete(
-        '/dashboard/properties/archived',
+        '/dashboard/properties/delete',
         {
           data: [
             {
@@ -278,7 +278,7 @@ const ArchivedPropertiesViewer = ({
       }))
 
       const response = await apiClient.delete(
-        '/dashboard/properties/archived',
+        '/dashboard/properties/delete',
         {
           data: archivePayload,
         }
