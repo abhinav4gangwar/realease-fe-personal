@@ -335,6 +335,7 @@ const PropertiesViewer = ({
           setSelectedProperty(null)
         }}
         onArchiveClick={handleArchiveClick}
+        setSelectedProperty={setSelectedProperty}
       />
 
       <PropertiesFilterModel
