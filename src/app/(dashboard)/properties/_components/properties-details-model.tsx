@@ -226,7 +226,7 @@ const PropertiesDetailsModel = ({
                       className="w-ful flex justify-between rounded-md bg-white p-2.5"
                     >
                       <div className="flex items-center gap-2">
-                        <FileIcon type={uploadedDocument.icon} />
+                        <FileIcon type={uploadedDocument.fileType as string} />
                         <h2 className="truncate text-sm font-extralight">
                           {uploadedDocument.name}
                         </h2>

@@ -247,12 +247,12 @@ const MobileDocumentDetailsModel = ({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="border-none">
-                    <DropdownMenuItem
+                    {/* <DropdownMenuItem
                       onClick={handleEdit}
                       className="cursor-pointer font-semibold hover:bg-[#A2CFE333]"
                     >
                       Edit
-                    </DropdownMenuItem>
+                    </DropdownMenuItem> */}
 
                     <DropdownMenuItem
                       className="cursor-pointer font-semibold hover:bg-[#A2CFE333]"
