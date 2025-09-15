@@ -28,6 +28,7 @@ export interface Properties {
   zipcode?: string
   coordinates?: string
   valuePerSQ?: string
+  additionalDetails?: Record<string, any>
   documents?: uploadedDocuments[]
 }
 

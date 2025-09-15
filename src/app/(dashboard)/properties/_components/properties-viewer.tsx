@@ -56,6 +56,13 @@ const PropertiesViewer = ({
     onPropertyCreated()
   }
 
+  const handleEditPropertyClose = () => {
+    onPropertyCreated()
+    setIsEditPropertyModalOpen(false)
+    setSelectedProperty(null)
+    setIsModalOpen(false)
+  }
+
   const handleSortChange = (
     field: PropertySortField,
     order: PropertySortOrder
@@ -321,11 +328,7 @@ const PropertiesViewer = ({
       <PropertiesEditModel
         property={selectedProperty}
         isOpen={isEditPropertyModalOpen}
-        onClose={() => {
-          setIsEditPropertyModalOpen(false)
-          setSelectedProperty(null)
-          setIsModalOpen(false)
-        }}
+        onClose={handleEditPropertyClose}
         handleAddAnother={() => {
           setIsEditPropertyModalOpen(false)
           setIsCreatePropertyModalOpen(true)

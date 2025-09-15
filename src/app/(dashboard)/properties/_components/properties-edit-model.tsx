@@ -2,10 +2,26 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Properties } from '@/types/property.types'
-import { ArrowLeft, MoveRight, Plus, Trash, X } from 'lucide-react'
+import { apiClient } from '@/utils/api'
+import {
+  ArrowLeft,
+  MoveRight,
+  Plus,
+  PlusIcon,
+  Trash,
+  Trash2,
+  X,
+} from 'lucide-react'
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
-import { UploadDropzone } from '../../documents/_components/UploadDropzone'
+import { toast } from 'sonner'
+import { FileItem, PropertyUploadDropzone } from './document-upload'
+
+interface CustomField {
+  id: string
+  label: string
+  value: string
+}
 
 interface PropertiesEditModelProps {
   property: Properties | null
@@ -26,6 +42,11 @@ const PropertiesEditModel = ({
   const totalSteps = 3
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [isDisputed, setIsDisputed] = useState(false)
+  const [customFields, setCustomFields] = useState<CustomField[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [documentFiles, setDocumentFiles] = useState<FileItem[]>([])
+  const [isDocumentUploading, setIsDocumentUploading] = useState(false)
+
   const [formData, setFormData] = useState<Properties>({
     name: '',
     type: '',
@@ -54,6 +75,18 @@ const PropertiesEditModel = ({
         ...property,
       })
       setIsDisputed(property.isDisputed || false)
+
+      // Extract custom fields from additionalDetails if they exist
+      if (property.additionalDetails) {
+        const customFieldsFromProperty = Object.entries(
+          property.additionalDetails
+        ).map(([key, value], index) => ({
+          id: `custom-${index}`,
+          label: key,
+          value: String(value),
+        }))
+        setCustomFields(customFieldsFromProperty)
+      }
     }
   }, [property, isOpen])
 
@@ -64,31 +97,196 @@ const PropertiesEditModel = ({
     }))
   }
 
+  const addCustomField = () => {
+    const newField: CustomField = {
+      id: `custom-${Date.now()}`,
+      label: 'Custom Field',
+      value: '',
+    }
+    setCustomFields((prev) => [...prev, newField])
+  }
+
+  const updateCustomField = (
+    id: string,
+    field: 'label' | 'value',
+    newValue: string
+  ) => {
+    setCustomFields((prev) =>
+      prev.map((customField) =>
+        customField.id === id
+          ? { ...customField, [field]: newValue }
+          : customField
+      )
+    )
+  }
+
+  const handleSaveAndAddAnother = async () => {
+    if (currentStep === 3) {
+      const uploadSuccess = await handleDocumentUpload()
+      if (uploadSuccess) {
+        toast.success('Property updated successfully!')
+        resetForm()
+        handleAddAnother()
+      }
+    }
+  }
+
+  const removeCustomField = (id: string) => {
+    setCustomFields((prev) => prev.filter((field) => field.id !== id))
+  }
+
   const resetForm = () => {
     if (property) {
       setFormData({
         ...property,
       })
       setIsDisputed(property.isDisputed || false)
+
+      if (property.additionalDetails) {
+        const customFieldsFromProperty = Object.entries(
+          property.additionalDetails
+        ).map(([key, value], index) => ({
+          id: `custom-${index}`,
+          label: key,
+          value: String(value),
+        }))
+        setCustomFields(customFieldsFromProperty)
+      } else {
+        setCustomFields([])
+      }
     }
     setCurrentStep(1)
     setIsSubmitted(false)
+    setDocumentFiles([])
+    setIsDocumentUploading(false)
   }
 
-  const handleNext = () => {
-    if (currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1)
-    } else {
-      console.log('🚀 Updating Property - API Call:')
-      console.log({
-        propertyId: property?.id,
-        updatedData: { ...formData, isDisputed },
+  const updateProperty = async () => {
+    if (!property?.id) {
+      toast.error('Property ID not found')
+      return false
+    }
+
+    try {
+      setIsLoading(true)
+
+      const additionalDetails = customFields.reduce(
+        (acc, field) => ({
+          ...acc,
+          [field.label]: field.value,
+        }),
+        {}
+      )
+
+      const requestBody = {
+        name: formData.name,
+        type: formData.type,
+        owner: formData.owner,
+        country: formData.country,
+        zipcode: formData.zipcode,
+        address: formData.address,
+        location: formData.location,
+        locality: formData.location,
+        district: formData.district,
+        city: formData.city,
+        state: formData.state,
+        coordinates: formData.coordinates,
+        isDisputed: isDisputed,
+        legalStatus: isDisputed ? 'Disputed - Ongoing' : 'Undisputed',
+        legalParties: formData.legalParties,
+        caseNumber: formData.caseNumber,
+        caseType: formData.caseType,
+        nextHearing: formData.nextHearing,
+        extent: formData.extent,
+        valuePerSQ: formData.valuePerSQ,
+        value: formData.value,
+        additionalDetails:
+          Object.keys(additionalDetails).length > 0
+            ? additionalDetails
+            : undefined,
+      }
+
+      const response = await apiClient.put(
+        `/dashboard/properties/edit/${property.id}`,
+        requestBody
+      )
+      console.log(response)
+
+      toast.success('Property updated successfully!')
+      return true
+    } catch (error: any) {
+      console.error('Property update error:', error)
+      toast.error(error.response?.data?.message || 'Failed to update property')
+      return false
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleDocumentUpload = async () => {
+    if (documentFiles.length === 0) {
+      return true
+    }
+
+    if (!property?.id) {
+      toast.error('Property ID not found')
+      return false
+    }
+
+    try {
+      setIsDocumentUploading(true)
+
+      const formDataUpload = new FormData()
+      documentFiles.forEach(({ file }) => {
+        formDataUpload.append('files', file)
       })
 
-      setTimeout(() => {
-        console.log('✅ Property updated successfully')
+      // Add metadata
+      const metadata = documentFiles.map(({ name }) => ({
+        name: name,
+        path: name,
+        propertyId: property.id,
+        tags: '',
+      }))
+
+      formDataUpload.append('meta', JSON.stringify(metadata))
+      formDataUpload.append('parentId', '')
+
+      const response = await apiClient.post(
+        '/dashboard/documents/upload',
+        formDataUpload,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      )
+
+      toast.success(response.data.message || 'Documents uploaded successfully!')
+      setDocumentFiles([])
+      return true
+    } catch (error: any) {
+      console.error('Upload error:', error)
+      toast.error(error.response?.data?.message || 'Upload failed')
+      return false
+    } finally {
+      setIsDocumentUploading(false)
+    }
+  }
+
+  const handleNext = async () => {
+    if (currentStep === 2) {
+      const success = await updateProperty()
+      if (success) {
+        setCurrentStep(currentStep + 1)
+      }
+    } else if (currentStep === 3) {
+      const uploadSuccess = await handleDocumentUpload()
+      if (uploadSuccess) {
         setIsSubmitted(true)
-      }, 1000)
+      }
+    } else if (currentStep < totalSteps) {
+      setCurrentStep(currentStep + 1)
     }
   }
 
@@ -102,7 +300,6 @@ const PropertiesEditModel = ({
     resetForm()
     onClose()
   }
-
 
   const renderStepForm = () => {
     if (isSubmitted) {
@@ -510,6 +707,69 @@ const PropertiesEditModel = ({
                 />
               </div>
             </div>
+
+            {/* Custom Fields Section */}
+            <div className="flex flex-col space-y-3">
+              {/* Existing custom fields */}
+              {customFields.map((field) => (
+                <div
+                  key={field.id}
+                  className="flex flex-col space-y-3 rounded-md bg-[#F8F8F8] p-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="mr-3 flex flex-1 flex-col space-y-1">
+                      <label className="text-md text-secondary block font-semibold">
+                        Field Label
+                      </label>
+                      <Input
+                        type="text"
+                        value={field.label}
+                        onChange={(e) =>
+                          updateCustomField(field.id, 'label', e.target.value)
+                        }
+                        className="w-full rounded-md border border-gray-300 px-3 py-2"
+                        placeholder="Enter field label"
+                      />
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeCustomField(field.id)}
+                      className="text-primary mt-6 cursor-pointer"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-md text-secondary block font-semibold">
+                      Value
+                    </label>
+                    <Input
+                      type="text"
+                      value={field.value}
+                      onChange={(e) =>
+                        updateCustomField(field.id, 'value', e.target.value)
+                      }
+                      className="w-full rounded-md border border-gray-300 px-3 py-2"
+                      placeholder="Enter value"
+                    />
+                  </div>
+                </div>
+              ))}
+
+              {/* Add more information button */}
+              <div className="flex flex-col space-y-1">
+                <div
+                  className="flex cursor-pointer justify-between rounded-md bg-[#F2F2F2] p-3 transition-colors hover:bg-[#E8E8E8]"
+                  onClick={addCustomField}
+                >
+                  <p className="text-secondary font-semibold">
+                    Add more information
+                  </p>
+                  <PlusIcon className="size-5" />
+                </div>
+              </div>
+            </div>
           </div>
         )
 
@@ -517,7 +777,12 @@ const PropertiesEditModel = ({
         return (
           <div>
             <p className="font-semibold">Upload Documents</p>
-            <UploadDropzone />
+            <PropertyUploadDropzone
+              propertyId={property?.id || null}
+              selectedFiles={documentFiles}
+              setSelectedFiles={setDocumentFiles}
+              isLoading={isDocumentUploading}
+            />
           </div>
         )
     }
@@ -550,7 +815,7 @@ const PropertiesEditModel = ({
               variant="ghost"
               size="icon"
               className="hover:text-primary h-5 w-5 cursor-pointer rounded-full bg-[#CDCDCE] text-white"
-              onClick={onClose}
+              onClick={handleClose}
             >
               <X className="h-4 w-4 font-bold" />
             </Button>
@@ -580,34 +845,55 @@ const PropertiesEditModel = ({
             </div>
 
             <div className="flex gap-4">
-              <Button
-                className="hover:bg-secondary flex h-11 w-[200px] cursor-pointer items-center gap-2 border border-gray-400 bg-transparent px-6 font-semibold text-black hover:text-white"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  if (onArchiveClick && property) {
-                    onArchiveClick(property)
-                  }
-                }}
-              >
-                Archive Property
-                <Trash className="size-4" />
-              </Button>
-              <Button
-                className="bg-primary hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 px-6"
-                onClick={handleNext}
-              >
-                {currentStep === totalSteps ? (
-                  <>
-                    Update Property
+              {currentStep === 3 ? (
+                <>
+                  <Button
+                    className="hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 border border-gray-400 bg-transparent px-6 font-semibold text-black hover:text-white"
+                    onClick={handleSaveAndAddAnother}
+                    disabled={isDocumentUploading}
+                  >
+                    Save & Add Another
+                    <Plus className="size-4" />
+                  </Button>
+                  <Button
+                    className="bg-primary hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 px-6"
+                    onClick={handleNext}
+                    disabled={isDocumentUploading}
+                  >
+                    {isDocumentUploading ? 'Uploading...' : 'Update Property'}
                     <MoveRight className="size-4" />
-                  </>
-                ) : (
-                  <>
-                    Next
-                    <MoveRight className="size-4" />
-                  </>
-                )}
-              </Button>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    className="hover:bg-secondary flex h-11 w-[200px] cursor-pointer items-center gap-2 border border-gray-400 bg-transparent px-6 font-semibold text-black hover:text-white"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (onArchiveClick && property) {
+                        onArchiveClick(property)
+                      }
+                    }}
+                  >
+                    Archive Property
+                    <Trash className="size-4" />
+                  </Button>
+                  <Button
+                    className="bg-primary hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 px-6"
+                    onClick={handleNext}
+                    disabled={isLoading}
+                  >
+                    {currentStep === 2 && isLoading ? (
+                      <>Updating Property...</>
+                    ) : (
+                      <>
+                        Next
+                        <MoveRight className="size-4" />
+                      </>
+                    )}
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         )}
