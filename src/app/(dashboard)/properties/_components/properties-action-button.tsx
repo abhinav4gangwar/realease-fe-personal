@@ -5,7 +5,7 @@ import { ChevronDown, ChevronUp } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
-export type actionType = "select" | "move" | "download" | "share" | "delete"
+export type actionType = "select"| "share" | "archive"
 
 interface ActionButtonProps {
   onActionSelect: (addType: actionType) => void
@@ -14,10 +14,8 @@ interface ActionButtonProps {
 }
 
 const actionOptions: { label: string; value: actionType }[] = [
-  { label: "Move", value: "move" },
-  { label: "Download", value: "download" },
   { label: "Share", value: "share" },
-  { label: "Delete", value: "delete" },
+  { label: "Archive", value: "archive" },
 ]
 
 export function PropertiesActionsButton({ onActionSelect, isSelectMode = false, selectedCount = 0 }: ActionButtonProps) {
@@ -26,7 +24,7 @@ export function PropertiesActionsButton({ onActionSelect, isSelectMode = false, 
 
   const handleSelect = (value: actionType) => {
     if ( selectedCount === 0 ) {
-      toast.error("Please select at least one document to perform this action")
+      toast.error("Please select at least one property to perform this action")
       setOpen(false)
       return
     }
@@ -48,10 +46,7 @@ export function PropertiesActionsButton({ onActionSelect, isSelectMode = false, 
         { label: "Deselect", value: "select" as actionType },
         ...(selectedCount > 0
           ? [
-              { label: "Move", value: "move" as actionType },
-              { label: "Download", value: "download" as actionType },
-              { label: "Share", value: "share" as actionType },
-              { label: "Delete", value: "delete" as actionType },
+              { label: "Delete", value: "archive" as actionType },
             ]
           : []),
       ]

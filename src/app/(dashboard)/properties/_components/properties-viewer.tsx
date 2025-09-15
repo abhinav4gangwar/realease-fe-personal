@@ -6,9 +6,10 @@ import {
   PropertySortOrder,
 } from '@/types/property.types'
 import { apiClient } from '@/utils/api'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import ScrollToTop from '../../documents/_components/scroll-to-top'
+import BulkArchivePropertyModal from './archive-bulk-property-modal'
 import ArchivePropertyModal from './archive-property-model'
 import CreatePropertyModal from './create-property-modal'
 import { PropertiesActionsButton } from './properties-action-button'
@@ -33,10 +34,12 @@ const PropertiesViewer = ({
     null
   )
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isCreatePropertyModalOpen, setisCreatePropertyModalOpen] =
+  const [isCreatePropertyModalOpen, setIsCreatePropertyModalOpen] =
     useState(false)
-  const [isEditPropertyModalOpen, setisEditPropertyModalOpen] = useState(false)
-  const [isFilterModalOpen, setisFilterModalOpen] = useState(false)
+  const [isEditPropertyModalOpen, setIsEditPropertyModalOpen] = useState(false)
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
+  const [selectedProperties, setSelectedProperties] = useState<string[]>([])
+  const [OpenBulkArchiveModal, setOpenBulkArchiveModal] = useState(false)
 
   const [sortField, setSortField] = useState<PropertySortField>('dateAdded')
   const [sortOrder, setSortOrder] = useState<PropertySortOrder>('desc')
@@ -48,12 +51,8 @@ const PropertiesViewer = ({
   })
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false)
 
-  const handleActionSelect = (actionType: string) => {
-    console.log(actionType)
-  }
-
   const handleCreatePropertyClose = () => {
-    setisCreatePropertyModalOpen(false)
+    setIsCreatePropertyModalOpen(false)
     onPropertyCreated()
   }
 
@@ -66,11 +65,11 @@ const PropertiesViewer = ({
   }
 
   const handleAddSelect = () => {
-    setisCreatePropertyModalOpen(true)
+    setIsCreatePropertyModalOpen(true)
   }
 
   const handleFilterSelect = () => {
-    setisFilterModalOpen(true)
+    setIsFilterModalOpen(true)
   }
 
   const handlePropertyInfo = (property: Properties) => {
@@ -80,7 +79,7 @@ const PropertiesViewer = ({
 
   const handleEditClick = (property: Properties) => {
     setSelectedProperty(property)
-    setisEditPropertyModalOpen(true)
+    setIsEditPropertyModalOpen(true)
   }
 
   const handleArchiveClick = (property: Properties) => {
@@ -99,6 +98,21 @@ const PropertiesViewer = ({
 
   const handleApplyFilters = (filters: FilterState) => {
     setActiveFilters(filters)
+  }
+
+  const handleActionSelect = (actionType: string) => {
+    switch (actionType) {
+      case 'share':
+        if (selectedProperties.length > 0) {
+          console.log('Share property')
+        }
+        break
+      case 'archive':
+        if (selectedProperties.length > 0) {
+          setOpenBulkArchiveModal(true)
+        }
+        break
+    }
   }
 
   const filteredProperties = useMemo(() => {
@@ -124,20 +138,18 @@ const PropertiesViewer = ({
       if (activeFilters.legalStatuses.length > 0) {
         const isDisputed = property.isDisputed === true
         const propertyStatus = isDisputed ? 'Disputed' : 'Non Disputed'
-
         if (!activeFilters.legalStatuses.includes(propertyStatus)) {
           return false
         }
       }
-
       return true
     })
   }, [allProperties, activeFilters])
 
+  // sorting logic
   const sortProperties = (properties: Properties[]) => {
     return properties.sort((a, b) => {
       let comparison = 0
-
       switch (sortField) {
         case 'dateAdded':
           if (a.dateAdded && b.dateAdded) {
@@ -148,24 +160,20 @@ const PropertiesViewer = ({
             comparison = a.dateAdded ? -1 : b.dateAdded ? 1 : 0
           }
           break
-
         case 'value':
           const valueA = parseFloat(a.value?.replace(/[^0-9.-]+/g, '') || '0')
           const valueB = parseFloat(b.value?.replace(/[^0-9.-]+/g, '') || '0')
           comparison = valueA - valueB
           break
-
         case 'name':
         case 'owner':
           const aValue = a[sortField] || ''
           const bValue = b[sortField] || ''
           comparison = aValue.localeCompare(bValue)
           break
-
         default:
           comparison = 0
       }
-
       return sortOrder === 'asc' ? comparison : -comparison
     })
   }
@@ -173,6 +181,40 @@ const PropertiesViewer = ({
   const sortedAndFilteredProperties = useMemo(() => {
     return sortProperties([...filteredProperties])
   }, [filteredProperties, sortField, sortOrder])
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedProperties((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    )
+  }
+
+  const handleSelectAll = () => {
+    const allPropertyIds = sortedAndFilteredProperties.map((p) => p.id)
+    if (selectedProperties.length === allPropertyIds.length) {
+      setSelectedProperties([])
+    } else {
+      setSelectedProperties(allPropertyIds)
+    }
+  }
+
+  const getSelectAllState = () => {
+    const allPropertyIds = sortedAndFilteredProperties.map((p) => p.id)
+    if (selectedProperties.length === 0) {
+      return 'none'
+    } else if (
+      selectedProperties.length === allPropertyIds.length &&
+      allPropertyIds.length > 0
+    ) {
+      return 'all'
+    } else {
+      return 'some'
+    }
+  }
+
+  useEffect(() => {
+    const visibleIds = new Set(sortedAndFilteredProperties.map((p) => p.id))
+    setSelectedProperties((prev) => prev.filter((id) => visibleIds.has(id)))
+  }, [sortedAndFilteredProperties])
 
   const confirmArchive = async () => {
     if (!selectedProperty) return
@@ -187,7 +229,7 @@ const PropertiesViewer = ({
       setSelectedProperty(null)
       onPropertyCreated()
       setIsArchiveModalOpen(false)
-      setisEditPropertyModalOpen(false)
+      setIsEditPropertyModalOpen(false)
       const successMessage =
         response.data?.message || 'Property archived successfully'
       toast.success(successMessage)
@@ -195,6 +237,34 @@ const PropertiesViewer = ({
       const errorMessage =
         error.response?.data?.message ||
         'Failed to archive property. Please try again.'
+      toast.error(errorMessage)
+    }
+  }
+
+  const handleBulkArchive = async () => {
+    if (selectedProperties.length === 0) return
+
+    try {
+      const archivePayload = selectedProperties.map((id) => ({
+        itemId: Number.parseInt(id),
+      }))
+      console.log(archivePayload)
+
+      const response = await apiClient.put(
+        '/dashboard/properties/archive',
+        archivePayload
+      )
+      setSelectedProperties([])
+      onPropertyCreated()
+      setOpenBulkArchiveModal(false)
+      const successMessage =
+        response.data?.message ||
+        `${selectedProperties.length} properties archived successfully`
+      toast.success(successMessage)
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        'Failed to archive properties. Please try again.'
       toast.error(errorMessage)
     }
   }
@@ -211,7 +281,10 @@ const PropertiesViewer = ({
         <div className="flex items-center gap-4">
           <PropertiesFilterButton onFilterSelect={handleFilterSelect} />
           <PropertiesSortButton onSortChange={handleSortChange} />
-          <PropertiesActionsButton onActionSelect={handleActionSelect} />
+          <PropertiesActionsButton
+            onActionSelect={handleActionSelect}
+            selectedCount={selectedProperties.length}
+          />
           <PropertiesAddButton onAddSelect={handleAddSelect} />
         </div>
       </div>
@@ -225,6 +298,10 @@ const PropertiesViewer = ({
             onDownloadClick={handleDownloadClick}
             onShareClick={handleShareClick}
             onPropertyInfo={handlePropertyInfo}
+            selectedProperties={selectedProperties}
+            onSelectAll={handleSelectAll}
+            onToggleSelect={handleToggleSelect}
+            selectAllState={getSelectAllState()}
           />
         </div>
       </div>
@@ -245,13 +322,13 @@ const PropertiesViewer = ({
         property={selectedProperty}
         isOpen={isEditPropertyModalOpen}
         onClose={() => {
-          setisEditPropertyModalOpen(false)
+          setIsEditPropertyModalOpen(false)
           setSelectedProperty(null)
           setIsModalOpen(false)
         }}
         handleAddAnother={() => {
-          setisEditPropertyModalOpen(false)
-          setisCreatePropertyModalOpen(true)
+          setIsEditPropertyModalOpen(false)
+          setIsCreatePropertyModalOpen(true)
           setSelectedProperty(null)
         }}
         onArchiveClick={handleArchiveClick}
@@ -261,7 +338,7 @@ const PropertiesViewer = ({
         properties={allProperties}
         isOpen={isFilterModalOpen}
         onClose={() => {
-          setisFilterModalOpen(false)
+          setIsFilterModalOpen(false)
         }}
         onApplyFilters={handleApplyFilters}
         initialFilters={activeFilters}
@@ -276,6 +353,15 @@ const PropertiesViewer = ({
         isOpen={isArchiveModalOpen}
         onCancel={() => setIsArchiveModalOpen(false)}
         onConfirm={confirmArchive}
+      />
+
+      <BulkArchivePropertyModal
+        isOpen={OpenBulkArchiveModal}
+        onConfirm={() => {
+          handleBulkArchive()
+        }}
+        onCancel={() => setOpenBulkArchiveModal(false)}
+        selectedCount={selectedProperties.length}
       />
     </div>
   )

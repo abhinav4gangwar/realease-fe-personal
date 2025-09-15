@@ -2,7 +2,7 @@
 import { Button } from '@/components/ui/button'
 import { Properties } from '@/types/property.types'
 import { Download, Info, Pencil } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { HiShare } from 'react-icons/hi2'
 
 export interface PropertiesListViewProps {
@@ -12,10 +12,12 @@ export interface PropertiesListViewProps {
   onShareClick?: (property: Properties) => void
   onDownloadClick?: (property: Properties) => void
   onPropertyInfo: (property: Properties) => void
-  selectedDocuments?: string[]
+  selectedProperties?: string[]
   onSelectAll?: () => void
-  selectAllState?: "none" | "some" | "all"
+  onToggleSelect?: (id: string) => void
+  selectAllState?: 'none' | 'some' | 'all'
 }
+
 const PropertiesListView = ({
   properties,
   selectedPropertyId,
@@ -23,13 +25,35 @@ const PropertiesListView = ({
   onDownloadClick,
   onShareClick,
   onPropertyInfo,
+  selectedProperties = [],
+  onSelectAll,
+  onToggleSelect,
+  selectAllState = 'none',
 }: PropertiesListViewProps) => {
   const [hoveredRow, setHoveredRow] = useState<string | null>(null)
+
+  const headerCheckboxRef = useRef<HTMLInputElement | null>(null)
+  useEffect(() => {
+    if (headerCheckboxRef.current) {
+      headerCheckboxRef.current.indeterminate = selectAllState === 'some'
+    }
+  }, [selectAllState])
+
   return (
     <div className="space-y-1.5">
       {/* Header */}
       <div className="text-md text-secondary grid grid-cols-16 gap-4 px-4 py-2 font-semibold">
         <div className="col-span-4 flex items-center gap-3">
+          <input
+            type="checkbox"
+            className="h-4 w-4 accent-[#f16969]"
+            ref={headerCheckboxRef}
+            checked={selectAllState === 'all'}
+            onChange={(e) => {
+              e.stopPropagation()
+              onSelectAll?.()
+            }}
+          />
           <div>Property Name</div>
         </div>
         <div className="col-span-4 text-left">Location</div>
@@ -51,6 +75,15 @@ const PropertiesListView = ({
           onMouseLeave={() => setHoveredRow(null)}
         >
           <div className="col-span-4 flex items-center gap-3">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-[#f16969]"
+              checked={selectedProperties.includes(property.id)}
+              onChange={(e) => {
+                e.stopPropagation()
+                onToggleSelect?.(property.id)
+              }}
+            />
             <span className="truncate text-sm font-semibold">
               {property.name}
             </span>
@@ -65,6 +98,7 @@ const PropertiesListView = ({
           <div className="col-span-2 truncate pl-3 text-left text-sm text-[#9B9B9D]">
             {property.type}
           </div>
+
           <div className="col-span-2 truncate text-left text-sm text-[#9B9B9D]">
             {hoveredRow === property.id ? (
               <div className="flex gap-1 pl-3">
@@ -74,9 +108,7 @@ const PropertiesListView = ({
                   className="hover:text-primary h-6 w-6 cursor-pointer"
                   onClick={(e) => {
                     e.stopPropagation()
-                    if (onEditClick) {
-                      onEditClick(property)
-                    }
+                    onEditClick?.(property)
                   }}
                 >
                   <Pencil className="h-3 w-3" />
@@ -88,9 +120,7 @@ const PropertiesListView = ({
                   className="hover:text-primary h-6 w-6 cursor-pointer"
                   onClick={(e) => {
                     e.stopPropagation()
-                    if (onDownloadClick) {
-                      onDownloadClick(property)
-                    }
+                    onDownloadClick?.(property)
                   }}
                 >
                   <Download className="h-3 w-3" />
@@ -102,9 +132,7 @@ const PropertiesListView = ({
                   className="hover:text-primary h-6 w-6 cursor-pointer"
                   onClick={(e) => {
                     e.stopPropagation()
-                    if (onShareClick) {
-                      onShareClick(property)
-                    }
+                    onShareClick?.(property)
                   }}
                 >
                   <HiShare className="h-3 w-3" />
