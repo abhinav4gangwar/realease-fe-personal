@@ -5,11 +5,16 @@ import { apiClient } from '@/utils/api'
 import { File, Upload, X } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { FileIcon } from '../../documents/_components/file-icon'
 
 interface FileItem {
   file: File
   name: string
   size: number
+}
+
+const getFileType = (fileName: string) => {
+  return fileName.split(".").pop()?.toLowerCase() ?? "file"
 }
 
 interface PropertyUploadDropzoneProps {
@@ -145,69 +150,75 @@ export function PropertyUploadDropzone({
   }
 
   return (
-    <div className="p-6">
-      <div
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
-        className={`flex min-h-[300px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
-          isDragActive
-            ? 'border-primary bg-primary/5'
-            : 'border-muted-foreground/25 hover:border-primary/50'
-        }`}
-        onClick={openFileDialog}
-      >
-        <div className="pointer-events-none">
-          <Upload className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
-          {isDragActive ? (
-            <p className="text-lg font-medium">Drop files here...</p>
-          ) : (
-            <>
-              <p className="mb-2 text-lg font-medium">
-                Drag & drop or click to select files
-              </p>
-              <p className="text-muted-foreground text-sm">
-                Upload documents related to this property
-              </p>
-            </>
-          )}
-        </div>
-      </div>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        onChange={handleFilesFromInput}
-        style={{ display: 'none' }}
-        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
-      />
-
-      <div className="mt-4 flex gap-3">
-        <Button
-          variant="outline"
+    <div className="py-6">
+      {selectedFiles.length === 0 && (
+        <div
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          className={`flex min-h-[300px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
+            isDragActive
+              ? 'border-primary bg-primary/5'
+              : 'border-muted-foreground/25 hover:border-primary/50'
+          }`}
           onClick={openFileDialog}
-          className="hover:bg-secondary h-11 flex-1 cursor-pointer transition ease-in-out hover:text-white"
         >
-          <File className="mr-2 h-4 w-4" />
-          Select Files
-        </Button>
-      </div>
+          <div className="pointer-events-none">
+            <Upload className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
+            {isDragActive ? (
+              <p className="text-lg font-medium">Drop files here...</p>
+            ) : (
+              <>
+                <p className="mb-2 text-lg font-medium">
+                  Drag & drop or click to select files
+                </p>
+                <p className="text-muted-foreground text-sm">
+                  Upload documents related to this property
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {selectedFiles.length === 0 && (
+        <div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            onChange={handleFilesFromInput}
+            style={{ display: 'none' }}
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
+          />
+
+          <div className="mt-4 flex gap-3">
+            <Button
+              variant="outline"
+              onClick={openFileDialog}
+              className="hover:bg-secondary h-11 flex-1 cursor-pointer transition ease-in-out hover:text-white"
+            >
+              <File className="mr-2 h-4 w-4" />
+              Select Files
+            </Button>
+          </div>
+        </div>
+      )}
 
       {selectedFiles.length > 0 && (
-        <div className="mt-6">
+        <div className="">
           <h3 className="mb-3 text-lg font-semibold">
             Selected Files ({selectedFiles.length})
           </h3>
-          <div className="max-h-40 overflow-auto rounded-md border border-gray-300 p-3">
+          <div className="max-h-80 overflow-auto rounded-md border border-gray-300 p-3">
             {selectedFiles.map((fileItem, index) => (
               <div
                 key={index}
                 className="flex items-center justify-between rounded p-2 hover:bg-gray-50"
               >
                 <div className="flex items-center gap-2">
-                  <File className="text-muted-foreground h-4 w-4" />
+                  <FileIcon type={getFileType(fileItem.name)} />
                   <span className="truncate text-sm">{fileItem.name}</span>
                   <span className="text-muted-foreground text-xs">
                     ({formatFileSize(fileItem.size)})
