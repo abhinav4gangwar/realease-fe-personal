@@ -12,6 +12,9 @@ export interface PropertiesListViewProps {
   onShareClick?: (property: Properties) => void
   onDownloadClick?: (property: Properties) => void
   onPropertyInfo: (property: Properties) => void
+  selectedDocuments?: string[]
+  onSelectAll?: () => void
+  selectAllState?: "none" | "some" | "all"
 }
 const PropertiesListView = ({
   properties,

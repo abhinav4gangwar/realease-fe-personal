@@ -5,8 +5,11 @@ import {
   PropertySortField,
   PropertySortOrder,
 } from '@/types/property.types'
+import { apiClient } from '@/utils/api'
 import { useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import ScrollToTop from '../../documents/_components/scroll-to-top'
+import ArchivePropertyModal from './archive-property-model'
 import CreatePropertyModal from './create-property-modal'
 import { PropertiesActionsButton } from './properties-action-button'
 import { PropertiesAddButton } from './properties-add-button'
@@ -22,7 +25,10 @@ export interface PropertiesViewerProps {
   onPropertyCreated: () => void
 }
 
-const PropertiesViewer = ({ allProperties, onPropertyCreated }: PropertiesViewerProps) => {
+const PropertiesViewer = ({
+  allProperties,
+  onPropertyCreated,
+}: PropertiesViewerProps) => {
   const [selectedProperty, setSelectedProperty] = useState<Properties | null>(
     null
   )
@@ -40,6 +46,7 @@ const PropertiesViewer = ({ allProperties, onPropertyCreated }: PropertiesViewer
     propertyTypes: [],
     legalStatuses: [],
   })
+  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false)
 
   const handleActionSelect = (actionType: string) => {
     console.log(actionType)
@@ -76,8 +83,9 @@ const PropertiesViewer = ({ allProperties, onPropertyCreated }: PropertiesViewer
     setisEditPropertyModalOpen(true)
   }
 
-  const handleDeleteClick = (property: Properties) => {
-    console.log('open delete model for', property)
+  const handleArchiveClick = (property: Properties) => {
+    setIsArchiveModalOpen(true)
+    setSelectedProperty(property)
   }
 
   const handleDownloadClick = (property: Properties) => {
@@ -166,6 +174,31 @@ const PropertiesViewer = ({ allProperties, onPropertyCreated }: PropertiesViewer
     return sortProperties([...filteredProperties])
   }, [filteredProperties, sortField, sortOrder])
 
+  const confirmArchive = async () => {
+    if (!selectedProperty) return
+
+    try {
+      const response = await apiClient.put('/dashboard/properties/archive', [
+        {
+          itemId: Number.parseInt(selectedProperty.id),
+        },
+      ])
+      setIsModalOpen(false)
+      setSelectedProperty(null)
+      onPropertyCreated()
+      setIsArchiveModalOpen(false)
+      setisEditPropertyModalOpen(false)
+      const successMessage =
+        response.data?.message || 'Property archived successfully'
+      toast.success(successMessage)
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        'Failed to archive property. Please try again.'
+      toast.error(errorMessage)
+    }
+  }
+
   return (
     <div>
       <div className="flex justify-between pb-4">
@@ -221,7 +254,7 @@ const PropertiesViewer = ({ allProperties, onPropertyCreated }: PropertiesViewer
           setisCreatePropertyModalOpen(true)
           setSelectedProperty(null)
         }}
-        onDeleteClick={handleDeleteClick}
+        onArchiveClick={handleArchiveClick}
       />
 
       <PropertiesFilterModel
@@ -237,6 +270,12 @@ const PropertiesViewer = ({ allProperties, onPropertyCreated }: PropertiesViewer
       <CreatePropertyModal
         isOpen={isCreatePropertyModalOpen}
         onClose={handleCreatePropertyClose}
+      />
+
+      <ArchivePropertyModal
+        isOpen={isArchiveModalOpen}
+        onCancel={() => setIsArchiveModalOpen(false)}
+        onConfirm={confirmArchive}
       />
     </div>
   )

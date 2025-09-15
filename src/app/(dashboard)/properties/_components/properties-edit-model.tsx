@@ -12,7 +12,7 @@ interface PropertiesEditModelProps {
   isOpen: boolean
   onClose: () => void
   handleAddAnother: () => void
-  onDeleteClick?: (property: Properties) => void
+  onArchiveClick?: (property: Properties) => void
 }
 
 const PropertiesEditModel = ({
@@ -20,7 +20,7 @@ const PropertiesEditModel = ({
   isOpen,
   onClose,
   handleAddAnother,
-  onDeleteClick,
+  onArchiveClick,
 }: PropertiesEditModelProps) => {
   const [currentStep, setCurrentStep] = useState(1)
   const totalSteps = 3
@@ -584,12 +584,12 @@ const PropertiesEditModel = ({
                 className="hover:bg-secondary flex h-11 w-[200px] cursor-pointer items-center gap-2 border border-gray-400 bg-transparent px-6 font-semibold text-black hover:text-white"
                 onClick={(e) => {
                   e.stopPropagation()
-                  if (onDeleteClick && property) {
-                    onDeleteClick(property)
+                  if (onArchiveClick && property) {
+                    onArchiveClick(property)
                   }
                 }}
               >
-                Delete Property
+                Archive Property
                 <Trash className="size-4" />
               </Button>
               <Button
