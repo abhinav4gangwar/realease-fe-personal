@@ -19,9 +19,10 @@ import { PropertiesSortButton } from './properties-sort-button'
 
 export interface PropertiesViewerProps {
   allProperties: Properties[]
+  onPropertyCreated: () => void
 }
 
-const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
+const PropertiesViewer = ({ allProperties, onPropertyCreated }: PropertiesViewerProps) => {
   const [selectedProperty, setSelectedProperty] = useState<Properties | null>(
     null
   )
@@ -42,6 +43,11 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
 
   const handleActionSelect = (actionType: string) => {
     console.log(actionType)
+  }
+
+  const handleCreatePropertyClose = () => {
+    setisCreatePropertyModalOpen(false)
+    onPropertyCreated()
   }
 
   const handleSortChange = (
@@ -230,9 +236,7 @@ const PropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
 
       <CreatePropertyModal
         isOpen={isCreatePropertyModalOpen}
-        onClose={() => {
-          setisCreatePropertyModalOpen(false)
-        }}
+        onClose={handleCreatePropertyClose}
       />
     </div>
   )

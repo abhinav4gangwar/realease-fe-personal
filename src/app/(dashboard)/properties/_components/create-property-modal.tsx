@@ -8,7 +8,7 @@ import { useState } from 'react'
 
 import { apiClient } from '@/utils/api'
 import { toast } from 'sonner'
-import { PropertyUploadDropzone } from './document-upload'
+import { FileItem, PropertyUploadDropzone } from './document-upload'
 
 interface CustomField {
   id: string
@@ -31,6 +31,8 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
   const [createdPropertyId, setCreatedPropertyId] = useState<string | null>(
     null
   )
+  const [documentFiles, setDocumentFiles] = useState<FileItem[]>([])
+  const [isDocumentUploading, setIsDocumentUploading] = useState(false)
 
   const [formData, setFormData] = useState<Properties>({
     name: '',
@@ -115,13 +117,14 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     setCurrentStep(1)
     setIsSubmitted(false)
     setCreatedPropertyId(null)
+    setDocumentFiles([])
+    setIsDocumentUploading(false)
   }
 
   const createProperty = async () => {
     try {
       setIsLoading(true)
 
-      // Build additional details from custom fields
       const additionalDetails = customFields.reduce(
         (acc, field) => ({
           ...acc,
@@ -138,7 +141,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
         zipcode: formData.zipcode,
         address: formData.address,
         location: formData.location,
-        locality: formData.location, // Using location as locality
+        locality: formData.location,
         district: formData.district,
         city: formData.city,
         state: formData.state,
@@ -156,9 +159,6 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
             ? additionalDetails
             : undefined,
       }
-
-      console.log('🚀 Creating Property - API Call:', requestBody)
-
       const response = await apiClient.post(
         '/dashboard/properties/create',
         requestBody
@@ -184,18 +184,70 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     }
   }
 
+  const handleDocumentUpload = async () => {
+    if (documentFiles.length === 0) {
+      return true
+    }
+
+    if (!createdPropertyId) {
+      toast.error('Property ID not found')
+      return false
+    }
+
+    try {
+      setIsDocumentUploading(true)
+
+      const formData = new FormData()
+      documentFiles.forEach(({ file }) => {
+        formData.append('files', file)
+      })
+
+      // Add metadata
+      const metadata = documentFiles.map(({ name }) => ({
+        name: name,
+        path: name,
+        propertyId: createdPropertyId,
+        tags: '',
+      }))
+
+      formData.append('meta', JSON.stringify(metadata))
+      formData.append('parentId', '')
+
+      const response = await apiClient.post(
+        '/dashboard/documents/upload',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      )
+
+      toast.success(response.data.message || 'Documents uploaded successfully!')
+      setDocumentFiles([])
+      return true
+    } catch (error: any) {
+      console.error('Upload error:', error)
+      toast.error(error.response?.data?.message || 'Upload failed')
+      return false
+    } finally {
+      setIsDocumentUploading(false)
+    }
+  }
+
   const handleNext = async () => {
     if (currentStep === 2) {
-      // Create property after step 2
       const success = await createProperty()
       if (success) {
         setCurrentStep(currentStep + 1)
       }
+    } else if (currentStep === 3) {
+      const uploadSuccess = await handleDocumentUpload()
+      if (uploadSuccess) {
+        setIsSubmitted(true)
+      }
     } else if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1)
-    } else {
-      // This should not be reached as step 3 will handle completion differently
-      setIsSubmitted(true)
     }
   }
 
@@ -214,8 +266,14 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     resetForm()
   }
 
-  const handleDocumentUploadComplete = () => {
-    setIsSubmitted(true)
+  const handleSaveAndAddAnother = async () => {
+    if (currentStep === 3) {
+      const uploadSuccess = await handleDocumentUpload()
+      if (uploadSuccess) {
+        toast.success('Property created successfully!')
+        resetForm()
+      }
+    }
   }
 
   const renderStepForm = () => {
@@ -691,7 +749,9 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
             <p className="font-semibold">Upload Documents</p>
             <PropertyUploadDropzone
               propertyId={createdPropertyId}
-              onUploadComplete={handleDocumentUploadComplete}
+              selectedFiles={documentFiles}
+              setSelectedFiles={setDocumentFiles}
+              isLoading={isDocumentUploading}
             />
           </div>
         )
@@ -755,7 +815,26 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
             </div>
 
             <div className="flex gap-4">
-              {currentStep < 3 && (
+              {currentStep === 3 ? (
+                <>
+                  <Button
+                    className="hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 border border-gray-400 bg-transparent px-6 font-semibold text-black hover:text-white"
+                    onClick={handleSaveAndAddAnother}
+                    disabled={isDocumentUploading}
+                  >
+                    Save & Add Another
+                    <Plus className="size-4" />
+                  </Button>
+                  <Button
+                    className="bg-primary hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 px-6"
+                    onClick={handleNext}
+                    disabled={isDocumentUploading}
+                  >
+                    {isDocumentUploading ? 'Uploading...' : 'Save & Next'}
+                    <MoveRight className="size-4" />
+                  </Button>
+                </>
+              ) : currentStep < 3 ? (
                 <Button
                   className="bg-primary hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 px-6"
                   onClick={handleNext}
@@ -770,7 +849,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                     </>
                   )}
                 </Button>
-              )}
+              ) : null}
             </div>
           </div>
         )}

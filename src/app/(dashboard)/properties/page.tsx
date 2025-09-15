@@ -1,6 +1,6 @@
 'use client'
 import { apiClient } from '@/utils/api'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import PropertiesViewer from './_components/properties-viewer'
 import MobilePropertiesViewer from './_mobile-properties-components/mobile-properties-viewer'
@@ -8,24 +8,32 @@ import MobilePropertiesViewer from './_mobile-properties-components/mobile-prope
 const Propertiespage = () => {
   const [fetchedProperties, setFetchedProperties] = useState([])
 
-  useEffect(() => {
-    const fetchedProperties = async () => {
-      try {
-        const response = await apiClient.get('/dashboard/properties/list')
-        setFetchedProperties(response.data.allProperties)
-      } catch (error) {
-        toast.error(error as string)
-        console.error('Error fetching properties:', error)
-      }
+  const fetchProperties = useCallback(async () => {
+    try {
+      const response = await apiClient.get('/dashboard/properties/list')
+      setFetchedProperties(response.data.allProperties)
+    } catch (error) {
+      toast.error(error as string)
+      console.error('Error fetching properties:', error)
     }
-    fetchedProperties()
   }, [])
+
+  useEffect(() => {
+    fetchProperties()
+  }, [fetchProperties])
+
+  const handlePropertyCreated = useCallback(() => {
+    fetchProperties()
+  }, [fetchProperties])
 
   return (
     <div>
       {/* for desktop */}
       <div className="hidden lg:block">
-        <PropertiesViewer allProperties={fetchedProperties} />
+        <PropertiesViewer 
+          allProperties={fetchedProperties} 
+          onPropertyCreated={handlePropertyCreated}
+        />
       </div>
 
       {/* for mobile */}
