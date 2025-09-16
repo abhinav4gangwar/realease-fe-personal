@@ -1,6 +1,7 @@
 'use client'
 import { Button } from '@/components/ui/button'
 import { parseCoordinates } from '@/utils/coordinateParser'
+import { getPropertyMarkerIcon } from '@/utils/customMarker'
 import { X } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
@@ -17,9 +18,10 @@ const Marker = dynamic(
   () => import('react-leaflet').then((mod) => mod.Marker),
   { ssr: false }
 )
-const Popup = dynamic(() => import('react-leaflet').then((mod) => mod.Popup), {
-  ssr: false,
-})
+const Popup = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Popup),
+  { ssr: false }
+)
 
 interface FullMapModalProps {
   isOpen: boolean
@@ -27,14 +29,18 @@ interface FullMapModalProps {
   coordinates?: string
   propertyName?: string
   propertyAddress?: string
+  propertyType?: string
+  isDisputed?: boolean
 }
 
-const FullMapModal = ({
-  isOpen,
-  onClose,
-  coordinates,
+const FullMapModal = ({ 
+  isOpen, 
+  onClose, 
+  coordinates, 
   propertyName,
   propertyAddress,
+  propertyType,
+  isDisputed
 }: FullMapModalProps) => {
   const [isClient, setIsClient] = useState(false)
 
@@ -56,19 +62,17 @@ const FullMapModal = ({
 
   if (!isOpen) return null
 
-  const coords = coordinates
-    ? parseCoordinates(coordinates)
-    : { lat: 0, lng: 0 }
+  const coords = coordinates ? parseCoordinates(coordinates) : { lat: 0, lng: 0 }
 
   return (
-    <div className="bg-opacity-50 fixed inset-0 z-[60] flex items-center justify-center bg-black p-4">
-      <div className="flex h-full max-h-[90vh] w-full max-w-6xl flex-col rounded-lg bg-white">
+    <div className="fixed inset-0 z-[60] bg-black bg-opacity-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg w-full h-full max-w-6xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between border-b p-4">
+        <div className="flex items-center justify-between p-4 border-b">
           <div>
             <h2 className="text-xl font-semibold">Property Location</h2>
             {propertyName && (
-              <p className="text-sm text-gray-600">{propertyName}</p>
+              <p className="text-gray-600 text-sm">{propertyName}</p>
             )}
           </div>
           <Button
@@ -82,7 +86,7 @@ const FullMapModal = ({
         </div>
 
         {/* Map Content */}
-        <div className="relative flex-1">
+        <div className="flex-1 relative">
           {isClient && coordinates && coords.lat !== 0 && coords.lng !== 0 ? (
             <MapContainer
               center={[coords.lat, coords.lng]}
@@ -93,33 +97,29 @@ const FullMapModal = ({
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-              <Marker position={[coords.lat, coords.lng]}>
+              <Marker 
+                position={[coords.lat, coords.lng]}
+                icon={getPropertyMarkerIcon(true, false, isDisputed, propertyType)}
+              >
                 <Popup>
                   <div className="p-2">
-                    <h3 className="font-semibold">
-                      {propertyName || 'Property'}
-                    </h3>
+                    <h3 className="font-semibold">{propertyName || 'Property'}</h3>
                     {propertyAddress && (
-                      <p className="mt-1 text-sm text-gray-600">
-                        {propertyAddress}
-                      </p>
+                      <p className="text-sm text-gray-600 mt-1">{propertyAddress}</p>
                     )}
-                    <p className="mt-2 text-xs text-gray-500">
-                      Coordinates: {coords.lat.toFixed(6)},{' '}
-                      {coords.lng.toFixed(6)}
+                    <p className="text-xs text-gray-500 mt-2">
+                      Coordinates: {coords.lat.toFixed(6)}, {coords.lng.toFixed(6)}
                     </p>
                   </div>
                 </Popup>
               </Marker>
             </MapContainer>
           ) : (
-            <div className="flex h-full items-center justify-center bg-gray-100">
+            <div className="h-full flex items-center justify-center bg-gray-100">
               <div className="text-center">
                 <p className="text-gray-600">Unable to display map</p>
-                <p className="mt-1 text-sm text-gray-500">
-                  {!coordinates
-                    ? 'No coordinates available'
-                    : 'Invalid coordinates format'}
+                <p className="text-gray-500 text-sm mt-1">
+                  {!coordinates ? 'No coordinates available' : 'Invalid coordinates format'}
                 </p>
               </div>
             </div>
@@ -127,12 +127,16 @@ const FullMapModal = ({
         </div>
 
         {/* Footer */}
-        <div className="border-t bg-gray-50 p-4">
-          <div className="flex items-center justify-between">
+        <div className="p-4 border-t bg-gray-50">
+          <div className="flex justify-between items-center">
             <div className="text-sm text-gray-600">
-              {coordinates && <span>Coordinates: {coordinates}</span>}
+              {coordinates && (
+                <span>Coordinates: {coordinates}</span>
+              )}
             </div>
-            <Button onClick={onClose}>Close</Button>
+            <Button onClick={onClose}>
+              Close
+            </Button>
           </div>
         </div>
       </div>

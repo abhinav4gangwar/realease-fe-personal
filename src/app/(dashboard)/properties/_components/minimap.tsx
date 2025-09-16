@@ -1,5 +1,6 @@
 'use client'
 import { parseCoordinates } from '@/utils/coordinateParser'
+import { getPropertyMarkerIcon } from '@/utils/customMarker'
 import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
 
@@ -19,10 +20,17 @@ const Marker = dynamic(
 interface MiniMapProps {
   coordinates?: string
   propertyName?: string
+  propertyType?: string
+  isDisputed?: boolean
   onClick: () => void
 }
 
-const MiniMap = ({ coordinates, onClick }: MiniMapProps) => {
+const MiniMap = ({
+  coordinates,
+  propertyType,
+  isDisputed,
+  onClick,
+}: MiniMapProps) => {
   const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
@@ -74,14 +82,11 @@ const MiniMap = ({ coordinates, onClick }: MiniMapProps) => {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <Marker position={[coords.lat, coords.lng]} />
+        <Marker
+          position={[coords.lat, coords.lng]}
+          icon={getPropertyMarkerIcon(false, false, isDisputed, propertyType)}
+        />
       </MapContainer>
-
-      <div className="bg-opacity-0 group-hover:bg-opacity-10 absolute inset-0 flex items-center justify-center bg-black transition-all duration-200">
-        <div className="bg-opacity-90 rounded-full bg-white px-3 py-1 text-sm font-medium opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-          Click to expand
-        </div>
-      </div>
     </div>
   )
 }
