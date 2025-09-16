@@ -2,8 +2,11 @@
 import { Button } from '@/components/ui/button'
 import { Properties } from '@/types/property.types'
 import { Bell, ChevronDown, Pencil, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { FileIcon } from '../../documents/_components/file-icon'
+import FullMapModal from './map-model'
+import MiniMap from './minimap'
+import { CustomField } from './properties-edit-model'
 
 export interface PropertiesDetailsModelProps {
   property: Properties | null
@@ -19,15 +22,38 @@ const PropertiesDetailsModel = ({
   onEditClick,
 }: PropertiesDetailsModelProps) => {
   const [openItems, setOpenItems] = useState(false)
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false)
+  const [customFields, setCustomFields] = useState<CustomField[]>([])
 
   const uploadedDocuments = property?.documents
+
+  const handleMiniMapClick = () => {
+    setIsMapModalOpen(true)
+  }
+
+  const handleMapModalClose = () => {
+    setIsMapModalOpen(false)
+  }
+
+  useEffect(() => {
+    if (property?.additionalDetails) {
+      const customFieldsFromProperty = Object.entries(
+        property.additionalDetails
+      ).map(([key, value], index) => ({
+        id: `custom-${index}`,
+        label: key,
+        value: String(value),
+      }))
+      setCustomFields(customFieldsFromProperty)
+    }
+  }, [property, isOpen])
 
   return (
     <>
       {isOpen && (
         <div className="fixed top-0 right-0 z-50 h-full w-full bg-black/30">
           <div className="fixed top-0 right-0 z-50 flex h-full w-[700px] flex-col border-l border-none bg-white shadow-lg">
-            {/* Header */}
+            {/* Header - unchanged */}
             <div className="bg-[#F2F2F2] shadow-md">
               <div className="flex items-center justify-between p-5">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -72,7 +98,6 @@ const PropertiesDetailsModel = ({
                             {property?.legalParties}
                           </h2>
                         </div>
-
                         <div>
                           <h3 className="mb-1 text-sm font-medium text-gray-500">
                             Case Number
@@ -81,7 +106,6 @@ const PropertiesDetailsModel = ({
                             {property?.caseNumber}
                           </h2>
                         </div>
-
                         <div>
                           <h3 className="mb-1 text-sm font-medium text-gray-500">
                             Case Type
@@ -90,7 +114,6 @@ const PropertiesDetailsModel = ({
                             {property?.caseType}
                           </h2>
                         </div>
-
                         <div>
                           <h3 className="mb-1 text-sm font-medium text-gray-500">
                             Next Hearing
@@ -132,8 +155,17 @@ const PropertiesDetailsModel = ({
               </div>
 
               <div className="flex justify-between gap-3">
-                <div className="w-full rounded-md bg-[#F2F2F2] px-3 py-2">
-                  map
+                <div className="w-full rounded-md bg-[#F2F2F2] p-3">
+                  <h3 className="mb-2 text-sm font-medium text-gray-500">
+                    Mini Map View
+                  </h3>
+                  <div className="h-40">
+                    <MiniMap
+                      coordinates={property?.coordinates}
+                      propertyName={property?.name}
+                      onClick={handleMiniMapClick}
+                    />
+                  </div>
                 </div>
 
                 <div className="flex w-full flex-col space-y-5 rounded-md bg-[#F2F2F2] px-3 py-2">
@@ -214,34 +246,52 @@ const PropertiesDetailsModel = ({
                 </div>
               </div>
 
-              <div className="flex h-1/2 w-full flex-col space-y-5 overflow-y-auto rounded-md bg-[#F2F2F2] px-3 py-2">
-                <h3 className="mb-2 text-sm font-medium text-gray-500">
-                  Documents Uploaded
-                </h3>
-
-                <div className="flex flex-col space-y-3">
-                  {uploadedDocuments?.map((uploadedDocument) => (
-                    <div
-                      key={uploadedDocument.doc_id}
-                      className="w-ful flex justify-between rounded-md bg-white p-2.5"
-                    >
-                      <div className="flex items-center gap-2">
-                        <FileIcon type={uploadedDocument.fileType as string} />
-                        <h2 className="truncate text-sm font-extralight">
-                          {uploadedDocument.name}
-                        </h2>
-                      </div>
-
-                      <h3 className="mb-1 text-sm font-medium text-gray-400">
-                        {uploadedDocument.size} KB
+              {customFields.length > 0 && (
+                <div className="flex w-full flex-col space-y-5 rounded-md bg-[#F2F2F2] px-3 py-2">
+                  {customFields.map((field) => (
+                    <div key={field.id}>
+                      <h3 className="mb-1 text-sm font-medium text-gray-500">
+                        {field.label}
                       </h3>
+                      <h2 className="truncate text-lg font-semibold">
+                        {field.value}
+                      </h2>
                     </div>
                   ))}
                 </div>
-              </div>
+              )}
+
+              {uploadedDocuments && uploadedDocuments?.length > 0 && (
+                <div className="flex max-h-1/2 w-full flex-col space-y-5 overflow-y-auto rounded-md bg-[#F2F2F2] px-3 py-2">
+                  <h3 className="mb-2 text-sm font-medium text-gray-500">
+                    Documents Uploaded
+                  </h3>
+
+                  <div className="flex flex-col space-y-3">
+                    {uploadedDocuments?.map((uploadedDocument) => (
+                      <div
+                        key={uploadedDocument.doc_id}
+                        className="w-ful flex justify-between rounded-md bg-white p-2.5"
+                      >
+                        <div className="flex items-center gap-2">
+                          <FileIcon
+                            type={uploadedDocument.fileType as string}
+                          />
+                          <h2 className="truncate text-sm font-extralight">
+                            {uploadedDocument.name}
+                          </h2>
+                        </div>
+
+                        <h3 className="mb-1 text-sm font-medium text-gray-400">
+                          {uploadedDocument.size} KB
+                        </h3>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Footer */}
             <div className="bg-[#F2F2F2] shadow-md">
               <div className="flex items-center justify-end p-5">
                 <div className="flex flex-shrink-0 items-center gap-5">
@@ -262,6 +312,15 @@ const PropertiesDetailsModel = ({
           </div>
         </div>
       )}
+
+      {/* Full Map Modal */}
+      <FullMapModal
+        isOpen={isMapModalOpen}
+        onClose={handleMapModalClose}
+        coordinates={property?.coordinates}
+        propertyName={property?.name}
+        propertyAddress={property?.address}
+      />
     </>
   )
 }

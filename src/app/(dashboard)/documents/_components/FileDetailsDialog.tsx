@@ -1,12 +1,11 @@
-"use client"
+'use client'
 
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { FileItem } from "@/lib/fileUploadUtils"
-import { ArrowLeft, X } from "lucide-react"
-import { FileIcon } from "./file-icon"
-import { TagInput } from "./tags-input"
-
+import { Button } from '@/components/ui/button'
+import type { FileItem } from '@/lib/fileUploadUtils'
+import { ArrowLeft, X } from 'lucide-react'
+import { FileIcon } from './file-icon'
+import { PropertyInput } from './properties-input'
+import { TagInput } from './tags-input'
 
 interface FileDetailsDialogProps {
   isOpen: boolean
@@ -15,16 +14,18 @@ interface FileDetailsDialogProps {
   folderPath: string[]
   handleBackClick: () => void
   handleFolderClick: (folder: FileItem) => void
-  updateFileMetadata: (path: string, field: "propertyId" | "tags", value: string) => void
+  updateFileMetadata: (
+    path: string,
+    field: 'propertyId' | 'tags',
+    value: string
+  ) => void
   handleSave: () => void
   isLoading: boolean
 }
 
-const properties = [{ id: "0", name: "Test Property" }]
-
 const getFileType = (fileName: string, isDirectory: boolean) => {
-  if (isDirectory) return "folder"
-  return fileName.split(".").pop()?.toLowerCase() ?? "file"
+  if (isDirectory) return 'folder'
+  return fileName.split('.').pop()?.toLowerCase() ?? 'file'
 }
 
 export function FileDetailsDialog({
@@ -54,9 +55,11 @@ export function FileDetailsDialog({
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
               )}
-              Edit Details{" "}
+              Edit Details{' '}
               {folderPath.length > 0 && (
-                <span className="text-muted-foreground text-sm">/ {folderPath.join(" / ")}</span>
+                <span className="text-muted-foreground text-sm">
+                  / {folderPath.join(' / ')}
+                </span>
               )}
             </h2>
             <Button
@@ -78,12 +81,17 @@ export function FileDetailsDialog({
               <div className="mt-1 space-y-1">
                 {currentViewItems.map((item) => {
                   return (
-                    <div key={item.path} className="grid grid-cols-3 items-center gap-4 p-2">
+                    <div
+                      key={item.path}
+                      className="grid grid-cols-3 items-center gap-4 p-2"
+                    >
                       <div className="flex items-center gap-2 truncate">
-                        <FileIcon type={getFileType(item.name, item.isDirectory)} />
+                        <FileIcon
+                          type={getFileType(item.name, item.isDirectory)}
+                        />
                         {item.isDirectory ? (
                           <button
-                            className="truncate text-left hover:text-primary"
+                            className="hover:text-primary truncate text-left"
                             onClick={() => handleFolderClick(item)}
                           >
                             {item.name}
@@ -94,24 +102,18 @@ export function FileDetailsDialog({
                       </div>
                       {!item.isDirectory ? (
                         <>
-                          <Select
-                            value={item.propertyId || "0"}
-                            onValueChange={(v) => updateFileMetadata(item.path, "propertyId", v)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {properties.map((p) => (
-                                <SelectItem key={p.id} value={p.id}>
-                                  {p.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <PropertyInput
+                            value={item.propertyId || ''}
+                            onChange={(value) =>
+                              updateFileMetadata(item.path, 'propertyId', value)
+                            }
+                            placeholder="Select property..."
+                          />
                           <TagInput
-                            value={item.tags || ""}
-                            onChange={(value) => updateFileMetadata(item.path, "tags", value)}
+                            value={item.tags || ''}
+                            onChange={(value) =>
+                              updateFileMetadata(item.path, 'tags', value)
+                            }
                             placeholder="Select tags..."
                           />
                         </>
@@ -142,7 +144,7 @@ export function FileDetailsDialog({
                 disabled={isLoading}
                 className="bg-primary hover:bg-secondary h-11 w-28 cursor-pointer px-6"
               >
-                {isLoading ? "Uploading..." : "Save"}
+                {isLoading ? 'Uploading...' : 'Save'}
               </Button>
             </div>
           </div>

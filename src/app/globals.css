@@ -1,5 +1,6 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'leaflet/dist/leaflet.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -46,7 +47,12 @@ body {
   font-family: var(--font-inter), system-ui, sans-serif;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-weight: 600;
   letter-spacing: -0.025em;
 }
@@ -118,6 +124,28 @@ h1, h2, h3, h4, h5, h6 {
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+}
+
+.custom-div-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.leaflet-container {
+  font-family: inherit;
+}
+
+.custom-div-icon svg {
+  transition: transform 0.2s ease-in-out;
+}
+
+.custom-div-icon:hover svg {
+  transform: scale(1.1);
+}
+
+.leaflet-control-attribution {
+  font-size: 10px;
+  opacity: 0.7;
 }
 
 @layer base {
