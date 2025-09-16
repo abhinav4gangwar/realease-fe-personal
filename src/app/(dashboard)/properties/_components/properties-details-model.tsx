@@ -4,6 +4,8 @@ import { Properties } from '@/types/property.types'
 import { Bell, ChevronDown, Pencil, X } from 'lucide-react'
 import { useState } from 'react'
 import { FileIcon } from '../../documents/_components/file-icon'
+import FullMapModal from './map-model'
+import MiniMap from './minimap'
 
 export interface PropertiesDetailsModelProps {
   property: Properties | null
@@ -19,15 +21,24 @@ const PropertiesDetailsModel = ({
   onEditClick,
 }: PropertiesDetailsModelProps) => {
   const [openItems, setOpenItems] = useState(false)
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false)
 
   const uploadedDocuments = property?.documents
+
+  const handleMiniMapClick = () => {
+    setIsMapModalOpen(true)
+  }
+
+  const handleMapModalClose = () => {
+    setIsMapModalOpen(false)
+  }
 
   return (
     <>
       {isOpen && (
         <div className="fixed top-0 right-0 z-50 h-full w-full bg-black/30">
           <div className="fixed top-0 right-0 z-50 flex h-full w-[700px] flex-col border-l border-none bg-white shadow-lg">
-            {/* Header */}
+            {/* Header - unchanged */}
             <div className="bg-[#F2F2F2] shadow-md">
               <div className="flex items-center justify-between p-5">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -72,7 +83,6 @@ const PropertiesDetailsModel = ({
                             {property?.legalParties}
                           </h2>
                         </div>
-
                         <div>
                           <h3 className="mb-1 text-sm font-medium text-gray-500">
                             Case Number
@@ -81,7 +91,6 @@ const PropertiesDetailsModel = ({
                             {property?.caseNumber}
                           </h2>
                         </div>
-
                         <div>
                           <h3 className="mb-1 text-sm font-medium text-gray-500">
                             Case Type
@@ -90,7 +99,6 @@ const PropertiesDetailsModel = ({
                             {property?.caseType}
                           </h2>
                         </div>
-
                         <div>
                           <h3 className="mb-1 text-sm font-medium text-gray-500">
                             Next Hearing
@@ -133,7 +141,16 @@ const PropertiesDetailsModel = ({
 
               <div className="flex justify-between gap-3">
                 <div className="w-full rounded-md bg-[#F2F2F2] px-3 py-2">
-                  map
+                  <h3 className="mb-2 text-sm font-medium text-gray-500">
+                    Location
+                  </h3>
+                  <div className="h-32">
+                    <MiniMap
+                      coordinates={property?.coordinates}
+                      propertyName={property?.name}
+                      onClick={handleMiniMapClick}
+                    />
+                  </div>
                 </div>
 
                 <div className="flex w-full flex-col space-y-5 rounded-md bg-[#F2F2F2] px-3 py-2">
@@ -241,7 +258,6 @@ const PropertiesDetailsModel = ({
               </div>
             </div>
 
-            {/* Footer */}
             <div className="bg-[#F2F2F2] shadow-md">
               <div className="flex items-center justify-end p-5">
                 <div className="flex flex-shrink-0 items-center gap-5">
@@ -262,6 +278,15 @@ const PropertiesDetailsModel = ({
           </div>
         </div>
       )}
+
+      {/* Full Map Modal */}
+      <FullMapModal
+        isOpen={isMapModalOpen}
+        onClose={handleMapModalClose}
+        coordinates={property?.coordinates}
+        propertyName={property?.name}
+        propertyAddress={property?.address}
+      />
     </>
   )
 }
