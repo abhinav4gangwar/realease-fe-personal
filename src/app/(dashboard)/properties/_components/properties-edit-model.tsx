@@ -19,7 +19,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { FileItem, PropertyUploadDropzone } from './document-upload'
 
-interface CustomField {
+export interface CustomField {
   id: string
   label: string
   value: string
@@ -616,30 +616,16 @@ const PropertiesEditModel = ({
                 Co-ordinates <span className="text-primary">*</span>
               </label>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col space-y-1">
-                  <Input
-                    type="text"
-                    value={formData.coordinates}
-                    onChange={(e) =>
-                      updateFormData('coordinates', e.target.value)
-                    }
-                    className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                    placeholder="Latitude"
-                  />
-                </div>
-
-                <div className="flex flex-col space-y-1">
-                  <Input
-                    type="text"
-                    value={formData.coordinates}
-                    onChange={(e) =>
-                      updateFormData('coordinates', e.target.value)
-                    }
-                    className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                    placeholder="Longitude"
-                  />
-                </div>
+              <div className="flex flex-col space-y-1">
+                <Input
+                  type="text"
+                  value={formData.coordinates}
+                  onChange={(e) =>
+                    updateFormData('coordinates', e.target.value)
+                  }
+                  className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+                  placeholder="Latitude"
+                />
               </div>
             </div>
 
@@ -671,34 +657,23 @@ const PropertiesEditModel = ({
                   <label className="text-md text-secondary block pb-5 font-semibold">
                     Legal Details <span className="text-primary">*</span>
                   </label>
+
+                  <div className="flex flex-col space-y-1 pb-3">
+                    <label className="text-md text-secondary block">
+                      Parties <span className="text-primary">*</span>
+                    </label>
+                    <Input
+                      type="text"
+                      value={formData.legalParties}
+                      onChange={(e) =>
+                        updateFormData('legalParties', e.target.value)
+                      }
+                      className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+                      placeholder="Party A"
+                    />
+                  </div>
+
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="flex flex-col space-y-1">
-                      <label className="text-md text-secondary block">
-                        Parties <span className="text-primary">*</span>
-                      </label>
-                      <Input
-                        type="text"
-                        value={formData.legalParties}
-                        onChange={(e) =>
-                          updateFormData('legalParties', e.target.value)
-                        }
-                        className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                        placeholder="Party A"
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between pt-7">
-                      <Input
-                        type="text"
-                        value={formData.legalParties}
-                        onChange={(e) =>
-                          updateFormData('legalParties', e.target.value)
-                        }
-                        className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                        placeholder="Party B"
-                      />
-                    </div>
-
                     <div className="flex flex-col space-y-1">
                       <label className="text-md text-secondary block">
                         Case Number
@@ -886,7 +861,7 @@ const PropertiesEditModel = ({
                         Number of Duplicates{' '}
                         <span className="text-primary">*</span>
                       </label>
-                      <div className='flex justify-between gap-2'>
+                      <div className="flex justify-between gap-2">
                         <Input
                           value={duplicateCount}
                           onChange={(e) => {
@@ -902,7 +877,13 @@ const PropertiesEditModel = ({
                           placeholder="Enter number of duplicates"
                         />
 
-                        <Button className='h-14 font-semibold w-14 bg-secondary cursor-pointer hover:bg-white hover:text-black' onClick={createDuplicateProperties} disabled={isLoading}><Check className='size-5' /></Button>
+                        <Button
+                          className="bg-secondary h-14 w-14 cursor-pointer font-semibold hover:bg-white hover:text-black"
+                          onClick={createDuplicateProperties}
+                          disabled={isLoading}
+                        >
+                          <Check className="size-5" />
+                        </Button>
                       </div>
                     </div>
 
@@ -1080,7 +1061,7 @@ const PropertiesEditModel = ({
             </div>
 
             {/* Content */}
-            <div className=" overflow-y-auto p-4">
+            <div className="overflow-y-auto p-4">
               <div className="space-y-3">
                 {createdDuplicates.map((duplicate, index) => (
                   <div
@@ -1093,9 +1074,8 @@ const PropertiesEditModel = ({
                       </h3>
                     </div>
                     <Button
-                      className="bg-transparent text-secondary/50 hover:bg-transparent hover:text-primary cursor-pointer"
+                      className="text-secondary/50 hover:text-primary cursor-pointer bg-transparent hover:bg-transparent"
                       onClick={() => {
-                       
                         const duplicateProperty = {
                           ...formData,
                           id: duplicate.id.toString(),
