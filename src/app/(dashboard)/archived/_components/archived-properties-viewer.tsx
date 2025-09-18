@@ -1,4 +1,5 @@
 'use client'
+
 import {
   FilterState,
   Properties,
@@ -8,38 +9,27 @@ import {
 import { apiClient } from '@/utils/api'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import BulkDeleteModal from '../../documents/_components/bulk-delete-modal'
 import ScrollToTop from '../../documents/_components/scroll-to-top'
-import BulkArchivePropertyModal from './archive-bulk-property-modal'
-import ArchivePropertyModal from './archive-property-model'
-import CreatePropertyModal from './create-property-modal'
-import { PropertiesActionsButton } from './properties-action-button'
-import { PropertiesAddButton } from './properties-add-button'
-import PropertiesDetailsModel from './properties-details-model'
-import PropertiesEditModel from './properties-edit-model'
-import { PropertiesFilterButton } from './properties-filter-button'
-import PropertiesFilterModel from './properties-filter-model'
-import PropertiesListView from './properties-list-view'
-import { PropertiesSortButton } from './properties-sort-button'
+import { PropertiesFilterButton } from '../../properties/_components/properties-filter-button'
+import PropertiesFilterModel from '../../properties/_components/properties-filter-model'
+import { PropertiesSortButton } from '../../properties/_components/properties-sort-button'
+import { PropertiesViewerProps } from '../../properties/_components/properties-viewer'
+import { ArchiveActionsButton } from './archive-action-button'
+import ArchivedPropertiesListView from './archived-properties-list-view'
+import BulkUnarchivePropertyModal from './bulk-unarchive-model'
+import DeletePropertyModal from './delete-model'
+import UnarchivePropertyModal from './unarchive-model'
 
-export interface PropertiesViewerProps {
-  allProperties: Properties[]
-  onPropertyCreated: () => void
-}
-
-const PropertiesViewer = ({
+const ArchivedPropertiesViewer = ({
   allProperties,
   onPropertyCreated,
 }: PropertiesViewerProps) => {
   const [selectedProperty, setSelectedProperty] = useState<Properties | null>(
     null
   )
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isCreatePropertyModalOpen, setIsCreatePropertyModalOpen] =
-    useState(false)
-  const [isEditPropertyModalOpen, setIsEditPropertyModalOpen] = useState(false)
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
   const [selectedProperties, setSelectedProperties] = useState<string[]>([])
-  const [OpenBulkArchiveModal, setOpenBulkArchiveModal] = useState(false)
 
   const [sortField, setSortField] = useState<PropertySortField>('dateAdded')
   const [sortOrder, setSortOrder] = useState<PropertySortOrder>('desc')
@@ -49,19 +39,12 @@ const PropertiesViewer = ({
     propertyTypes: [],
     legalStatuses: [],
   })
-  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false)
+  const [isunarchiveModalOpen, setIsunarchiveModalOpen] = useState(false)
+  const [isBulkunarchiveModalOpen, setIsBulkunarchiveModalOpen] =
+    useState(false)
 
-  const handleCreatePropertyClose = () => {
-    setIsCreatePropertyModalOpen(false)
-    onPropertyCreated()
-  }
-
-  const handleEditPropertyClose = () => {
-    onPropertyCreated()
-    setIsEditPropertyModalOpen(false)
-    setSelectedProperty(null)
-    setIsModalOpen(false)
-  }
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false)
 
   const handleSortChange = (
     field: PropertySortField,
@@ -71,36 +54,8 @@ const PropertiesViewer = ({
     setSortOrder(order)
   }
 
-  const handleAddSelect = () => {
-    setIsCreatePropertyModalOpen(true)
-  }
-
   const handleFilterSelect = () => {
     setIsFilterModalOpen(true)
-  }
-
-  const handlePropertyInfo = (property: Properties) => {
-    setSelectedProperty(property)
-    setIsModalOpen(true)
-  }
-
-  const handleEditClick = (property: Properties) => {
-    setSelectedProperty(property)
-    setIsEditPropertyModalOpen(true)
-  }
-
-  const handleArchiveClick = (property: Properties) => {
-    setIsArchiveModalOpen(true)
-    setSelectedProperty(property)
-  }
-
-  const handleDownloadClick = (property: Properties) => {
-    console.log('Download', property)
-  }
-
-  const handleShareClick = (property: Properties) => {
-    setSelectedProperty(property)
-    console.log('Share property model open for', property)
   }
 
   const handleApplyFilters = (filters: FilterState) => {
@@ -109,14 +64,14 @@ const PropertiesViewer = ({
 
   const handleActionSelect = (actionType: string) => {
     switch (actionType) {
-      case 'share':
+      case 'delete':
         if (selectedProperties.length > 0) {
-          console.log('Share property')
+          setIsBulkDeleteModalOpen(true)
         }
         break
-      case 'archive':
+      case 'unarchive':
         if (selectedProperties.length > 0) {
-          setOpenBulkArchiveModal(true)
+          setIsBulkunarchiveModalOpen(true)
         }
         break
     }
@@ -223,7 +178,17 @@ const PropertiesViewer = ({
     setSelectedProperties((prev) => prev.filter((id) => visibleIds.has(id)))
   }, [sortedAndFilteredProperties])
 
-  const confirmArchive = async () => {
+  const handleUnarchiveClick = (property: Properties) => {
+    setSelectedProperty(property)
+    setIsunarchiveModalOpen(true)
+  }
+
+  const handleDeleteClick = (property: Properties) => {
+    setSelectedProperty(property)
+    setIsDeleteModalOpen(true)
+  }
+
+  const confirmUnarchive = async () => {
     if (!selectedProperty) return
 
     try {
@@ -232,11 +197,10 @@ const PropertiesViewer = ({
           itemId: Number.parseInt(selectedProperty.id),
         },
       ])
-      setIsModalOpen(false)
       setSelectedProperty(null)
       onPropertyCreated()
-      setIsArchiveModalOpen(false)
-      setIsEditPropertyModalOpen(false)
+      setIsunarchiveModalOpen(false)
+
       const successMessage =
         response.data?.message || 'Property archived successfully'
       toast.success(successMessage)
@@ -248,7 +212,36 @@ const PropertiesViewer = ({
     }
   }
 
-  const handleBulkArchive = async () => {
+  const confirmDelete = async () => {
+    if (!selectedProperty) return
+
+    try {
+      const response = await apiClient.delete(
+        '/dashboard/properties/delete',
+        {
+          data: [
+            {
+              itemId: Number.parseInt(selectedProperty.id),
+            },
+          ],
+        }
+      )
+      setSelectedProperty(null)
+      onPropertyCreated()
+      setIsDeleteModalOpen(false)
+
+      const successMessage =
+        response.data?.message || 'Property deleted successfully'
+      toast.success(successMessage)
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        'Failed to delete property. Please try again.'
+      toast.error(errorMessage)
+    }
+  }
+
+  const handleBulkUnarchive = async () => {
     if (selectedProperties.length === 0) return
 
     try {
@@ -263,7 +256,7 @@ const PropertiesViewer = ({
       )
       setSelectedProperties([])
       onPropertyCreated()
-      setOpenBulkArchiveModal(false)
+      setIsBulkunarchiveModalOpen(false)
       const successMessage =
         response.data?.message ||
         `${selectedProperties.length} properties archived successfully`
@@ -276,67 +269,72 @@ const PropertiesViewer = ({
     }
   }
 
+  const handleBulkDelete = async () => {
+    if (selectedProperties.length === 0) return
+
+    try {
+      const archivePayload = selectedProperties.map((id) => ({
+        itemId: Number.parseInt(id),
+      }))
+
+      const response = await apiClient.delete(
+        '/dashboard/properties/delete',
+        {
+          data: archivePayload,
+        }
+      )
+
+      setSelectedProperties([])
+      onPropertyCreated()
+      setIsBulkDeleteModalOpen(false)
+
+      const successMessage =
+        response.data?.message ||
+        `${selectedProperties.length} properties deleted successfully`
+      toast.success(successMessage)
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        'Failed to delete properties. Please try again.'
+      toast.error(errorMessage)
+    }
+  }
+
   return (
     <div>
       <div className="flex justify-between pb-4">
         <div className="flex items-center gap-4">
           <div className="text-secondary text-2xl font-semibold lg:text-3xl">
-            Properties
+            Archived Properties
           </div>
         </div>
 
         <div className="flex items-center gap-4">
           <PropertiesFilterButton onFilterSelect={handleFilterSelect} />
           <PropertiesSortButton onSortChange={handleSortChange} />
-          <PropertiesActionsButton
+          <ArchiveActionsButton
             onActionSelect={handleActionSelect}
             selectedCount={selectedProperties.length}
           />
-          <PropertiesAddButton onAddSelect={handleAddSelect} />
         </div>
       </div>
 
       <div>
         <div className="mt-5 rounded-lg bg-white p-6">
-          <PropertiesListView
+          <ArchivedPropertiesListView
             properties={sortedAndFilteredProperties}
             selectedPropertyId={selectedProperty?.id}
-            onEditClick={handleEditClick}
-            onDownloadClick={handleDownloadClick}
-            onShareClick={handleShareClick}
-            onPropertyInfo={handlePropertyInfo}
             selectedProperties={selectedProperties}
             onSelectAll={handleSelectAll}
             onToggleSelect={handleToggleSelect}
             selectAllState={getSelectAllState()}
+            onUnarchiveClick={handleUnarchiveClick}
+            onDeleteClick={handleDeleteClick}
           />
         </div>
       </div>
 
       <ScrollToTop />
-
-      <PropertiesDetailsModel
-        property={selectedProperty}
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false)
-          setSelectedProperty(null)
-        }}
-        onEditClick={handleEditClick}
-      />
-
-      <PropertiesEditModel
-        property={selectedProperty}
-        isOpen={isEditPropertyModalOpen}
-        onClose={handleEditPropertyClose}
-        handleAddAnother={() => {
-          setIsEditPropertyModalOpen(false)
-          setIsCreatePropertyModalOpen(true)
-          setSelectedProperty(null)
-        }}
-        onArchiveClick={handleArchiveClick}
-        setSelectedProperty={setSelectedProperty}
-      />
 
       <PropertiesFilterModel
         properties={allProperties}
@@ -348,27 +346,37 @@ const PropertiesViewer = ({
         initialFilters={activeFilters}
       />
 
-      <CreatePropertyModal
-        isOpen={isCreatePropertyModalOpen}
-        onClose={handleCreatePropertyClose}
+      <UnarchivePropertyModal
+        isOpen={isunarchiveModalOpen}
+        onCancel={() => setIsunarchiveModalOpen(false)}
+        onConfirm={confirmUnarchive}
       />
 
-      <ArchivePropertyModal
-        isOpen={isArchiveModalOpen}
-        onCancel={() => setIsArchiveModalOpen(false)}
-        onConfirm={confirmArchive}
-      />
-
-      <BulkArchivePropertyModal
-        isOpen={OpenBulkArchiveModal}
+      <BulkUnarchivePropertyModal
+        isOpen={isBulkunarchiveModalOpen}
         onConfirm={() => {
-          handleBulkArchive()
+          handleBulkUnarchive()
         }}
-        onCancel={() => setOpenBulkArchiveModal(false)}
+        onCancel={() => setIsBulkunarchiveModalOpen(false)}
         selectedCount={selectedProperties.length}
+      />
+
+      <DeletePropertyModal
+        isOpen={isDeleteModalOpen}
+        onCancel={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+      />
+
+      <BulkDeleteModal
+        isOpen={isBulkDeleteModalOpen}
+        onCancel={() => setIsBulkDeleteModalOpen(false)}
+        selectedCount={selectedProperties.length}
+        onConfirm={() => {
+          handleBulkDelete()
+        }}
       />
     </div>
   )
 }
 
-export default PropertiesViewer
+export default ArchivedPropertiesViewer

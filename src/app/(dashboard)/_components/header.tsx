@@ -1,24 +1,25 @@
 'use client'
 
-import { Input } from '@/components/ui/input'
-import { Bell, CircleUser, Search } from 'lucide-react'
+import DocumentSearch from '@/components/searchbars/document-search'
+import GlobalSearch from '@/components/searchbars/global-search'
+import PropertySearch from '@/components/searchbars/property-search'
+import { Bell, CircleUser } from 'lucide-react'
 import Image from 'next/image'
+import { usePathname } from 'next/navigation'
 
 export function Header() {
+  const pathname = usePathname()
   return (
-    <header className="z-40 bg-white px-6 py-4 shadow-sm hidden lg:block">
+    <header className="z-40 hidden bg-white px-6 py-4 shadow-sm lg:block">
       <div className="flex items-center justify-between">
         {/* Search Bar */}
-        <div className="mx-8 hidden max-w-6xl flex-1 lg:block">
-          <div className="relative">
-            <Search className="text-secondary absolute top-1/2 left-3 h-6 w-6 -translate-y-1/2 transform" />
-            <Input
-              type="text"
-              placeholder="Anywhere Search"
-              className="h-12 w-full pl-10"
-            />
-          </div>
-        </div>
+        {pathname === '/properties' ? (
+          <PropertySearch />
+        ) : pathname === '/documents' ? (
+          <DocumentSearch />
+        ) : (
+          <GlobalSearch />
+        )}
 
         <div className="block lg:hidden">
           <Image

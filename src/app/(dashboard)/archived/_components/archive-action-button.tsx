@@ -5,7 +5,7 @@ import { ChevronDown, ChevronUp } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
-export type actionType = "select"| "share" | "archive"
+export type actionType = "select"| "delete" | "unarchive"
 
 interface ActionButtonProps {
   onActionSelect: (addType: actionType) => void
@@ -14,11 +14,11 @@ interface ActionButtonProps {
 }
 
 const actionOptions: { label: string; value: actionType }[] = [
-  { label: "Share", value: "share" },
-  { label: "Archive", value: "archive" },
+  { label: "Unarchive", value: "unarchive" },
+  { label: "Delete", value: "delete" },
 ]
 
-export function PropertiesActionsButton({ onActionSelect, isSelectMode = false, selectedCount = 0 }: ActionButtonProps) {
+export function ArchiveActionsButton({ onActionSelect, isSelectMode = false, selectedCount = 0 }: ActionButtonProps) {
   const [open, setOpen] = useState<boolean>(false)
   const [selected, setSelected] = useState<actionType | null>(null)
 

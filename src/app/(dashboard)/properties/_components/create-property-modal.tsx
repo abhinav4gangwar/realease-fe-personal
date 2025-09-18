@@ -2,20 +2,38 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Properties } from '@/types/property.types'
-import { ArrowLeft, MoveRight, Plus, X } from 'lucide-react'
+import { ArrowLeft, MoveRight, Plus, PlusIcon, Trash2, X } from 'lucide-react'
 import Image from 'next/image'
 import { useState } from 'react'
-import { UploadDropzone } from '../../documents/_components/UploadDropzone'
+
+import { apiClient } from '@/utils/api'
+import { toast } from 'sonner'
+import { FileItem, PropertyUploadDropzone } from './document-upload'
+
+interface CustomField {
+  id: string
+  label: string
+  value: string
+}
 
 interface CreatePropertyModalProps {
   isOpen: boolean
   onClose: () => void
 }
+
 const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
   const [currentStep, setCurrentStep] = useState(1)
   const totalSteps = 3
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [isDisputed, setIsDisputed] = useState(false)
+  const [customFields, setCustomFields] = useState<CustomField[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [createdPropertyId, setCreatedPropertyId] = useState<string | null>(
+    null
+  )
+  const [documentFiles, setDocumentFiles] = useState<FileItem[]>([])
+  const [isDocumentUploading, setIsDocumentUploading] = useState(false)
+
   const [formData, setFormData] = useState<Properties>({
     name: '',
     type: '',
@@ -45,6 +63,33 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     }))
   }
 
+  const addCustomField = () => {
+    const newField: CustomField = {
+      id: `custom-${Date.now()}`,
+      label: 'Custom Field',
+      value: '',
+    }
+    setCustomFields((prev) => [...prev, newField])
+  }
+
+  const updateCustomField = (
+    id: string,
+    field: 'label' | 'value',
+    newValue: string
+  ) => {
+    setCustomFields((prev) =>
+      prev.map((customField) =>
+        customField.id === id
+          ? { ...customField, [field]: newValue }
+          : customField
+      )
+    )
+  }
+
+  const removeCustomField = (id: string) => {
+    setCustomFields((prev) => prev.filter((field) => field.id !== id))
+  }
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -67,18 +112,142 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
       valuePerSQ: '',
       value: '',
     })
+    setCustomFields([])
     setIsDisputed(false)
     setCurrentStep(1)
     setIsSubmitted(false)
+    setCreatedPropertyId(null)
+    setDocumentFiles([])
+    setIsDocumentUploading(false)
   }
 
-  const handleNext = () => {
-    if (currentStep < totalSteps) {
+  const createProperty = async () => {
+    try {
+      setIsLoading(true)
+
+      const additionalDetails = customFields.reduce(
+        (acc, field) => ({
+          ...acc,
+          [field.label]: field.value,
+        }),
+        {}
+      )
+
+      const requestBody = {
+        name: formData.name,
+        type: formData.type,
+        owner: formData.owner,
+        country: formData.country,
+        zipcode: formData.zipcode,
+        address: formData.address,
+        location: formData.location,
+        locality: formData.location,
+        district: formData.district,
+        city: formData.city,
+        state: formData.state,
+        coordinates: formData.coordinates,
+        isDisputed: isDisputed,
+        legalStatus: isDisputed ? 'Disputed - Ongoing' : 'Undisputed',
+        legalParties: formData.legalParties,
+        caseNumber: formData.caseNumber,
+        caseType: formData.caseType,
+        nextHearing: formData.nextHearing,
+        extent: formData.extent,
+        valuePerSQ: formData.valuePerSQ,
+        additionalDetails:
+          Object.keys(additionalDetails).length > 0
+            ? additionalDetails
+            : undefined,
+      }
+      const response = await apiClient.post(
+        '/dashboard/properties/create',
+        requestBody
+      )
+
+      if (
+        response.data &&
+        response.data.properties &&
+        response.data.properties.length > 0
+      ) {
+        setCreatedPropertyId(response.data.properties[0].id.toString())
+        toast.success('Property created successfully!')
+        return true
+      }
+
+      throw new Error('Invalid response format')
+    } catch (error: any) {
+      console.error('Property creation error:', error)
+      toast.error(error.response?.data?.message || 'Failed to create property')
+      return false
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleDocumentUpload = async () => {
+    if (documentFiles.length === 0) {
+      return true
+    }
+
+    if (!createdPropertyId) {
+      toast.error('Property ID not found')
+      return false
+    }
+
+    try {
+      setIsDocumentUploading(true)
+
+      const formData = new FormData()
+      documentFiles.forEach(({ file }) => {
+        formData.append('files', file)
+      })
+
+      // Add metadata
+      const metadata = documentFiles.map(({ name }) => ({
+        name: name,
+        path: name,
+        propertyId: createdPropertyId,
+        tags: '',
+      }))
+
+      formData.append('meta', JSON.stringify(metadata))
+      formData.append('parentId', '')
+
+      const response = await apiClient.post(
+        '/dashboard/documents/upload',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      )
+
+      toast.success(response.data.message || 'Documents uploaded successfully!')
+      setDocumentFiles([])
+      return true
+    } catch (error: any) {
+      console.error('Upload error:', error)
+      toast.error(error.response?.data?.message || 'Upload failed')
+      return false
+    } finally {
+      setIsDocumentUploading(false)
+    }
+  }
+
+  const handleNext = async () => {
+    if (currentStep === 2) {
+      const success = await createProperty()
+      if (success) {
+        setCurrentStep(currentStep + 1)
+      }
+    } else if (currentStep === 3) {
+      const uploadSuccess = await handleDocumentUpload()
+      if (uploadSuccess) {
+        setIsSubmitted(true)
+      }
+    } else if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1)
-    } else {
-      console.log('🚀 Creating Property - API Call:')
-      console.log({ ...formData })
-      setIsSubmitted(true)
     }
   }
 
@@ -97,9 +266,14 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     resetForm()
   }
 
-  const handleSaveAndAdd = () => {
-    handleNext()
-    handleAddAnother()
+  const handleSaveAndAddAnother = async () => {
+    if (currentStep === 3) {
+      const uploadSuccess = await handleDocumentUpload()
+      if (uploadSuccess) {
+        toast.success('Property created successfully!')
+        resetForm()
+      }
+    }
   }
 
   const renderStepForm = () => {
@@ -165,10 +339,10 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
               </label>
               <div>
                 {[
-                  { value: 'land', label: 'Land' },
-                  { value: 'plot', label: 'Plot' },
-                  { value: 'commercial', label: 'Commercial' },
-                  { value: 'residential', label: 'Residential' },
+                  { value: 'Land', label: 'Land' },
+                  { value: 'Plot', label: 'Plot' },
+                  { value: 'Commercial', label: 'Commercial' },
+                  { value: 'Residential', label: 'Residential' },
                 ].map((type) => (
                   <label
                     key={type.value}
@@ -503,6 +677,69 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                 />
               </div>
             </div>
+
+            {/* Custom Fields Section */}
+            <div className="flex flex-col space-y-3">
+              {/* Existing custom fields */}
+              {customFields.map((field) => (
+                <div
+                  key={field.id}
+                  className="flex flex-col space-y-3 rounded-md bg-[#F8F8F8] p-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="mr-3 flex flex-1 flex-col space-y-1">
+                      <label className="text-md text-secondary block font-semibold">
+                        Field Label
+                      </label>
+                      <Input
+                        type="text"
+                        value={field.label}
+                        onChange={(e) =>
+                          updateCustomField(field.id, 'label', e.target.value)
+                        }
+                        className="w-full rounded-md border border-gray-300 px-3 py-2"
+                        placeholder="Enter field label"
+                      />
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeCustomField(field.id)}
+                      className="text-primary mt-6 cursor-pointer"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-md text-secondary block font-semibold">
+                      Value
+                    </label>
+                    <Input
+                      type="text"
+                      value={field.value}
+                      onChange={(e) =>
+                        updateCustomField(field.id, 'value', e.target.value)
+                      }
+                      className="w-full rounded-md border border-gray-300 px-3 py-2"
+                      placeholder="Enter value"
+                    />
+                  </div>
+                </div>
+              ))}
+
+              {/* Add more information button */}
+              <div className="flex flex-col space-y-1">
+                <div
+                  className="flex cursor-pointer justify-between rounded-md bg-[#F2F2F2] p-3 transition-colors hover:bg-[#E8E8E8]"
+                  onClick={addCustomField}
+                >
+                  <p className="text-secondary font-semibold">
+                    Add more information
+                  </p>
+                  <PlusIcon className="size-5" />
+                </div>
+              </div>
+            </div>
           </div>
         )
 
@@ -510,7 +747,12 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
         return (
           <div>
             <p className="font-semibold">Upload Documents</p>
-            <UploadDropzone />
+            <PropertyUploadDropzone
+              propertyId={createdPropertyId}
+              selectedFiles={documentFiles}
+              setSelectedFiles={setDocumentFiles}
+              isLoading={isDocumentUploading}
+            />
           </div>
         )
     }
@@ -573,34 +815,41 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
             </div>
 
             <div className="flex gap-4">
-              {currentStep === 3 && (
-                <Button
-                  className="hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 bg-white px-6 text-black hover:text-white font-semibold border border-gray-400"
-                  onClick={handleSaveAndAdd}
-                >
-                  <>
-                    Save and Add Another
+              {currentStep === 3 ? (
+                <>
+                  <Button
+                    className="hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 border border-gray-400 bg-transparent px-6 font-semibold text-black hover:text-white"
+                    onClick={handleSaveAndAddAnother}
+                    disabled={isDocumentUploading}
+                  >
+                    Save & Add Another
                     <Plus className="size-4" />
-                  </>
+                  </Button>
+                  <Button
+                    className="bg-primary hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 px-6"
+                    onClick={handleNext}
+                    disabled={isDocumentUploading}
+                  >
+                    {isDocumentUploading ? 'Uploading...' : 'Save & Next'}
+                    <MoveRight className="size-4" />
+                  </Button>
+                </>
+              ) : currentStep < 3 ? (
+                <Button
+                  className="bg-primary hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 px-6"
+                  onClick={handleNext}
+                  disabled={isLoading}
+                >
+                  {currentStep === 2 && isLoading ? (
+                    <>Creating Property...</>
+                  ) : (
+                    <>
+                      Next
+                      <MoveRight className="size-4" />
+                    </>
+                  )}
                 </Button>
-              )}
-
-              <Button
-                className="bg-primary hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 px-6"
-                onClick={handleNext}
-              >
-                {currentStep === totalSteps ? (
-                  <>
-                    Save & Finish
-                    <MoveRight className="size-4" />
-                  </>
-                ) : (
-                  <>
-                    Next
-                    <MoveRight className="size-4" />
-                  </>
-                )}
-              </Button>
+              ) : null}
             </div>
           </div>
         )}

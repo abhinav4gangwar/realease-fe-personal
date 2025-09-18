@@ -8,13 +8,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { FileTypeDisplay } from '@/components/ui/file-type-display'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { User } from '@/types'
 import type { Document } from '@/types/document.types'
 import { apiClient } from '@/utils/api'
@@ -25,8 +18,9 @@ import { toast } from 'sonner'
 import { FileIcon } from './file-icon'
 import { TagInput } from './tags-input'
 
-//fetch this from an API
-const properties = [{ id: '0', name: 'No Property' }]
+import { Properties } from '@/types/property.types'
+import { propertiesApi } from '../../properties/_property_utils/property.services'
+import { PropertyInput } from './properties-input'
 
 // API function to get users (same as in PDFPreviewModal)
 export const getUsers = async (documentId: number) => {
@@ -75,31 +69,51 @@ export function DocumentDetailModal({
   const [isSaving, setIsSaving] = useState(false)
   const [editedProperty, setEditedProperty] = useState('')
   const [editedTags, setEditedTags] = useState('')
-  
+
   // Add states for shared users
   const [users, setUsers] = useState<User[]>([])
   const [isLoadingUsers, setIsLoadingUsers] = useState<boolean>(false)
 
+  // Add state for properties
+  const [properties, setProperties] = useState<Properties[]>([])
+
+  // Load properties
+  useEffect(() => {
+    const loadProperties = async () => {
+      try {
+        const propertiesList = await propertiesApi.getProperties()
+        setProperties([
+          { id: '0', name: 'No Property' } as Properties,
+          ...propertiesList,
+        ])
+      } catch (error) {
+        console.error('Failed to load properties:', error)
+        setProperties([{ id: '0', name: 'No Property' } as Properties])
+      }
+    }
+
+    if (isOpen) {
+      loadProperties()
+    }
+  }, [isOpen])
+
   useEffect(() => {
     if (isOpen && openInEditMode && document) {
-      const propertyId = properties.find(
-      (p) => p.name === document.linkedProperty
-    )?.id || '0'
+      const propertyId =
+        properties.find((p) => p.name === document.linkedProperty)?.id || '0'
       setEditedName(document.name)
       setEditedProperty(propertyId || '0')
       setEditedTags(document.tags || '')
       setIsEditing(true)
     } else if (isOpen && document) {
-      const propertyId = properties.find(
-      (p) => p.name === document.linkedProperty
-    )?.id || '0'
+      const propertyId =
+        properties.find((p) => p.name === document.linkedProperty)?.id || '0'
       setEditedName(document.name)
       setEditedProperty(propertyId || '0')
       setEditedTags(document.tags || '')
       setIsEditing(false)
     }
-  }, [isOpen, openInEditMode, document])
-
+  }, [isOpen, openInEditMode, document, properties])
 
   // Load users when document changes
   useEffect(() => {
@@ -116,8 +130,8 @@ export function DocumentDetailModal({
       const fetchedUsers = await getUsers(Number.parseInt(document.id))
       setUsers(fetchedUsers || [])
     } catch (error) {
-      console.error("Error loading users:", error)
-      toast.error("Failed to load shared users")
+      console.error('Error loading users:', error)
+      toast.error('Failed to load shared users')
       setUsers([])
     } finally {
       setIsLoadingUsers(false)
@@ -134,9 +148,8 @@ export function DocumentDetailModal({
   if (!document || !isOpen) return null
 
   const handleEdit = () => {
-    const propertyId = properties.find(
-      (p) => p.name === document.linkedProperty
-    )?.id || '0'
+    const propertyId =
+      properties.find((p) => p.name === document.linkedProperty)?.id || '0'
     setEditedName(document.name)
     setEditedProperty(propertyId)
     setEditedTags(document.tags || '')
@@ -353,24 +366,15 @@ export function DocumentDetailModal({
                 Linked Property
               </h3>
               {isEditing ? (
-                <Select
+                <PropertyInput
                   value={editedProperty}
-                  onValueChange={setEditedProperty}
-                  disabled={isSaving}
-                >
-                  <SelectTrigger className="w-full border-gray-400 focus-visible:ring-0">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {properties.map((property) => (
-                      <SelectItem key={property.id} value={property.id}>
-                        {property.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onChange={setEditedProperty}
+                  placeholder="Select property..."
+                />
               ) : (
-                <p className="text-sm">{document.linkedProperty}</p>
+                <p className="text-sm">
+                  {document.linkedProperty || 'No Property'}
+                </p>
               )}
             </div>
           )}
@@ -423,34 +427,35 @@ export function DocumentDetailModal({
             </div>
           )}
 
-          
-            <div>
-              <h3 className="mb-2 text-sm font-medium text-gray-500">
-                Shared With
-              </h3>
-              {isLoadingUsers ? (
-                <div className="flex items-center text-sm text-gray-500">
-                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-primary"></div>
-                  Loading shared users...
-                </div>
-              ) : users && users.length > 0 ? (
-                <div className="space-y-2">
-                  {users.map((user) => (
-                    <div key={user.id} className="flex items-center gap-2 text-sm">
-                      <div className="flex flex-col">
-                        {user.email && (
-                          <span className="text-xs">{user.email}</span>
-                        )}
-                      </div>
+          <div>
+            <h3 className="mb-2 text-sm font-medium text-gray-500">
+              Shared With
+            </h3>
+            {isLoadingUsers ? (
+              <div className="flex items-center text-sm text-gray-500">
+                <div className="border-t-primary mr-2 h-4 w-4 animate-spin rounded-full border-2 border-gray-300"></div>
+                Loading shared users...
+              </div>
+            ) : users && users.length > 0 ? (
+              <div className="space-y-2">
+                {users.map((user) => (
+                  <div
+                    key={user.id}
+                    className="flex items-center gap-2 text-sm"
+                  >
+                    <div className="flex flex-col">
+                      {user.email && (
+                        <span className="text-xs">{user.email}</span>
+                      )}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm">Not shared with anyone</p>
-              )}
-            </div>
-        
-          
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm">Not shared with anyone</p>
+            )}
+          </div>
+
           {document.size && (
             <div>
               <h3 className="mb-1 text-sm font-medium text-gray-500">Size</h3>

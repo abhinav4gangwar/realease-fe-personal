@@ -2,17 +2,36 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Properties } from '@/types/property.types'
-import { ArrowLeft, MoveRight, Plus, Trash, X } from 'lucide-react'
+import { apiClient } from '@/utils/api'
+import {
+  ArrowLeft,
+  Check,
+  MoveRight,
+  Pencil,
+  Plus,
+  PlusIcon,
+  Trash,
+  Trash2,
+  X,
+} from 'lucide-react'
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
-import { UploadDropzone } from '../../documents/_components/UploadDropzone'
+import { toast } from 'sonner'
+import { FileItem, PropertyUploadDropzone } from './document-upload'
+
+export interface CustomField {
+  id: string
+  label: string
+  value: string
+}
 
 interface PropertiesEditModelProps {
   property: Properties | null
   isOpen: boolean
   onClose: () => void
   handleAddAnother: () => void
-  onDeleteClick?: (property: Properties) => void
+  onArchiveClick?: (property: Properties) => void
+  setSelectedProperty?: (property: Properties | null) => void
 }
 
 const PropertiesEditModel = ({
@@ -20,12 +39,23 @@ const PropertiesEditModel = ({
   isOpen,
   onClose,
   handleAddAnother,
-  onDeleteClick,
+  onArchiveClick,
+  setSelectedProperty,
 }: PropertiesEditModelProps) => {
   const [currentStep, setCurrentStep] = useState(1)
   const totalSteps = 3
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [isDisputed, setIsDisputed] = useState(false)
+  const [customFields, setCustomFields] = useState<CustomField[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [documentFiles, setDocumentFiles] = useState<FileItem[]>([])
+  const [isDocumentUploading, setIsDocumentUploading] = useState(false)
+  const [isDuplicateEnabled, setIsDuplicateEnabled] = useState(false)
+  const [duplicateCount, setDuplicateCount] = useState(1)
+  const [duplicateNames, setDuplicateNames] = useState<string[]>([])
+  const [createdDuplicates, setCreatedDuplicates] = useState<any[]>([])
+  const [showDuplicatesModal, setShowDuplicatesModal] = useState(false)
+
   const [formData, setFormData] = useState<Properties>({
     name: '',
     type: '',
@@ -54,6 +84,18 @@ const PropertiesEditModel = ({
         ...property,
       })
       setIsDisputed(property.isDisputed || false)
+
+      // Extract custom fields from additionalDetails if they exist
+      if (property.additionalDetails) {
+        const customFieldsFromProperty = Object.entries(
+          property.additionalDetails
+        ).map(([key, value], index) => ({
+          id: `custom-${index}`,
+          label: key,
+          value: String(value),
+        }))
+        setCustomFields(customFieldsFromProperty)
+      }
     }
   }, [property, isOpen])
 
@@ -64,31 +106,261 @@ const PropertiesEditModel = ({
     }))
   }
 
+  const addCustomField = () => {
+    const newField: CustomField = {
+      id: `custom-${Date.now()}`,
+      label: 'Custom Field',
+      value: '',
+    }
+    setCustomFields((prev) => [...prev, newField])
+  }
+
+  const updateCustomField = (
+    id: string,
+    field: 'label' | 'value',
+    newValue: string
+  ) => {
+    setCustomFields((prev) =>
+      prev.map((customField) =>
+        customField.id === id
+          ? { ...customField, [field]: newValue }
+          : customField
+      )
+    )
+  }
+
+  const removeCustomField = (id: string) => {
+    setCustomFields((prev) => prev.filter((field) => field.id !== id))
+  }
+
   const resetForm = () => {
     if (property) {
       setFormData({
         ...property,
       })
       setIsDisputed(property.isDisputed || false)
+
+      if (property.additionalDetails) {
+        const customFieldsFromProperty = Object.entries(
+          property.additionalDetails
+        ).map(([key, value], index) => ({
+          id: `custom-${index}`,
+          label: key,
+          value: String(value),
+        }))
+        setCustomFields(customFieldsFromProperty)
+      } else {
+        setCustomFields([])
+      }
     }
     setCurrentStep(1)
     setIsSubmitted(false)
+    setDocumentFiles([])
+    setIsDocumentUploading(false)
+    setIsDuplicateEnabled(false)
+    setDuplicateCount(1)
+    setDuplicateNames([])
+    setCreatedDuplicates([])
+    setShowDuplicatesModal(false)
   }
 
-  const handleNext = () => {
-    if (currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1)
-    } else {
-      console.log('🚀 Updating Property - API Call:')
-      console.log({
-        propertyId: property?.id,
-        updatedData: { ...formData, isDisputed },
+  const updateProperty = async () => {
+    if (!property?.id) {
+      toast.error('Property ID not found')
+      return false
+    }
+
+    try {
+      setIsLoading(true)
+
+      const additionalDetails = customFields.reduce(
+        (acc, field) => ({
+          ...acc,
+          [field.label]: field.value,
+        }),
+        {}
+      )
+
+      const requestBody = {
+        name: formData.name,
+        type: formData.type,
+        owner: formData.owner,
+        country: formData.country,
+        zipcode: formData.zipcode,
+        address: formData.address,
+        location: formData.location,
+        locality: formData.location,
+        district: formData.district,
+        city: formData.city,
+        state: formData.state,
+        coordinates: formData.coordinates,
+        isDisputed: isDisputed,
+        legalStatus: isDisputed ? 'Disputed - Ongoing' : 'Undisputed',
+        legalParties: formData.legalParties,
+        caseNumber: formData.caseNumber,
+        caseType: formData.caseType,
+        nextHearing: formData.nextHearing,
+        extent: formData.extent,
+        valuePerSQ: formData.valuePerSQ,
+        value: formData.value,
+        additionalDetails:
+          Object.keys(additionalDetails).length > 0
+            ? additionalDetails
+            : undefined,
+      }
+
+      const response = await apiClient.put(
+        `/dashboard/properties/edit/${property.id}`,
+        requestBody
+      )
+
+      toast.success('Property updated successfully!')
+      return true
+    } catch (error: any) {
+      console.error('Property update error:', error)
+      toast.error(error.response?.data?.message || 'Failed to update property')
+      return false
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleDocumentUpload = async () => {
+    if (documentFiles.length === 0) {
+      return true
+    }
+
+    if (!property?.id) {
+      toast.error('Property ID not found')
+      return false
+    }
+
+    try {
+      setIsDocumentUploading(true)
+
+      const formDataUpload = new FormData()
+      documentFiles.forEach(({ file }) => {
+        formDataUpload.append('files', file)
       })
 
-      setTimeout(() => {
-        console.log('✅ Property updated successfully')
+      // Add metadata
+      const metadata = documentFiles.map(({ name }) => ({
+        name: name,
+        path: name,
+        propertyId: property.id,
+        tags: '',
+      }))
+
+      formDataUpload.append('meta', JSON.stringify(metadata))
+      formDataUpload.append('parentId', '')
+
+      const response = await apiClient.post(
+        '/dashboard/documents/upload',
+        formDataUpload,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      )
+
+      toast.success(response.data.message || 'Documents uploaded successfully!')
+      setDocumentFiles([])
+      return true
+    } catch (error: any) {
+      console.error('Upload error:', error)
+      toast.error(error.response?.data?.message || 'Upload failed')
+      return false
+    } finally {
+      setIsDocumentUploading(false)
+    }
+  }
+
+  const createDuplicateProperties = async () => {
+    if (!property?.id) {
+      toast.error('Property ID not found')
+      return false
+    }
+
+    try {
+      setIsLoading(true)
+
+      const additionalDetails = customFields.reduce(
+        (acc, field) => ({
+          ...acc,
+          [field.label]: field.value,
+        }),
+        {}
+      )
+
+      const requestBody = {
+        name: formData.name,
+        type: formData.type,
+        owner: formData.owner,
+        country: formData.country,
+        zipcode: formData.zipcode,
+        address: formData.address,
+        location: formData.location,
+        locality: formData.location,
+        district: formData.district,
+        city: formData.city,
+        state: formData.state,
+        coordinates: formData.coordinates,
+        isDisputed: isDisputed,
+        legalStatus: isDisputed ? 'Disputed - Ongoing' : 'Undisputed',
+        legalParties: formData.legalParties,
+        caseNumber: formData.caseNumber,
+        caseType: formData.caseType,
+        nextHearing: formData.nextHearing,
+        extent: formData.extent,
+        valuePerSQ: formData.valuePerSQ,
+        numberOfDuplicatePlots: duplicateCount,
+        duplicateNames: duplicateNames.length > 0 ? duplicateNames : undefined,
+        additionalDetails:
+          Object.keys(additionalDetails).length > 0
+            ? additionalDetails
+            : undefined,
+      }
+
+      const response = await apiClient.post(
+        '/dashboard/properties/create',
+        requestBody
+      )
+
+      if (response.data && response.data.properties) {
+        setCreatedDuplicates(response.data.properties)
+        setShowDuplicatesModal(true)
+        toast.success(
+          `${response.data.count} duplicate properties created successfully!`
+        )
+        return true
+      }
+
+      throw new Error('Invalid response format')
+    } catch (error: any) {
+      console.error('Duplicate properties creation error:', error)
+      toast.error(
+        error.response?.data?.message || 'Failed to create duplicate properties'
+      )
+      return false
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleNext = async () => {
+    if (currentStep === 2) {
+      const success = await updateProperty()
+      if (success) {
+        setCurrentStep(currentStep + 1)
+      }
+    } else if (currentStep === 3) {
+      const uploadSuccess = await handleDocumentUpload()
+      if (uploadSuccess) {
         setIsSubmitted(true)
-      }, 1000)
+      }
+    } else if (currentStep < totalSteps) {
+      setCurrentStep(currentStep + 1)
     }
   }
 
@@ -103,6 +375,16 @@ const PropertiesEditModel = ({
     onClose()
   }
 
+  const handleSaveAndAddAnother = async () => {
+    if (currentStep === 3) {
+      const uploadSuccess = await handleDocumentUpload()
+      if (uploadSuccess) {
+        toast.success('Property updated successfully!')
+        resetForm()
+        handleAddAnother()
+      }
+    }
+  }
 
   const renderStepForm = () => {
     if (isSubmitted) {
@@ -171,10 +453,10 @@ const PropertiesEditModel = ({
               </label>
               <div>
                 {[
-                  { value: 'land', label: 'Land' },
-                  { value: 'plot', label: 'Plot' },
-                  { value: 'commercial', label: 'Commercial' },
-                  { value: 'residential', label: 'Residential' },
+                  { value: 'Land', label: 'Land' },
+                  { value: 'Plot', label: 'Plot' },
+                  { value: 'Commercial', label: 'Commercial' },
+                  { value: 'Residential', label: 'Residential' },
                 ].map((type) => (
                   <label
                     key={type.value}
@@ -334,30 +616,16 @@ const PropertiesEditModel = ({
                 Co-ordinates <span className="text-primary">*</span>
               </label>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col space-y-1">
-                  <Input
-                    type="text"
-                    value={formData.coordinates}
-                    onChange={(e) =>
-                      updateFormData('coordinates', e.target.value)
-                    }
-                    className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                    placeholder="Latitude"
-                  />
-                </div>
-
-                <div className="flex flex-col space-y-1">
-                  <Input
-                    type="text"
-                    value={formData.coordinates}
-                    onChange={(e) =>
-                      updateFormData('coordinates', e.target.value)
-                    }
-                    className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                    placeholder="Longitude"
-                  />
-                </div>
+              <div className="flex flex-col space-y-1">
+                <Input
+                  type="text"
+                  value={formData.coordinates}
+                  onChange={(e) =>
+                    updateFormData('coordinates', e.target.value)
+                  }
+                  className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+                  placeholder="Latitude"
+                />
               </div>
             </div>
 
@@ -389,34 +657,23 @@ const PropertiesEditModel = ({
                   <label className="text-md text-secondary block pb-5 font-semibold">
                     Legal Details <span className="text-primary">*</span>
                   </label>
+
+                  <div className="flex flex-col space-y-1 pb-3">
+                    <label className="text-md text-secondary block">
+                      Parties <span className="text-primary">*</span>
+                    </label>
+                    <Input
+                      type="text"
+                      value={formData.legalParties}
+                      onChange={(e) =>
+                        updateFormData('legalParties', e.target.value)
+                      }
+                      className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+                      placeholder="Party A"
+                    />
+                  </div>
+
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="flex flex-col space-y-1">
-                      <label className="text-md text-secondary block">
-                        Parties <span className="text-primary">*</span>
-                      </label>
-                      <Input
-                        type="text"
-                        value={formData.legalParties}
-                        onChange={(e) =>
-                          updateFormData('legalParties', e.target.value)
-                        }
-                        className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                        placeholder="Party A"
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between pt-7">
-                      <Input
-                        type="text"
-                        value={formData.legalParties}
-                        onChange={(e) =>
-                          updateFormData('legalParties', e.target.value)
-                        }
-                        className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                        placeholder="Party B"
-                      />
-                    </div>
-
                     <div className="flex flex-col space-y-1">
                       <label className="text-md text-secondary block">
                         Case Number
@@ -510,6 +767,151 @@ const PropertiesEditModel = ({
                 />
               </div>
             </div>
+
+            {/* Custom Fields Section */}
+            <div className="flex flex-col space-y-3">
+              {/* Existing custom fields */}
+              {customFields.map((field) => (
+                <div
+                  key={field.id}
+                  className="flex flex-col space-y-3 rounded-md bg-[#F8F8F8] p-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="mr-3 flex flex-1 flex-col space-y-1">
+                      <label className="text-md text-secondary block font-semibold">
+                        Field Label
+                      </label>
+                      <Input
+                        type="text"
+                        value={field.label}
+                        onChange={(e) =>
+                          updateCustomField(field.id, 'label', e.target.value)
+                        }
+                        className="w-full rounded-md border border-gray-300 px-3 py-2"
+                        placeholder="Enter field label"
+                      />
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeCustomField(field.id)}
+                      className="text-primary mt-6 cursor-pointer"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-md text-secondary block font-semibold">
+                      Value
+                    </label>
+                    <Input
+                      type="text"
+                      value={field.value}
+                      onChange={(e) =>
+                        updateCustomField(field.id, 'value', e.target.value)
+                      }
+                      className="w-full rounded-md border border-gray-300 px-3 py-2"
+                      placeholder="Enter value"
+                    />
+                  </div>
+                </div>
+              ))}
+
+              {/* Add more information button */}
+              <div className="flex flex-col space-y-1">
+                <div
+                  className="flex cursor-pointer justify-between rounded-md bg-[#F2F2F2] p-3 transition-colors hover:bg-[#E8E8E8]"
+                  onClick={addCustomField}
+                >
+                  <p className="text-secondary font-semibold">
+                    Add more information
+                  </p>
+                  <PlusIcon className="size-5" />
+                </div>
+              </div>
+            </div>
+
+            {/* Duplicate Property Section */}
+            <div className="flex flex-col space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-md text-secondary block font-semibold">
+                  Duplicate Property
+                </label>
+                <div className="flex rounded-4xl bg-[#F2F2F2] text-sm">
+                  <div
+                    className={`${!isDuplicateEnabled ? 'bg-secondary text-white' : 'bg-transparent text-black'} cursor-pointer rounded-4xl px-4 py-2`}
+                    onClick={() => setIsDuplicateEnabled(false)}
+                  >
+                    No
+                  </div>
+                  <div
+                    className={`${isDuplicateEnabled ? 'bg-secondary text-white' : 'bg-transparent text-black'} cursor-pointer rounded-4xl px-4 py-2`}
+                    onClick={() => setIsDuplicateEnabled(true)}
+                  >
+                    Yes
+                  </div>
+                </div>
+              </div>
+
+              {isDuplicateEnabled && (
+                <div className="rounded-lg bg-[#F2F2F2] p-4">
+                  <div className="flex flex-col space-y-3">
+                    <div className="flex flex-col space-y-1">
+                      <label className="text-md text-secondary block font-semibold">
+                        Number of Duplicates{' '}
+                        <span className="text-primary">*</span>
+                      </label>
+                      <div className="flex justify-between gap-2">
+                        <Input
+                          value={duplicateCount}
+                          onChange={(e) => {
+                            const count = parseInt(e.target.value) | 1
+                            setDuplicateCount(count)
+                            const names = Array.from(
+                              { length: count },
+                              (_, i) => `${formData.name} - ${i + 1}`
+                            )
+                            setDuplicateNames(names)
+                          }}
+                          className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+                          placeholder="Enter number of duplicates"
+                        />
+
+                        <Button
+                          className="bg-secondary h-14 w-14 cursor-pointer font-semibold hover:bg-white hover:text-black"
+                          onClick={createDuplicateProperties}
+                          disabled={isLoading}
+                        >
+                          <Check className="size-5" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {duplicateCount > 0 && (
+                      <div className="flex flex-col space-y-2">
+                        <label className="text-md text-secondary block font-semibold">
+                          Duplicate Names (Optional)
+                        </label>
+                        {duplicateNames.map((name, index) => (
+                          <Input
+                            key={index}
+                            type="text"
+                            value={name}
+                            onChange={(e) => {
+                              const newNames = [...duplicateNames]
+                              newNames[index] = e.target.value
+                              setDuplicateNames(newNames)
+                            }}
+                            className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+                            placeholder={`Duplicate ${index + 1} name`}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )
 
@@ -517,7 +919,12 @@ const PropertiesEditModel = ({
         return (
           <div>
             <p className="font-semibold">Upload Documents</p>
-            <UploadDropzone />
+            <PropertyUploadDropzone
+              propertyId={property?.id || null}
+              selectedFiles={documentFiles}
+              setSelectedFiles={setDocumentFiles}
+              isLoading={isDocumentUploading}
+            />
           </div>
         )
     }
@@ -550,7 +957,7 @@ const PropertiesEditModel = ({
               variant="ghost"
               size="icon"
               className="hover:text-primary h-5 w-5 cursor-pointer rounded-full bg-[#CDCDCE] text-white"
-              onClick={onClose}
+              onClick={handleClose}
             >
               <X className="h-4 w-4 font-bold" />
             </Button>
@@ -580,38 +987,133 @@ const PropertiesEditModel = ({
             </div>
 
             <div className="flex gap-4">
-              <Button
-                className="hover:bg-secondary flex h-11 w-[200px] cursor-pointer items-center gap-2 border border-gray-400 bg-transparent px-6 font-semibold text-black hover:text-white"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  if (onDeleteClick && property) {
-                    onDeleteClick(property)
-                  }
-                }}
-              >
-                Delete Property
-                <Trash className="size-4" />
-              </Button>
-              <Button
-                className="bg-primary hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 px-6"
-                onClick={handleNext}
-              >
-                {currentStep === totalSteps ? (
-                  <>
-                    Update Property
+              {currentStep === 3 ? (
+                <>
+                  <Button
+                    className="hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 border border-gray-400 bg-transparent px-6 font-semibold text-black hover:text-white"
+                    onClick={handleSaveAndAddAnother}
+                    disabled={isDocumentUploading}
+                  >
+                    Save & Add Another
+                    <Plus className="size-4" />
+                  </Button>
+                  <Button
+                    className="bg-primary hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 px-6"
+                    onClick={handleNext}
+                    disabled={isDocumentUploading}
+                  >
+                    {isDocumentUploading ? 'Uploading...' : 'Update Property'}
                     <MoveRight className="size-4" />
-                  </>
-                ) : (
-                  <>
-                    Next
-                    <MoveRight className="size-4" />
-                  </>
-                )}
-              </Button>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    className="hover:bg-secondary flex h-11 w-[200px] cursor-pointer items-center gap-2 border border-gray-400 bg-transparent px-6 font-semibold text-black hover:text-white"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (onArchiveClick && property) {
+                        onArchiveClick(property)
+                      }
+                    }}
+                  >
+                    Archive Property
+                    <Trash className="size-4" />
+                  </Button>
+                  <Button
+                    className="bg-primary hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 px-6"
+                    onClick={handleNext}
+                    disabled={isLoading}
+                  >
+                    {currentStep === 2 && isLoading ? (
+                      <>Updating Property...</>
+                    ) : (
+                      <>
+                        Next
+                        <MoveRight className="size-4" />
+                      </>
+                    )}
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         )}
       </div>
+
+      {/* Duplicates List Modal */}
+      {showDuplicatesModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40 p-4">
+          <div className="flex max-h-[80vh] w-full max-w-2xl flex-col space-y-4 rounded-lg border border-gray-400 bg-white shadow-lg">
+            {/* Header */}
+            <div className="flex items-center justify-between rounded-t-lg bg-[#F2F2F2] px-4 py-4">
+              <h2 className="text-secondary text-lg font-semibold">
+                Duplicate Properties Created ({createdDuplicates.length})
+              </h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hover:text-primary h-5 w-5 cursor-pointer rounded-full bg-[#CDCDCE] text-white"
+                onClick={() => setShowDuplicatesModal(false)}
+              >
+                <X className="h-4 w-4 font-bold" />
+              </Button>
+            </div>
+
+            {/* Content */}
+            <div className="overflow-y-auto p-4">
+              <div className="space-y-3">
+                {createdDuplicates.map((duplicate, index) => (
+                  <div
+                    key={duplicate.id}
+                    className="flex items-center justify-between rounded-md border border-gray-300 bg-gray-50 p-4"
+                  >
+                    <div className="flex flex-col">
+                      <h3 className="text-secondary font-semibold">
+                        {duplicate.name}
+                      </h3>
+                    </div>
+                    <Button
+                      className="text-secondary/50 hover:text-primary cursor-pointer bg-transparent hover:bg-transparent"
+                      onClick={() => {
+                        const duplicateProperty = {
+                          ...formData,
+                          id: duplicate.id.toString(),
+                          name: duplicate.name,
+                        }
+                        if (setSelectedProperty) {
+                          setSelectedProperty(duplicateProperty as Properties)
+                        }
+                        setShowDuplicatesModal(false)
+                        setCurrentStep(1)
+                        setIsSubmitted(false)
+                        setIsDuplicateEnabled(false)
+                        setDuplicateCount(1)
+                        setDuplicateNames([])
+                      }}
+                    >
+                      <Pencil />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end rounded-b-lg bg-[#F2F2F2] px-4 py-3">
+              <Button
+                className="bg-primary hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 px-6"
+                onClick={() => {
+                  setShowDuplicatesModal(false)
+                }}
+              >
+                Save
+                <MoveRight className="size-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
