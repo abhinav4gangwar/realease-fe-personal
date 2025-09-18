@@ -2,21 +2,30 @@
 
 import { apiClient } from '@/utils/api'
 import { getFileTypeFromMime } from '@/utils/fileTypeUtils'
+
+import { useSearchContext } from '@/providers/doc-search-context'
+import { X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { DocumentViewer } from './_components/document-viewer'
-import MobileDocumentViewer from './_mobile-components/mobile-document-viewer'
 
 const Documentspage = () => {
   const [fetchedDocuments, setFetchedDocuments] = useState(null)
+  const {
+    searchResults,
+    searchQuery,
+    isSearchActive,
+    clearSearchResults,
+    getTransformedSearchDocuments,
+  } = useSearchContext()
 
   useEffect(() => {
     const fetchDocuments = async () => {
       try {
         const response = await apiClient.get('/dashboard/documents/list')
         setFetchedDocuments(response.data)
-        console.log('Fetched documents:', response.data)
+        console.log('📁 Fetched all documents:', response.data)
       } catch (error) {
-        console.error('Error fetching documents:', error)
+        console.error('❌ Error fetching documents:', error)
       }
     }
 
@@ -24,9 +33,9 @@ const Documentspage = () => {
   }, [])
 
   // Transform API response to match component expectations
-  const transformApiResponse = (apiData: any) => {
+  const transformApiResponse = (apiData) => {
     if (!apiData || !apiData.children) return []
-    return apiData.children.map((item: any) => ({
+    return apiData.children.map((item) => ({
       id: item.id.toString(),
       name: item.name,
       icon:
@@ -48,14 +57,10 @@ const Documentspage = () => {
     }))
   }
 
-  const getFileTypeFromMimeType = (mimeType: string, fileName?: string) => {
+  const getFileTypeFromMimeType = (mimeType, fileName) => {
     if (!mimeType) return 'file'
-
-    // Use our utility function to get user-friendly file type
     const friendlyType = getFileTypeFromMime(mimeType, fileName)
-
-    // Map friendly types back to icon types for FileIcon component
-    const iconTypeMap: Record<string, string> = {
+    const iconTypeMap = {
       PDF: 'pdf',
       'Word Document': 'word',
       'Excel Spreadsheet': 'excel',
@@ -76,10 +81,10 @@ const Documentspage = () => {
       'JavaScript File': 'js',
     }
 
-    return iconTypeMap[friendlyType] || friendlyType.toLowerCase()
+    return iconTypeMap[friendlyType] || friendlyType?.toLowerCase()
   }
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString) => {
     if (!dateString) return 'Unknown'
     const date = new Date(dateString)
     return date.toLocaleDateString('en-US', {
@@ -89,28 +94,60 @@ const Documentspage = () => {
     })
   }
 
-  const transformedDocuments = transformApiResponse(fetchedDocuments)
+  const getDocumentsToShow = () => {
+    if (isSearchActive && searchResults) {
+      return getTransformedSearchDocuments()
+    } else {
+      return transformApiResponse(fetchedDocuments)
+    }
+  }
+
+  const documentsToShow = getDocumentsToShow()
+
+  const handleClearSearch = () => {
+    clearSearchResults()
+  }
 
   return (
     <div>
+      {/* Search Results Banner */}
+      {isSearchActive && searchResults && (
+        <div className="mb-4 flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <div className="flex items-center gap-2">
+            <div className="text-sm font-medium text-blue-900">
+              Search Results for {searchQuery}
+            </div>
+            <div className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-700">
+              {searchResults.totalResults} results found
+            </div>
+          </div>
+          <button
+            onClick={handleClearSearch}
+            className="flex items-center gap-1 text-sm font-medium text-blue-700 hover:text-blue-900"
+          >
+            <X className="h-4 w-4" />
+            Clear Search
+          </button>
+        </div>
+      )}
+
       {/* for desktop */}
       <div className="hidden lg:block">
         <DocumentViewer
-          // recentlyAccessed={documentsData.recentlyAccessed}
-          allFiles={transformedDocuments}
+          allFiles={documentsToShow}
           apiClient={apiClient}
           transformApiResponse={transformApiResponse}
         />
       </div>
 
       {/* for mobile */}
-      <div className="block pt-14 lg:hidden">
-        <MobileDocumentViewer // recentlyAccessed={documentsData.recentlyAccessed}
-          allFiles={transformedDocuments}
+      {/* <div className="block pt-14 lg:hidden">
+        <MobileDocumentViewer
+          allFiles={documentsToShow}
           apiClient={apiClient}
           transformApiResponse={transformApiResponse}
         />
-      </div>
+      </div> */}
     </div>
   )
 }
