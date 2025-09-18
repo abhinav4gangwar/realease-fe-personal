@@ -1,3 +1,4 @@
+import { useSearchContext } from '@/providers/doc-search-context'
 import { apiClient } from '@/utils/api'
 import { LoaderCircle, Search } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -8,8 +9,36 @@ const DocumentSearch = () => {
   const [suggestions, setSuggestions] = useState([])
   const [showDropdown, setShowDropdown] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isSearching, setIsSearching] = useState(false)
   const dropdownRef = useRef(null)
   const inputRef = useRef(null)
+
+  const { setSearchResults, setSearchQuery, clearSearchResults } =
+    useSearchContext()
+
+  const performSearch = async (searchQuery) => {
+    if (!searchQuery.trim()) {
+      clearSearchResults()
+      return
+    }
+
+    console.log('🚀 Starting search for:', searchQuery)
+    setIsSearching(true)
+
+    try {
+      const response = await apiClient.get(
+        `/dashboard/search/documents?q=${encodeURIComponent(searchQuery)}`
+      )
+      setSearchResults(response.data)
+      setSearchQuery(searchQuery)
+    } catch (error) {
+      console.error('❌ Error performing search:', error)
+      clearSearchResults()
+    } finally {
+      setIsSearching(false)
+      console.log('🏁 Search completed')
+    }
+  }
 
   const fetchSuggestions = async (searchQuery) => {
     if (!searchQuery.trim()) {
@@ -69,10 +98,21 @@ const DocumentSearch = () => {
     setQuery(e.target.value)
   }
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      setShowDropdown(false)
+      performSearch(query)
+    }
+  }
+
   return (
     <div className="mx-8 hidden max-w-6xl flex-1 lg:block">
       <div className="relative">
         <Search className="text-secondary absolute top-1/2 left-3 h-6 w-6 -translate-y-1/2 transform" />
+        {isSearching && (
+          <LoaderCircle className="text-primary absolute top-1/2 right-3 h-5 w-5 -translate-y-1/2 transform animate-spin" />
+        )}
         <Input
           ref={inputRef}
           type="text"
@@ -83,20 +123,23 @@ const DocumentSearch = () => {
           onFocus={() =>
             query.trim() && suggestions.length > 0 && setShowDropdown(true)
           }
+          onKeyDown={handleKeyDown}
         />
 
         {showDropdown && (
           <div
             ref={dropdownRef}
-            className="absolute top-full right-0 left-0 z-50 mt-1 h-60 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg"
+            className="absolute top-full right-0 left-0 z-50 mt-1 h-50 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg"
           >
             {isLoading ? (
-              <div className="px-4 py-2 text-sm text-primary flex justify-center items-center h-full"><LoaderCircle className='size-8 animate-spin' /></div>
+              <div className="text-primary flex h-full items-center justify-center px-4 py-2 text-sm">
+                <LoaderCircle className="size-10 animate-spin" />
+              </div>
             ) : suggestions.length > 0 ? (
               suggestions.map((suggestion, index) => (
                 <div
                   key={index}
-                  className="cursor-pointer px-4 py-3 text-sm last:border-b-0 hover:bg-gray-100"
+                  className="hover:text-primary cursor-pointer px-4 py-3 text-sm last:border-b-0 hover:bg-gray-100"
                   onClick={() => handleSuggestionSelect(suggestion)}
                 >
                   {suggestion.text}
@@ -104,7 +147,9 @@ const DocumentSearch = () => {
               ))
             ) : (
               query.trim() && (
-                <div className="px-4 py-2 text-sm text-primary flex justify-center items-center h-full">No Suggestions Found</div>
+                <div className="text-primary flex h-full items-center justify-center px-4 py-2 text-sm">
+                  No Suggestions Found
+                </div>
               )
             )}
           </div>
