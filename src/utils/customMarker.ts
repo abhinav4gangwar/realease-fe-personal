@@ -1,4 +1,3 @@
-import L from 'leaflet'
 
 export interface MarkerIconProps {
   color?: string
@@ -8,13 +7,19 @@ export interface MarkerIconProps {
   borderColor?: string
 }
 
-export const createCustomMarker = ({
+export const createCustomMarker = async ({
   color = '#ffffff',
   size = 32,
   iconName = 'map-pin',
   backgroundColor = '#3b82f6',
   borderColor = '#ffffff'
 }: MarkerIconProps = {}) => {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  const L = (await import('leaflet')).default
+
   const iconSvgs: Record<string, string> = {
     'map-pin': `<path d="M20 10c0 6-10 12-10 12s-10-6-10-12a10 10 0 0 1 20 0Z"/><circle cx="10" cy="10" r="3"/>`,
     'home': `<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/>`,
@@ -68,13 +73,16 @@ export const createCustomMarker = ({
   })
 }
 
-
-export const getPropertyMarkerIcon = (
+export const getPropertyMarkerIcon = async (
   isSelected: boolean = false,
   isHighlighted: boolean = false,
   isDisputed: boolean = false,
   propertyType?: string
 ) => {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
   let backgroundColor = '#3b82f6' 
   let iconName = 'map-pin'
   
@@ -110,7 +118,7 @@ export const getPropertyMarkerIcon = (
     backgroundColor = '#f97316'
   }
 
-  return createCustomMarker({
+  return await createCustomMarker({
     backgroundColor,
     iconName,
     color: '#ffffff',
