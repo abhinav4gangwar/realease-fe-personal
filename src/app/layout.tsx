@@ -1,5 +1,5 @@
 import { Toaster } from '@/components/ui/sonner'
-import QueryProvider from '@/providers/QueryProvider'
+import { SearchProvider } from '@/providers/doc-search-context'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
@@ -58,10 +58,10 @@ export default function RootLayout({
       </head>
       <body className="bg-gray-50 font-sans text-gray-900 antialiased">
         <div id="root">
-          <QueryProvider>
+          <SearchProvider>
             {children}
             <Toaster />
-          </QueryProvider>
+          </SearchProvider>
         </div>
       </body>
     </html>
