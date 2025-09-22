@@ -1,7 +1,6 @@
 'use client'
 import { Button } from '@/components/ui/button'
 import { parseCoordinates } from '@/utils/coordinateParser'
-import { getPropertyMarkerIcon } from '@/utils/customMarker'
 import { X } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
@@ -99,7 +98,6 @@ const FullMapModal = ({
               />
               <Marker 
                 position={[coords.lat, coords.lng]}
-                icon={getPropertyMarkerIcon(true, false, isDisputed, propertyType)}
               >
                 <Popup>
                   <div className="p-2">

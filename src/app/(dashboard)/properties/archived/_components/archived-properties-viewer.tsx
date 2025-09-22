@@ -9,14 +9,16 @@ import {
 import { apiClient } from '@/utils/api'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import BulkDeleteModal from '../../documents/_components/bulk-delete-modal'
-import ScrollToTop from '../../documents/_components/scroll-to-top'
-import { PropertiesFilterButton } from '../../properties/_components/properties-filter-button'
-import PropertiesFilterModel from '../../properties/_components/properties-filter-model'
-import { PropertiesSortButton } from '../../properties/_components/properties-sort-button'
-import { PropertiesViewerProps } from '../../properties/_components/properties-viewer'
+
+import ScrollToTop from '@/app/(dashboard)/documents/_components/scroll-to-top'
+import ArchiveToggle from '../../_components/archive-toggle'
+import { PropertiesFilterButton } from '../../_components/properties-filter-button'
+import PropertiesFilterModel from '../../_components/properties-filter-model'
+import { PropertiesSortButton } from '../../_components/properties-sort-button'
+import { PropertiesViewerProps } from '../../_components/properties-viewer'
 import { ArchiveActionsButton } from './archive-action-button'
 import ArchivedPropertiesListView from './archived-properties-list-view'
+import BulkDeletePropertyModal from './bulk-delete-model'
 import BulkUnarchivePropertyModal from './bulk-unarchive-model'
 import DeletePropertyModal from './delete-model'
 import UnarchivePropertyModal from './unarchive-model'
@@ -216,16 +218,13 @@ const ArchivedPropertiesViewer = ({
     if (!selectedProperty) return
 
     try {
-      const response = await apiClient.delete(
-        '/dashboard/properties/delete',
-        {
-          data: [
-            {
-              itemId: Number.parseInt(selectedProperty.id),
-            },
-          ],
-        }
-      )
+      const response = await apiClient.delete('/dashboard/properties/delete', {
+        data: [
+          {
+            itemId: Number.parseInt(selectedProperty.id),
+          },
+        ],
+      })
       setSelectedProperty(null)
       onPropertyCreated()
       setIsDeleteModalOpen(false)
@@ -277,12 +276,9 @@ const ArchivedPropertiesViewer = ({
         itemId: Number.parseInt(id),
       }))
 
-      const response = await apiClient.delete(
-        '/dashboard/properties/delete',
-        {
-          data: archivePayload,
-        }
-      )
+      const response = await apiClient.delete('/dashboard/properties/delete', {
+        data: archivePayload,
+      })
 
       setSelectedProperties([])
       onPropertyCreated()
@@ -310,6 +306,7 @@ const ArchivedPropertiesViewer = ({
         </div>
 
         <div className="flex items-center gap-4">
+          <ArchiveToggle />
           <PropertiesFilterButton onFilterSelect={handleFilterSelect} />
           <PropertiesSortButton onSortChange={handleSortChange} />
           <ArchiveActionsButton
@@ -367,7 +364,7 @@ const ArchivedPropertiesViewer = ({
         onConfirm={confirmDelete}
       />
 
-      <BulkDeleteModal
+      <BulkDeletePropertyModal
         isOpen={isBulkDeleteModalOpen}
         onCancel={() => setIsBulkDeleteModalOpen(false)}
         selectedCount={selectedProperties.length}

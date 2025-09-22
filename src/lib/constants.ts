@@ -1,6 +1,5 @@
 import { QuickAction } from '@/types'
 import {
-  ArchiveRestore,
   BarChart3,
   Building2,
   FileText,
@@ -8,7 +7,7 @@ import {
   MapPin,
   Search,
   Settings,
-  Trash,
+  Trash
 } from 'lucide-react'
 
 export const APP_CONFIG = {
@@ -89,7 +88,6 @@ export const navigationItems = [
   { icon: Building2, label: 'Properties', href: '/properties' },
   { icon: BarChart3, label: 'Analytics', href: '/analytics' },
   { icon: FileText, label: 'Documents', href: '/documents' },
-  { icon: ArchiveRestore, label: 'Archived', href: '/archived' },
   { icon: Trash, label: 'Trash', href: '/trash' },
 ]
 

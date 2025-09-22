@@ -1,6 +1,5 @@
 'use client'
 import { parseCoordinates } from '@/utils/coordinateParser'
-import { getPropertyMarkerIcon } from '@/utils/customMarker'
 import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
 
@@ -84,7 +83,6 @@ const MiniMap = ({
         />
         <Marker
           position={[coords.lat, coords.lng]}
-          icon={getPropertyMarkerIcon(false, false, isDisputed, propertyType)}
         />
       </MapContainer>
     </div>
