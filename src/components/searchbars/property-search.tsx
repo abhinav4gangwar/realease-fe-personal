@@ -1,6 +1,8 @@
+import { usePropertySearchContext } from '@/providers/property-search-context'
 import { apiClient } from '@/utils/api'
 import { LoaderCircle, Search } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { Input } from '../ui/input'
 
 const PropertySearch = () => {
@@ -12,9 +14,30 @@ const PropertySearch = () => {
   const dropdownRef = useRef(null)
   const inputRef = useRef(null)
 
+  const { setSearchResults, setSearchQuery, clearSearchResults } =
+    usePropertySearchContext()
+
   const performSearch = async (searchQuery: string) => {
+    if (!searchQuery.trim()) {
+      clearSearchResults()
+      return
+    }
     console.log('🚀 Starting search for:', searchQuery)
     setIsSearching(true)
+
+    try {
+      const response = await apiClient.get(
+        `/dashboard/search/properties?q=${encodeURIComponent(searchQuery)}`
+      )
+      setSearchResults(response.data)
+      setSearchQuery(searchQuery)
+    } catch (error: unknown) {
+      toast.error('❌ Error performing search:', error)
+      clearSearchResults()
+    } finally {
+      setIsSearching(false)
+      toast.message('Showing Search Results')
+    }
   }
 
   const fetchSuggestions = async (searchQuery: string) => {
