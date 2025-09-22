@@ -16,7 +16,7 @@ const DocumentSearch = () => {
   const { setSearchResults, setSearchQuery, clearSearchResults } =
     useSearchContext()
 
-  const performSearch = async (searchQuery) => {
+  const performSearch = async (searchQuery: string) => {
     if (!searchQuery.trim()) {
       clearSearchResults()
       return
@@ -40,7 +40,7 @@ const DocumentSearch = () => {
     }
   }
 
-  const fetchSuggestions = async (searchQuery) => {
+  const fetchSuggestions = async (searchQuery: string) => {
     if (!searchQuery.trim()) {
       setSuggestions([])
       setShowDropdown(false)
@@ -92,6 +92,7 @@ const DocumentSearch = () => {
     setQuery(suggestion.text)
     setShowDropdown(false)
     inputRef.current?.focus()
+    performSearch(suggestion.text)
   }
 
   const handleInputChange = (e) => {
