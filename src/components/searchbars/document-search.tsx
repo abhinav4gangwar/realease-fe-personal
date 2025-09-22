@@ -2,6 +2,7 @@ import { useSearchContext } from '@/providers/doc-search-context'
 import { apiClient } from '@/utils/api'
 import { LoaderCircle, Search } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { Input } from '../ui/input'
 
 const DocumentSearch = () => {
@@ -32,11 +33,11 @@ const DocumentSearch = () => {
       setSearchResults(response.data)
       setSearchQuery(searchQuery)
     } catch (error) {
-      console.error('❌ Error performing search:', error)
+      toast.error('❌ Error performing search:', error)
       clearSearchResults()
     } finally {
       setIsSearching(false)
-      console.log('🏁 Search completed')
+      toast.message('Showing Searched Results')
     }
   }
 

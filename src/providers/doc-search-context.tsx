@@ -55,74 +55,6 @@ export const SearchProvider = ({ children }) => {
     setIsSearchActive(false)
   }
 
-  const getTransformedSearchDocuments = () => {
-    if (!searchResults || !searchResults.documents) return []
-
-    // Helper function to get file type icon from mime type
-    const getFileTypeFromMimeType = (mimeType, fileName) => {
-      if (!mimeType) return 'file'
-
-      // Simple mapping for common types
-      if (mimeType.includes('pdf')) return 'pdf'
-      if (mimeType.includes('word') || mimeType.includes('document'))
-        return 'word'
-      if (mimeType.includes('excel') || mimeType.includes('spreadsheet'))
-        return 'excel'
-      if (mimeType.includes('powerpoint') || mimeType.includes('presentation'))
-        return 'powerpoint'
-      if (mimeType.includes('image')) return 'img'
-      if (mimeType.includes('text')) return 'txt'
-      if (mimeType.includes('json')) return 'json'
-      if (mimeType.includes('html')) return 'html'
-      if (mimeType.includes('css')) return 'css'
-      if (mimeType.includes('javascript')) return 'js'
-
-      return 'file'
-    }
-
-    const formatDate = (dateString) => {
-      if (!dateString) return 'Unknown'
-      const date = new Date(dateString)
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      })
-    }
-
-    const transformed = searchResults.documents.map((doc) => {
-      console.log('Transforming search document:', doc)
-
-      return {
-        id: doc.id?.toString() || '',
-        name: doc.name || 'Untitled',
-        icon:
-          doc.type === 'folder'
-            ? 'folder'
-            : doc.icon || getFileTypeFromMimeType(doc.mimeType, doc.name),
-        linkedProperty: doc.linkedProperty?.name,
-        dateAdded: formatDate(doc.createdAt || doc.modifiedOn),
-        dateModified: formatDate(doc.modifiedOn || doc.createdAt),
-        lastOpened: formatDate(doc.modifiedOn || doc.createdAt),
-        fileType: doc.mimeType || 'Unknown',
-        tags: Array.isArray(doc.tags)
-          ? doc.tags.join(', ')
-          : doc.tags
-            ? String(doc.tags)
-            : '',
-        isFolder: doc.type === 'folder',
-        hasChildren: doc.hasChildren || false,
-        children: [],
-        size: doc.size || null,
-        s3Key: doc.s3Key || null,
-        parentId: doc.parentId || null,
-      }
-    })
-
-    console.log('Transformed search documents:', transformed)
-    return transformed
-  }
-
   return (
     <SearchContext.Provider
       value={{
@@ -132,7 +64,6 @@ export const SearchProvider = ({ children }) => {
         setSearchResults,
         setSearchQuery,
         clearSearchResults,
-        getTransformedSearchDocuments,
       }}
     >
       {children}
