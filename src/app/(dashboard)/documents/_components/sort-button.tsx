@@ -40,7 +40,7 @@ export function SortButton({ onSortChange }: SortButtonProps) {
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          className={`flex lg:h-11 cursor-pointer items-center space-x-1 font-semibold ${
+          className={`flex lg:h-11 h-13 cursor-pointer items-center space-x-1 font-semibold ${
             open ? "text-primary bg-white border-none" : "hover:bg-secondary hover:text-white"
           }`}
         >

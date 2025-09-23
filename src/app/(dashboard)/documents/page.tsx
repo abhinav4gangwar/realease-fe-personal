@@ -118,15 +118,11 @@ const Documentspage = () => {
     })
   }
 
-  console.log('search result', searchResults)
-
-  console.log('search result document', searchResults?.documents)
 
   const transformedDocuments = transformApiResponse(fetchedDocuments)
   const transformedSearchResponse = transformApiResponse(
     searchResults?.documents
   )
-  console.log('search response', transformedSearchResponse)
 
   const getDocumentsToShow = () => {
     if (isSearchActive && searchResults) {
@@ -142,12 +138,11 @@ const Documentspage = () => {
     clearSearchResults()
   }
 
-  console.log('to show', documentsToShow)
 
   return (
     <div>
       {isSearchActive && searchResults && (
-        <div className="mb-4 flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-4">
+        <div className="lg:mb-4 flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-4 mt-20 lg:mt-0">
           <div className="flex items-center gap-2">
             <div className="text-sm font-medium text-blue-900">
               Search Results for {searchQuery}
@@ -176,9 +171,9 @@ const Documentspage = () => {
       </div>
 
       {/* for mobile */}
-      <div className="block pt-14 lg:hidden">
+      <div className={`block ${ searchResults ? ("pt-4") : ("pt-14")} lg:hidden`}>
         <MobileDocumentViewer // recentlyAccessed={documentsData.recentlyAccessed}
-          allFiles={transformedDocuments}
+          allFiles={documentsToShow}
           apiClient={apiClient}
           transformApiResponse={transformApiResponse}
         />
