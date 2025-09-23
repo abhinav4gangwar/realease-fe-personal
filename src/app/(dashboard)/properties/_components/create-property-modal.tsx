@@ -1,12 +1,40 @@
 'use client'
 import { Button } from '@/components/ui/button'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
 import { Input } from '@/components/ui/input'
-import { Properties } from '@/types/property.types'
-import { ArrowLeft, MoveRight, Plus, PlusIcon, Trash2, X } from 'lucide-react'
-import Image from 'next/image'
-import { useState } from 'react'
-
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { cn } from '@/lib/utils'
+import {
+  CityType,
+  CountryType,
+  Properties,
+  StateType,
+} from '@/types/property.types'
 import { apiClient } from '@/utils/api'
+import { City, Country, State } from 'country-state-city'
+import {
+  ArrowLeft,
+  Check,
+  ChevronDown,
+  MoveRight,
+  Plus,
+  PlusIcon,
+  Trash2,
+  X,
+} from 'lucide-react'
+import Image from 'next/image'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { FileItem, PropertyUploadDropzone } from './document-upload'
 
@@ -34,6 +62,15 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
   const [documentFiles, setDocumentFiles] = useState<FileItem[]>([])
   const [isDocumentUploading, setIsDocumentUploading] = useState(false)
 
+  const [selectedCountry, setSelectedCountry] = useState<CountryType | null>(
+    null
+  )
+  const [selectedState, setSelectedState] = useState<StateType | null>(null)
+  const [selectedCity, setSelectedCity] = useState<CityType | null>(null)
+  const [countries, setCountries] = useState<CountryType[]>([])
+  const [states, setStates] = useState<StateType[]>([])
+  const [cities, setCities] = useState<CityType[]>([])
+
   const [formData, setFormData] = useState<Properties>({
     name: '',
     type: '',
@@ -55,6 +92,231 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     valuePerSQ: '',
     value: '',
   })
+
+  useEffect(() => {
+    // Load all countries on component mount
+    const allCountries = Country.getAllCountries()
+    setCountries(allCountries)
+  }, [])
+
+  useEffect(() => {
+    if (selectedCountry) {
+      // Load states for selected country
+      const countryStates = State.getStatesOfCountry(selectedCountry.isoCode)
+      setStates(countryStates)
+      setSelectedState(null)
+      setSelectedCity(null)
+      setCities([])
+
+      // Update form data
+      updateFormData('country', selectedCountry.name)
+    }
+  }, [selectedCountry])
+
+  useEffect(() => {
+    if (selectedState && selectedCountry) {
+      // Load cities for selected state
+      const stateCities = City.getCitiesOfState(
+        selectedCountry.isoCode,
+        selectedState.isoCode
+      )
+      setCities(stateCities)
+      setSelectedCity(null)
+
+      // Update form data
+      updateFormData('state', selectedState.name)
+    }
+  }, [selectedState])
+
+  useEffect(() => {
+    if (selectedCity) {
+      updateFormData('city', selectedCity.name)
+    }
+  }, [selectedCity])
+
+  const CountrySelect = () => {
+    const [open, setOpen] = useState(false)
+    const [searchValue, setSearchValue] = useState('')
+
+    const filteredCountries = countries.filter((country) =>
+      country.name.toLowerCase().includes(searchValue.toLowerCase())
+    )
+
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between h-14 truncate"
+          >
+            {selectedCountry?.name || 'Select Country'}
+            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-full p-0 border-gray-400" align="start">
+          <Command>
+            <CommandInput
+              placeholder="Search country..."
+              value={searchValue}
+              onValueChange={setSearchValue}
+            />
+            <CommandList>
+              <CommandEmpty>No country found.</CommandEmpty>
+              <CommandGroup>
+                {filteredCountries.map((country) => (
+                  <CommandItem
+                    key={country.isoCode}
+                    value={country.name}
+                    onSelect={() => {
+                      setSelectedCountry(country)
+                      setOpen(false)
+                      setSearchValue('')
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        'mr-2 h-4 w-4',
+                        selectedCountry?.isoCode === country.isoCode
+                          ? 'opacity-100'
+                          : 'opacity-0'
+                      )}
+                    />
+                    {country.name}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    )
+  }
+
+  // State Autocomplete Component
+  const StateSelect = () => {
+    const [open, setOpen] = useState(false)
+    const [searchValue, setSearchValue] = useState('')
+
+    const filteredStates = states.filter((state) =>
+      state.name.toLowerCase().includes(searchValue.toLowerCase())
+    )
+
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between h-14 truncate"
+            disabled={!selectedCountry}
+          >
+            {selectedState?.name || 'Select State'}
+            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-full p-0 border-gray-400" align="start">
+          <Command>
+            <CommandInput
+              placeholder="Search state..."
+              value={searchValue}
+              onValueChange={setSearchValue}
+            />
+            <CommandList>
+              <CommandEmpty>No state found.</CommandEmpty>
+              <CommandGroup>
+                {filteredStates.map((state) => (
+                  <CommandItem
+                    key={state.isoCode}
+                    value={state.name}
+                    onSelect={() => {
+                      setSelectedState(state)
+                      setOpen(false)
+                      setSearchValue('')
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        'mr-2 h-4 w-4',
+                        selectedState?.isoCode === state.isoCode
+                          ? 'opacity-100'
+                          : 'opacity-0'
+                      )}
+                    />
+                    {state.name}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    )
+  }
+
+  // City Autocomplete Component
+  const CitySelect = () => {
+    const [open, setOpen] = useState(false)
+    const [searchValue, setSearchValue] = useState('')
+
+    const filteredCities = cities.filter((city) =>
+      city.name.toLowerCase().includes(searchValue.toLowerCase())
+    )
+
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between h-14 truncate"
+            disabled={!selectedState}
+          >
+            {selectedCity?.name || 'Select City'}
+            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-full p-0 border-gray-400" align="start">
+          <Command>
+            <CommandInput
+              placeholder="Search city..."
+              value={searchValue}
+              onValueChange={setSearchValue}
+            />
+            <CommandList>
+              <CommandEmpty>No city found.</CommandEmpty>
+              <CommandGroup>
+                {filteredCities.map((city, index) => (
+                  <CommandItem
+                    key={`${city.name}-${index}`}
+                    value={city.name}
+                    onSelect={() => {
+                      setSelectedCity(city)
+                      setOpen(false)
+                      setSearchValue('')
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        'mr-2 h-4 w-4',
+                        selectedCity?.name === city.name
+                          ? 'opacity-100'
+                          : 'opacity-0'
+                      )}
+                    />
+                    {city.name}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    )
+  }
 
   const updateFormData = (field: keyof Properties, value: string) => {
     setFormData((prev) => ({
@@ -394,16 +656,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                     <label className="text-md text-secondary block">
                       Country <span className="text-primary">*</span>
                     </label>
-                    <Input
-                      type="text"
-                      value={formData.country}
-                      onChange={(e) =>
-                        updateFormData('country', e.target.value)
-                      }
-                      className="w-full rounded-md border border-gray-300 px-3 py-2"
-                      placeholder="Select Country"
-                      required
-                    />
+                    <CountrySelect />
                   </div>
 
                   <div className="flex flex-col space-y-1">
@@ -471,26 +724,14 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
 
                   <div className="flex flex-col space-y-1">
                     <label className="text-md text-secondary block">City</label>
-                    <Input
-                      type="text"
-                      value={formData.city}
-                      onChange={(e) => updateFormData('city', e.target.value)}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2"
-                      placeholder="-"
-                    />
+                    <CitySelect />
                   </div>
 
                   <div className="flex flex-col space-y-1">
                     <label className="text-md text-secondary block">
                       State
                     </label>
-                    <Input
-                      type="text"
-                      value={formData.state}
-                      onChange={(e) => updateFormData('state', e.target.value)}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2"
-                      placeholder="-"
-                    />
+                    <StateSelect />
                   </div>
                 </div>
               </div>
@@ -502,30 +743,16 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                 Co-ordinates <span className="text-primary">*</span>
               </label>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col space-y-1">
-                  <Input
-                    type="text"
-                    value={formData.coordinates}
-                    onChange={(e) =>
-                      updateFormData('coordinates', e.target.value)
-                    }
-                    className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                    placeholder="Latitude"
-                  />
-                </div>
-
-                <div className="flex flex-col space-y-1">
-                  <Input
-                    type="text"
-                    value={formData.coordinates}
-                    onChange={(e) =>
-                      updateFormData('coordinates', e.target.value)
-                    }
-                    className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                    placeholder="Longitude"
-                  />
-                </div>
+              <div className="flex flex-col space-y-1">
+                <Input
+                  type="text"
+                  value={formData.coordinates}
+                  onChange={(e) =>
+                    updateFormData('coordinates', e.target.value)
+                  }
+                  className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+                  placeholder="Coordinates"
+                />
               </div>
             </div>
             {/* legal status */}
@@ -538,13 +765,13 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                 <div className="flex rounded-4xl bg-[#F2F2F2] text-sm">
                   <div
                     className={`${!isDisputed ? 'bg-secondary text-white' : 'bg-transparent text-black'} cursor-pointer rounded-4xl px-4 py-2`}
-                    onClick={() => setIsDisputed((prev) => !prev)}
+                    onClick={() => setIsDisputed(false)}
                   >
                     Undisputed
                   </div>
                   <div
                     className={`${isDisputed ? 'bg-secondary text-white' : 'bg-transparent text-black'} cursor-pointer rounded-4xl px-4 py-2`}
-                    onClick={() => setIsDisputed((prev) => !prev)}
+                    onClick={() => setIsDisputed(true)}
                   >
                     Disputed
                   </div>
@@ -556,34 +783,23 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                   <label className="text-md text-secondary block pb-5 font-semibold">
                     Legal Details <span className="text-primary">*</span>
                   </label>
+
+                  <div className="flex flex-col space-y-1 pb-3">
+                    <label className="text-md text-secondary block">
+                      Parties <span className="text-primary">*</span>
+                    </label>
+                    <Input
+                      type="text"
+                      value={formData.legalParties}
+                      onChange={(e) =>
+                        updateFormData('legalParties', e.target.value)
+                      }
+                      className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+                      placeholder="Parties"
+                    />
+                  </div>
+
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="flex flex-col space-y-1">
-                      <label className="text-md text-secondary block">
-                        Parties <span className="text-primary">*</span>
-                      </label>
-                      <Input
-                        type="text"
-                        value={formData.legalParties}
-                        onChange={(e) =>
-                          updateFormData('legalParties', e.target.value)
-                        }
-                        className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                        placeholder="Party A"
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between pt-7">
-                      <Input
-                        type="text"
-                        value={formData.legalParties}
-                        onChange={(e) =>
-                          updateFormData('legalParties', e.target.value)
-                        }
-                        className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                        placeholder="Party B"
-                      />
-                    </div>
-
                     <div className="flex flex-col space-y-1">
                       <label className="text-md text-secondary block">
                         Case Number
@@ -785,7 +1001,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
               variant="ghost"
               size="icon"
               className="hover:text-primary h-5 w-5 cursor-pointer rounded-full bg-[#CDCDCE] text-white"
-              onClick={onClose}
+              onClick={handleClose}
             >
               <X className="h-4 w-4 font-bold" />
             </Button>
