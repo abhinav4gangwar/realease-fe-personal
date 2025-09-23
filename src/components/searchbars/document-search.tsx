@@ -109,7 +109,7 @@ const DocumentSearch = () => {
   }
 
   return (
-    <div className="mx-8 hidden max-w-6xl flex-1 lg:block">
+    <div className="lg:mx-8 max-w-6xl flex-1">
       <div className="relative">
         <Search className="text-secondary absolute top-1/2 left-3 h-6 w-6 -translate-y-1/2 transform" />
         {isSearching && (

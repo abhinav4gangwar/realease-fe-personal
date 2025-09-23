@@ -47,7 +47,7 @@ const Propertiespage = () => {
   return (
     <div>
       {isSearchActive && searchResults && (
-        <div className="mb-4 flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-4">
+        <div className="lg:mb-4 flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-4 mt-20 lg:mt-0">
           <div className="flex items-center gap-2">
             <div className="text-sm font-medium text-blue-900">
               Search Results for {searchQuery}
@@ -74,8 +74,8 @@ const Propertiespage = () => {
       </div>
 
       {/* for mobile */}
-      <div className="block pt-14 lg:hidden">
-        <MobilePropertiesViewer allProperties={fetchedProperties} />
+      <div className={`block ${ searchResults ? ("pt-4") : ("pt-14")} lg:hidden`}>
+        <MobilePropertiesViewer allProperties={propertiesToShow} />
       </div>
     </div>
   )

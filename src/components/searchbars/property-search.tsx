@@ -107,7 +107,7 @@ const PropertySearch = () => {
   }
 
   return (
-    <div className="mx-8 hidden max-w-6xl flex-1 lg:block">
+    <div className="lg:mx-8 max-w-6xl flex-1">
       <div className="relative">
         <Search className="text-secondary absolute top-1/2 left-3 h-6 w-6 -translate-y-1/2 transform" />
         {isSearching && (
@@ -117,7 +117,7 @@ const PropertySearch = () => {
           ref={inputRef}
           type="text"
           placeholder="Search Properties"
-          className="h-13 w-full pl-12 font-semibold"
+          className="h-13 w-full pl-12 lg:font-semibold"
           value={query}
           onChange={handleInputChange}
           onFocus={() =>
