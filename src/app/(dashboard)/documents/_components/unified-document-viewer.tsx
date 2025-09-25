@@ -106,6 +106,11 @@ export function UnifiedDocumentViewer({
     if (!document) return
 
     setIsLoading(true)
+
+    setDocumentUrl(null)
+    setDocumentType(null)
+    setNumPages(null)
+
     try {
       // Determine document type
       const isImage = isImageFile(document)
@@ -141,6 +146,10 @@ export function UnifiedDocumentViewer({
     } catch (error) {
       console.error('Error loading document:', error)
       toast.error('Failed to load document')
+
+      setDocumentUrl(null)
+      setDocumentType(null)
+      setNumPages(null)
     } finally {
       setIsLoading(false)
     }
@@ -412,7 +421,7 @@ export function UnifiedDocumentViewer({
         >
           {/* Zoom Controls - only show zoom for documents */}
           {documentUrl && (
-            <div className="zoom-controls fixed right-6 bottom-6 z-30 flex items-center gap-1 rounded-lg bg-[#9B9B9D] p-1 text-white shadow-lg">
+            <div className="zoom-controls fixed right-[47%] bottom-6 z-30 flex items-center gap-1 rounded-lg bg-[#9B9B9D] p-1 text-white shadow-lg">
               <button
                 onClick={(e) => {
                   e.stopPropagation()
@@ -591,7 +600,7 @@ export function UnifiedDocumentViewer({
                   height={80}
                   width={80}
                 />
-                <p className="lg:text-lg font-semibold text-white">
+                <p className="font-semibold text-white lg:text-lg">
                   Sorry, no preview available for this file format.
                 </p>
                 <div className="flex justify-center gap-4">
@@ -607,7 +616,7 @@ export function UnifiedDocumentViewer({
                     Download file <Download className="text-primary h-3 w-3" />
                   </Button>
                   <Button
-                    className="h-12 w-[200px] cursor-pointer bg-white px-6 text-lg font-semibold text-black hover:bg-white lg:block hidden"
+                    className="flex h-12 w-[200px] cursor-pointer items-center justify-center bg-white px-6 text-lg font-semibold text-black hover:bg-white"
                     onClick={(e) => {
                       e.stopPropagation()
                       if (onShareClick && document) {
@@ -615,7 +624,7 @@ export function UnifiedDocumentViewer({
                       }
                     }}
                   >
-                    Share file <HiShare className="text-primary h-3 w-3" />
+                    Share file <HiShare className="text-primary" />
                   </Button>
                 </div>
               </div>
