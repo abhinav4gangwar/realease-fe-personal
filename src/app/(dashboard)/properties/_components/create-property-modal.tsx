@@ -93,6 +93,35 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     value: '',
   })
 
+  // Add these validation functions
+  const validateStep1 = () => {
+    return (
+      formData.name.trim() !== '' &&
+      formData.type !== '' &&
+      formData.owner.trim() !== ''
+    )
+  }
+
+  const validateStep2 = () => {
+    const basicValidation =
+      formData.country?.trim() !== '' &&
+      formData.zipcode?.trim() !== '' &&
+      formData.coordinates?.trim() !== '' &&
+      formData.extent?.trim() !== '' &&
+      formData.valuePerSQ?.trim() !== '' &&
+      formData.value?.trim() !== ''
+
+    if (isDisputed) {
+      return (
+        basicValidation &&
+        formData.legalParties?.trim() !== '' &&
+        formData.nextHearing?.trim() !== ''
+      )
+    }
+
+    return basicValidation
+  }
+
   useEffect(() => {
     // Load all countries on component mount
     const allCountries = Country.getAllCountries()
@@ -149,13 +178,13 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between h-14 truncate"
+            className="h-14 w-full justify-between truncate"
           >
             {selectedCountry?.name || 'Select Country'}
             <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0 border-gray-400" align="start">
+        <PopoverContent className="w-full border-gray-400 p-0" align="start">
           <Command>
             <CommandInput
               placeholder="Search country..."
@@ -210,14 +239,14 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between h-14 truncate"
+            className="h-14 w-full justify-between truncate"
             disabled={!selectedCountry}
           >
             {selectedState?.name || 'Select State'}
             <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0 border-gray-400" align="start">
+        <PopoverContent className="w-full border-gray-400 p-0" align="start">
           <Command>
             <CommandInput
               placeholder="Search state..."
@@ -272,14 +301,14 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between h-14 truncate"
+            className="h-14 w-full justify-between truncate"
             disabled={!selectedState}
           >
             {selectedCity?.name || 'Select City'}
             <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0 border-gray-400" align="start">
+        <PopoverContent className="w-full border-gray-400 p-0" align="start">
           <Command>
             <CommandInput
               placeholder="Search city..."
@@ -498,7 +527,16 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
   }
 
   const handleNext = async () => {
+    if (currentStep === 1 && !validateStep1()) {
+      toast.error('Please fill in all required fields')
+      return
+    }
+
     if (currentStep === 2) {
+      if (!validateStep2()) {
+        toast.error('Please fill in all required fields')
+        return
+      }
       const success = await createProperty()
       if (success) {
         setCurrentStep(currentStep + 1)
@@ -661,6 +699,35 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
 
                   <div className="flex flex-col space-y-1">
                     <label className="text-md text-secondary block">
+                      State
+                    </label>
+                    <StateSelect />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 py-3">
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-md text-secondary block">
+                      District
+                    </label>
+                    <Input
+                      type="text"
+                      value={formData.district}
+                      onChange={(e) =>
+                        updateFormData('district', e.target.value)
+                      }
+                      className="w-full rounded-md border border-gray-300 px-3 py-2"
+                      placeholder="-"
+                    />
+                  </div>
+
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-md text-secondary block">City</label>
+                    <CitySelect />
+                  </div>
+
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-md text-secondary block">
                       Zip-code <span className="text-primary">*</span>
                     </label>
                     <Input
@@ -674,7 +741,9 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                       required
                     />
                   </div>
+                </div>
 
+                <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col space-y-1">
                     <label className="text-md text-secondary block">
                       Address line 1
@@ -703,35 +772,6 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                       className="w-full rounded-md border border-gray-300 px-3 py-2"
                       placeholder="Enter locality name"
                     />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3 py-3">
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-md text-secondary block">
-                      District
-                    </label>
-                    <Input
-                      type="text"
-                      value={formData.district}
-                      onChange={(e) =>
-                        updateFormData('district', e.target.value)
-                      }
-                      className="w-full rounded-md border border-gray-300 px-3 py-2"
-                      placeholder="-"
-                    />
-                  </div>
-
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-md text-secondary block">City</label>
-                    <CitySelect />
-                  </div>
-
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-md text-secondary block">
-                      State
-                    </label>
-                    <StateSelect />
                   </div>
                 </div>
               </div>
@@ -1052,9 +1092,13 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                 </>
               ) : currentStep < 3 ? (
                 <Button
-                  className="bg-primary hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 px-6"
+                  className="bg-primary hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 px-6 disabled:cursor-not-allowed disabled:opacity-50"
                   onClick={handleNext}
-                  disabled={isLoading}
+                  disabled={
+                    isLoading ||
+                    (currentStep === 1 && !validateStep1()) ||
+                    (currentStep === 2 && !validateStep2())
+                  }
                 >
                   {currentStep === 2 && isLoading ? (
                     <>Creating Property...</>
