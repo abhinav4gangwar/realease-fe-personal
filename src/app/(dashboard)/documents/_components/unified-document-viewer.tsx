@@ -537,6 +537,10 @@ export function UnifiedDocumentViewer({
     ...(tempAnnotation ? [tempAnnotation] : []),
   ]
 
+  const handleCancelComment = () => {
+  setActiveCommentId(null)
+}
+
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50">
       <div className="bg-secondary flex h-full w-full max-w-7xl flex-col shadow-xl">
@@ -662,6 +666,7 @@ export function UnifiedDocumentViewer({
                                     replyingToCommentId === comment.id
                                   }
                                   deletingReplyId={deletingReplyId}
+                                  onCancel={handleCancelComment}
                                 />
                               </div>
                             ))}
@@ -721,6 +726,7 @@ export function UnifiedDocumentViewer({
                             isActive={activeCommentId === comment.id}
                             isReplying={replyingToCommentId === comment.id}
                             deletingReplyId={deletingReplyId}
+                            onCancel={handleCancelComment}
                           />
                         </div>
                       ))}
