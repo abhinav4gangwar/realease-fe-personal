@@ -8,10 +8,14 @@ import { CityType, CountryType, Properties, StateType } from '@/types/property.t
 import { apiClient } from '@/utils/api'
 import { CommandEmpty } from 'cmdk'
 import { City, Country, State } from 'country-state-city'
+import { useLocationAutoFill } from '@/hooks/useLocationAutoFill'
 import {
+  AlertCircle,
   ArrowLeft,
   Check,
+  CheckCircle,
   ChevronDown,
+  Loader2,
   MoveRight,
   Pencil,
   Plus,
@@ -63,11 +67,7 @@ const PropertiesEditModel = ({
   const [showDuplicatesModal, setShowDuplicatesModal] = useState(false)
 
   const [selectedCountry, setSelectedCountry] = useState<CountryType | null>(null)
-const [selectedState, setSelectedState] = useState<StateType | null>(null)
-const [selectedCity, setSelectedCity] = useState<CityType | null>(null)
 const [countries, setCountries] = useState<CountryType[]>([])
-const [states, setStates] = useState<StateType[]>([])
-const [cities, setCities] = useState<CityType[]>([])
 
   const [formData, setFormData] = useState<Properties>({
     name: '',
@@ -131,50 +131,84 @@ const [cities, setCities] = useState<CityType[]>([])
 
 useEffect(() => {
   if (selectedCountry) {
-    const countryStates = State.getStatesOfCountry(selectedCountry.isoCode)
-    setStates(countryStates)
-    
-    if (formData.state) {
-      const state = countryStates.find(s => s.name === formData.state)
-      if (state) {
-        setSelectedState(state)
-      } else {
-        setSelectedState(null)
-      }
-    } else {
-      setSelectedState(null)
-    }
-    
     updateFormData('country', selectedCountry.name)
   }
 }, [selectedCountry])
 
-useEffect(() => {
-  if (selectedState && selectedCountry) {
+// Track if we're currently auto-filling to prevent infinite loops
+const [isAutoFilling, setIsAutoFilling] = useState(false)
+const [lastAutoFilledZipcode, setLastAutoFilledZipcode] = useState('')
 
-    const stateCities = City.getCitiesOfState(selectedCountry.isoCode, selectedState.isoCode)
-    setCities(stateCities)
-    
-    if (formData.city) {
-      const city = stateCities.find(c => c.name === formData.city)
-      if (city) {
-        setSelectedCity(city)
-      } else {
-        setSelectedCity(null)
+// Location auto-fill functionality
+const {
+  isLoading: isLocationLoading,
+  error: locationError,
+  isValidZipcode,
+} = useLocationAutoFill({
+  country: selectedCountry?.name || '',
+  zipcode: formData.zipcode,
+  onLocationFound: (location) => {
+    // Prevent infinite loops by checking if we're already auto-filling
+    if (isAutoFilling || lastAutoFilledZipcode === formData.zipcode) {
+      return
+    }
+
+    setIsAutoFilling(true)
+    setLastAutoFilledZipcode(formData.zipcode)
+
+    console.log('🎯 Location found:', location)
+    console.log('🏁 Current selected country:', selectedCountry?.name)
+
+    // Only auto-select country if none is selected or if it matches the current selection
+    if (!selectedCountry) {
+      const foundCountry = countries.find(c =>
+        c.name.toLowerCase().includes(location.country.toLowerCase()) ||
+        c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
+      )
+
+      if (foundCountry) {
+        console.log('🌍 Auto-selecting country:', foundCountry.name)
+        setSelectedCountry(foundCountry)
       }
     } else {
-      setSelectedCity(null)
-    }
-    
-    updateFormData('state', selectedState.name)
-  }
-}, [selectedState, selectedCountry])
+      // Verify the current country matches the location result
+      const currentCountryMatches =
+        selectedCountry.name.toLowerCase().includes(location.country.toLowerCase()) ||
+        selectedCountry.isoCode.toLowerCase() === location.countryCode.toLowerCase()
 
+      if (!currentCountryMatches) {
+        console.log('⚠️ Country mismatch - keeping user selection:', selectedCountry.name)
+      }
+    }
+
+    // Use the currently selected country for state/city lookup
+    const countryForLookup = selectedCountry || countries.find(c =>
+      c.name.toLowerCase().includes(location.country.toLowerCase()) ||
+      c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
+    )
+
+    // Auto-fill state and city from location data
+    console.log('🏛️ Auto-filling state:', location.state)
+    updateFormData('state', location.state)
+
+    console.log('🏙️ Auto-filling city:', location.city)
+    updateFormData('city', location.city)
+
+    // Reset auto-filling flag after a short delay
+    setTimeout(() => {
+      setIsAutoFilling(false)
+    }, 100)
+  },
+  autoTrigger: !isAutoFilling, // Only auto-trigger when not already auto-filling
+  debounceMs: 1000,
+})
+
+// Reset auto-fill tracking when zipcode changes manually
 useEffect(() => {
-  if (selectedCity) {
-    updateFormData('city', selectedCity.name)
+  if (formData.zipcode !== lastAutoFilledZipcode) {
+    setLastAutoFilledZipcode('')
   }
-}, [selectedCity])
+}, [formData.zipcode, lastAutoFilledZipcode])
 
 
   const updateFormData = (field: keyof Properties, value: string) => {
@@ -269,125 +303,7 @@ useEffect(() => {
   )
 }
 
-// State Autocomplete Component
-const StateSelect = () => {
-  const [open, setOpen] = useState(false)
-  const [searchValue, setSearchValue] = useState('')
 
-  const filteredStates = states.filter(state =>
-    state.name.toLowerCase().includes(searchValue.toLowerCase())
-  )
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between h-14 truncate"
-          disabled={!selectedCountry}
-        >
-          {selectedState?.name || "Select State"}
-          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-full p-0 border-gray-400" align="start">
-        <Command>
-          <CommandInput 
-            placeholder="Search state..." 
-            value={searchValue}
-            onValueChange={setSearchValue}
-          />
-          <CommandList>
-            <CommandEmpty>No state found.</CommandEmpty>
-            <CommandGroup>
-              {filteredStates.map((state) => (
-                <CommandItem
-                  key={state.isoCode}
-                  value={state.name}
-                  onSelect={() => {
-                    setSelectedState(state)
-                    setOpen(false)
-                    setSearchValue('')
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      selectedState?.isoCode === state.isoCode ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {state.name}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  )
-}
-
-// City Autocomplete Component
-const CitySelect = () => {
-  const [open, setOpen] = useState(false)
-  const [searchValue, setSearchValue] = useState('')
-
-  const filteredCities = cities.filter(city =>
-    city.name.toLowerCase().includes(searchValue.toLowerCase())
-  )
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between h-14 truncate"
-          disabled={!selectedState}
-        >
-          {selectedCity?.name || "Select City"}
-          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-full p-0 border-gray-400" align="start">
-        <Command>
-          <CommandInput 
-            placeholder="Search city..." 
-            value={searchValue}
-            onValueChange={setSearchValue}
-          />
-          <CommandList>
-            <CommandEmpty>No city found.</CommandEmpty>
-            <CommandGroup>
-              {filteredCities.map((city, index) => (
-                <CommandItem
-                  key={`${city.name}-${index}`}
-                  value={city.name}
-                  onSelect={() => {
-                    setSelectedCity(city)
-                    setOpen(false)
-                    setSearchValue('')
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      selectedCity?.name === city.name ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {city.name}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  )
-}
 
   const resetForm = () => {
     if (property) {
@@ -420,10 +336,6 @@ const CitySelect = () => {
     setShowDuplicatesModal(false)
 
     setSelectedCountry(null)
-  setSelectedState(null)
-  setSelectedCity(null)
-  setStates([])
-  setCities([])
   }
 
   const updateProperty = async () => {
@@ -777,16 +689,54 @@ const CitySelect = () => {
                     <label className="text-md text-secondary block">
                       Zip-code <span className="text-primary">*</span>
                     </label>
-                    <Input
-                      type="text"
-                      value={formData.zipcode}
-                      onChange={(e) =>
-                        updateFormData('zipcode', e.target.value)
-                      }
-                      className="w-full rounded-md border border-gray-300 px-3 py-2"
-                      placeholder="Select zip-code"
-                      required
-                    />
+                    <div className="relative">
+                      <Input
+                        type="text"
+                        value={formData.zipcode}
+                        onChange={(e) =>
+                          updateFormData('zipcode', e.target.value)
+                        }
+                        className={`w-full rounded-md border px-3 py-2 pr-10 ${
+                          locationError || (!isValidZipcode && formData.zipcode)
+                            ? 'border-red-300 focus:border-red-500'
+                            : isLocationLoading
+                            ? 'border-blue-300 focus:border-blue-500'
+                            : 'border-gray-300'
+                        }`}
+                        placeholder="Enter zip-code"
+                        required
+                      />
+
+                      {/* Status Icon */}
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        {isLocationLoading && (
+                          <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                        )}
+                        {!isLocationLoading && formData.zipcode && isValidZipcode && !locationError && (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        )}
+                        {(locationError || (!isValidZipcode && formData.zipcode)) && (
+                          <AlertCircle className="h-4 w-4 text-red-500" />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Status Messages */}
+                    {!isValidZipcode && formData.zipcode && (
+                      <p className="text-xs text-red-500">
+                        Invalid zipcode format for {selectedCountry?.name || 'selected country'}
+                      </p>
+                    )}
+                    {locationError && (
+                      <p className="text-xs text-red-500">
+                        {locationError}
+                      </p>
+                    )}
+                    {isLocationLoading && (
+                      <p className="text-xs text-blue-600">
+                        🔍 Looking up location...
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex flex-col space-y-1">
@@ -838,14 +788,37 @@ const CitySelect = () => {
 
                   <div className="flex flex-col space-y-1">
                     <label className="text-md text-secondary block">City</label>
-                    <CitySelect />
+                    <Input
+                      type="text"
+                      placeholder="Enter city"
+                      value={formData.city || ''}
+                      onChange={(e) => updateFormData('city', e.target.value)}
+                      className="h-14"
+                    />
+                  </div>
+
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-md text-secondary block">District</label>
+                    <Input
+                      type="text"
+                      placeholder="Enter district"
+                      value={formData.district || ''}
+                      onChange={(e) => updateFormData('district', e.target.value)}
+                      className="h-14"
+                    />
                   </div>
 
                   <div className="flex flex-col space-y-1">
                     <label className="text-md text-secondary block">
                       State
                     </label>
-                    <StateSelect />
+                    <Input
+                      type="text"
+                      placeholder="Enter state"
+                      value={formData.state || ''}
+                      onChange={(e) => updateFormData('state', e.target.value)}
+                      className="h-14"
+                    />
                   </div>
                 </div>
               </div>

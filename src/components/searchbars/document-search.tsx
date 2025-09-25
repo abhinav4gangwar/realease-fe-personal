@@ -4,15 +4,22 @@ import { LoaderCircle, Search } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Input } from '../ui/input'
+import { FileIcon } from '../ui/file-icon'
+
+interface SearchSuggestion {
+  text: string
+  mimeType: string
+  type: 'suggestion'
+}
 
 const DocumentSearch = () => {
   const [query, setQuery] = useState('')
-  const [suggestions, setSuggestions] = useState([])
+  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
-  const dropdownRef = useRef(null)
-  const inputRef = useRef(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const { setSearchResults, setSearchQuery, clearSearchResults } =
     useSearchContext()
@@ -74,12 +81,12 @@ const DocumentSearch = () => {
 
   // Close dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event) => {
+    const handleClickOutside = (event: MouseEvent) => {
       if (
         dropdownRef.current &&
-        !dropdownRef.current.contains(event.target) &&
+        !dropdownRef.current.contains(event.target as Node) &&
         inputRef.current &&
-        !inputRef.current.contains(event.target)
+        !inputRef.current.contains(event.target as Node)
       ) {
         setShowDropdown(false)
       }
@@ -89,18 +96,18 @@ const DocumentSearch = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const handleSuggestionSelect = (suggestion) => {
+  const handleSuggestionSelect = (suggestion: SearchSuggestion) => {
     setQuery(suggestion.text)
     setShowDropdown(false)
     inputRef.current?.focus()
     performSearch(suggestion.text)
   }
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(e.target.value)
   }
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault()
       setShowDropdown(false)
@@ -144,7 +151,14 @@ const DocumentSearch = () => {
                   className="hover:text-primary cursor-pointer px-4 py-3 text-sm last:border-b-0 hover:bg-gray-100"
                   onClick={() => handleSuggestionSelect(suggestion)}
                 >
-                  {suggestion.text}
+                  <div className="flex items-center gap-3">
+                    <FileIcon
+                      mimeType={suggestion.mimeType}
+                      size={18}
+                      className="flex-shrink-0"
+                    />
+                    <span className="truncate">{suggestion.text}</span>
+                  </div>
                 </div>
               ))
             ) : (
