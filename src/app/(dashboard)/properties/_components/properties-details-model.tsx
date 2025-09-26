@@ -1,18 +1,50 @@
 'use client'
 import { Button } from '@/components/ui/button'
 import { Properties } from '@/types/property.types'
-import { Bell, ChevronDown, Pencil, X } from 'lucide-react'
+import { formatCoordinates } from '@/utils/coordinateUtils'
+import {
+  Bell,
+  ChevronDown,
+  Edit2,
+  Pencil,
+  Reply,
+  Send,
+  Trash2,
+  X,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { FileIcon } from '../../documents/_components/file-icon'
 import FullMapModal from './map-model'
 import MiniMap from './minimap'
 import { CustomField } from './properties-edit-model'
 
+import { apiClient } from '@/utils/api'
+import { toast } from 'sonner'; // Adjust import path as needed
+
 export interface PropertiesDetailsModelProps {
   property: Properties | null
   isOpen: boolean
   onClose: () => void
   onEditClick?: (property: Properties) => void
+}
+
+interface Comment {
+  id: number
+  propertyId: number
+  parentId: number
+  deleted: boolean
+  mentions: Array<{
+    name: string
+    email: string
+    userId: number
+    userType: string
+    mentionText: string
+  }>
+  author: number
+  text: string
+  createdAt: string
+  updatedAt: string
+  children?: Comment[]
 }
 
 const PropertiesDetailsModel = ({
@@ -25,6 +57,16 @@ const PropertiesDetailsModel = ({
   const [isMapModalOpen, setIsMapModalOpen] = useState(false)
   const [customFields, setCustomFields] = useState<CustomField[]>([])
 
+  // Comment states
+  const [comments, setComments] = useState<Comment[]>([])
+  const [newComment, setNewComment] = useState('')
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false)
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(null)
+  const [editingText, setEditingText] = useState('')
+  const [loadingComments, setLoadingComments] = useState(false)
+  const [replyingToId, setReplyingToId] = useState<number | null>(null)
+  const [replyText, setReplyText] = useState('')
+
   const uploadedDocuments = property?.documents
 
   const handleMiniMapClick = () => {
@@ -34,6 +76,295 @@ const PropertiesDetailsModel = ({
   const handleMapModalClose = () => {
     setIsMapModalOpen(false)
   }
+
+  // Helper function to get coordinates in the correct format for display
+  const getCoordinatesForDisplay = () => {
+    if (!property) return ''
+
+    // If backend sends separate latitude/longitude, combine them
+    if ((property as any).latitude && (property as any).longitude) {
+      return formatCoordinates(
+        (property as any).latitude,
+        (property as any).longitude
+      )
+    }
+
+    // Fallback to existing coordinates field
+    return property.coordinates || ''
+  }
+
+  // Helper function to get coordinates for map components (they expect the old format)
+  const getCoordinatesForMap = () => {
+    if (!property) return ''
+
+    // If backend sends separate latitude/longitude, convert to old format
+    if ((property as any).latitude && (property as any).longitude) {
+      const lat = parseFloat((property as any).latitude)
+      const lng = parseFloat((property as any).longitude)
+
+      if (!isNaN(lat) && !isNaN(lng)) {
+        const latDir = lat >= 0 ? 'N' : 'S'
+        const lngDir = lng >= 0 ? 'E' : 'W'
+        return `${Math.abs(lat)} ${latDir}; ${Math.abs(lng)} ${lngDir}`
+      }
+    }
+
+    // Fallback to existing coordinates field
+    return property.coordinates || ''
+  }
+
+  // Load comments
+  const loadComments = async () => {
+    if (!property?.id) return
+
+    setLoadingComments(true)
+    try {
+      const response = await apiClient.get(
+        `/dashboard/properties/comments/list/${property.id}`
+      )
+      setComments(response.data.comments || [])
+    } catch (error: any) {
+      toast.error('Failed to load comments')
+      console.error('Error loading comments:', error)
+    } finally {
+      setLoadingComments(false)
+    }
+  }
+
+  // Add new comment
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !property?.id) return
+
+    setIsSubmittingComment(true)
+    try {
+      const response = await apiClient.post(
+        '/dashboard/properties/comments/create',
+        {
+          text: newComment,
+          propertyId: property.id,
+        }
+      )
+
+      setComments(response.data || [])
+      setNewComment('')
+      toast.success('Comment added successfully')
+    } catch (error: any) {
+      toast.error('Failed to add comment')
+      console.error('Error adding comment:', error)
+    } finally {
+      setIsSubmittingComment(false)
+    }
+  }
+
+  // Add reply to comment
+  const handleAddReply = async (parentId: number) => {
+    if (!replyText.trim() || !property?.id) return
+
+    setIsSubmittingComment(true)
+    try {
+      const response = await apiClient.post(
+        '/dashboard/properties/comments/create',
+        {
+          text: replyText,
+          propertyId: property.id,
+          parentId: parentId,
+        }
+      )
+
+      setComments(response.data || [])
+      setReplyText('')
+      setReplyingToId(null)
+      toast.success('Reply added successfully')
+    } catch (error: any) {
+      toast.error('Failed to add reply')
+      console.error('Error adding reply:', error)
+    } finally {
+      setIsSubmittingComment(false)
+    }
+  }
+
+  // Update comment
+  const handleUpdateComment = async (commentId: number) => {
+    if (!editingText.trim()) return
+
+    try {
+      await apiClient.put('/dashboard/properties/comments/update', {
+        text: editingText,
+        commentId: commentId,
+      })
+
+      // Reload comments after update
+      await loadComments()
+      setEditingCommentId(null)
+      setEditingText('')
+      toast.success('Comment updated successfully')
+    } catch (error: any) {
+      toast.error('Failed to update comment')
+      console.error('Error updating comment:', error)
+    }
+  }
+
+  // Delete comment
+  const handleDeleteComment = async (commentId: number) => {
+    if (!confirm('Are you sure you want to delete this comment?')) return
+
+    try {
+      await apiClient.delete(
+        `/dashboard/properties/comments/delete/${commentId}`
+      )
+
+      // Remove the comment from local state
+      setComments((prev) => prev.filter((comment) => comment.id !== commentId))
+      toast.success('Comment deleted successfully')
+    } catch (error: any) {
+      toast.error('Failed to delete comment')
+      console.error('Error deleting comment:', error)
+    }
+  }
+
+  // Start editing comment
+  const startEditing = (comment: Comment) => {
+    setEditingCommentId(comment.id)
+    setEditingText(comment.text)
+  }
+
+  // Cancel editing
+  const cancelEditing = () => {
+    setEditingCommentId(null)
+    setEditingText('')
+  }
+
+  // Format date
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
+
+  // Render comment component
+  const renderComment = (comment: Comment, isReply = false) => (
+    <div
+      key={comment.id}
+      className={`rounded-md border p-3 ${isReply ? 'ml-6 bg-gray-50' : 'bg-white'}`}
+    >
+      {editingCommentId === comment.id ? (
+        <div className="space-y-2">
+          <textarea
+            value={editingText}
+            onChange={(e) => setEditingText(e.target.value)}
+            className="w-full resize-none rounded-md border p-2"
+            rows={3}
+            placeholder="Edit your comment..."
+          />
+          <div className="flex gap-2">
+            <Button
+              onClick={() => handleUpdateComment(comment.id)}
+              disabled={!editingText.trim()}
+            >
+              Save
+            </Button>
+            <Button variant="outline" onClick={cancelEditing}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <p className="mb-2 text-sm text-gray-800">{comment.text}</p>
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <span>Author: {comment.author}</span>
+                <span>•</span>
+                <span>{formatDate(comment.createdAt)}</span>
+                {Array.isArray(comment.mentions) &&
+                  comment.mentions.length > 0 && (
+                    <>
+                      <span>•</span>
+                      <span>
+                        Mentions:{' '}
+                        {comment.mentions.map((m) => m.name).join(', ')}
+                      </span>
+                    </>
+                  )}
+              </div>
+            </div>
+            <div className="flex gap-1">
+              {!isReply && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setReplyingToId(comment.id)}
+                  className="h-6 w-6 p-0"
+                >
+                  <Reply className="h-3 w-3" />
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => startEditing(comment)}
+                className="h-6 w-6 p-0"
+              >
+                <Edit2 className="h-3 w-3" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleDeleteComment(comment.id)}
+                className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Reply input */}
+          {replyingToId === comment.id && (
+            <div className="mt-3 space-y-2">
+              <textarea
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                className="w-full resize-none rounded-md border p-2"
+                rows={2}
+                placeholder="Write a reply..."
+              />
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => handleAddReply(comment.id)}
+                  disabled={!replyText.trim() || isSubmittingComment}
+                >
+                  Reply
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setReplyingToId(null)
+                    setReplyText('')
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Render replies */}
+          {comment.children &&
+            Array.isArray(comment.children) &&
+            comment.children.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {comment.children.map((reply) => renderComment(reply, true))}
+              </div>
+            )}
+        </>
+      )}
+    </div>
+  )
 
   useEffect(() => {
     if (property?.additionalDetails) {
@@ -45,6 +376,11 @@ const PropertiesDetailsModel = ({
         value: String(value),
       }))
       setCustomFields(customFieldsFromProperty)
+    }
+
+    // Load comments when modal opens
+    if (isOpen && property?.id) {
+      loadComments()
     }
   }, [property, isOpen])
 
@@ -161,7 +497,7 @@ const PropertiesDetailsModel = ({
                   </h3>
                   <div className="h-40">
                     <MiniMap
-                      coordinates={property?.coordinates}
+                      coordinates={getCoordinatesForMap()}
                       propertyName={property?.name}
                       onClick={handleMiniMapClick}
                     />
@@ -211,7 +547,7 @@ const PropertiesDetailsModel = ({
                     Co-ordinates
                   </h3>
                   <h2 className="truncate text-lg font-semibold">
-                    {property?.coordinates}
+                    {getCoordinatesForDisplay()}
                   </h2>
                 </div>
               </div>
@@ -290,6 +626,62 @@ const PropertiesDetailsModel = ({
                   </div>
                 </div>
               )}
+
+              {/* Comments Section */}
+              <div className="flex w-full flex-col space-y-4 rounded-md bg-[#F2F2F2] px-3 py-2">
+                <h3 className="text-sm font-medium text-gray-500">Comments</h3>
+
+                {/* Add Comment Input */}
+                <div className="space-y-2">
+                  <textarea
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    className="w-full resize-none rounded-md border p-3"
+                    rows={3}
+                    placeholder="Add a comment... You can use @mentions"
+                  />
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleAddComment}
+                      disabled={!newComment.trim() || isSubmittingComment}
+                      className="bg-primary hover:bg-secondary"
+                    >
+                      {isSubmittingComment ? (
+                        <div className="flex items-center gap-2">
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          Posting...
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Send className="h-4 w-4" />
+                          Post Comment
+                        </div>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Comments List */}
+                <div className="max-h-96 space-y-3 overflow-y-auto">
+                  {loadingComments ? (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+                      <span className="ml-2 text-sm text-gray-500">
+                        Loading comments...
+                      </span>
+                    </div>
+                  ) : comments.length > 0 ? (
+                    comments.map((comment) => renderComment(comment))
+                  ) : (
+                    <div className="py-6 text-center text-gray-500">
+                      <p className="text-sm">No comments yet</p>
+                      <p className="mt-1 text-xs">
+                        Be the first to add a comment!
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="bg-[#F2F2F2] shadow-md">
@@ -317,9 +709,10 @@ const PropertiesDetailsModel = ({
       <FullMapModal
         isOpen={isMapModalOpen}
         onClose={handleMapModalClose}
-        coordinates={property?.coordinates}
+        coordinates={getCoordinatesForMap()}
         propertyName={property?.name}
         propertyAddress={property?.address}
+        documents={property?.documents}
       />
     </>
   )

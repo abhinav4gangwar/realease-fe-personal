@@ -4,6 +4,7 @@ import { parseCoordinates } from '@/utils/coordinateParser'
 import { X } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
+import { apiClient } from '@/utils/api'
 
 const MapContainer = dynamic(
   () => import('react-leaflet').then((mod) => mod.MapContainer),
@@ -21,6 +22,27 @@ const Popup = dynamic(
   () => import('react-leaflet').then((mod) => mod.Popup),
   { ssr: false }
 )
+const Polyline = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Polyline),
+  { ssr: false }
+)
+const Polygon = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Polygon),
+  { ssr: false }
+)
+
+// Fix Leaflet marker icons
+let DefaultIcon: any
+if (typeof window !== 'undefined') {
+  const L = require('leaflet')
+  delete (L.Icon.Default.prototype as any)._getIconUrl
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  })
+  DefaultIcon = L.Icon.Default
+}
 
 interface FullMapModalProps {
   isOpen: boolean
@@ -30,22 +52,158 @@ interface FullMapModalProps {
   propertyAddress?: string
   propertyType?: string
   isDisputed?: boolean
+  documents?: Array<{
+    doc_id: number
+    name: string
+    icon: string
+    fileType: string
+    size: number
+  }>
 }
 
-const FullMapModal = ({ 
-  isOpen, 
-  onClose, 
-  coordinates, 
+const FullMapModal = ({
+  isOpen,
+  onClose,
+  coordinates,
   propertyName,
   propertyAddress,
   propertyType,
-  isDisputed
+  isDisputed,
+  documents
 }: FullMapModalProps) => {
   const [isClient, setIsClient] = useState(false)
+  const [kmlLayers, setKmlLayers] = useState<any[]>([])
+  const [isLoadingKml, setIsLoadingKml] = useState(false)
 
   useEffect(() => {
     setIsClient(true)
   }, [])
+
+  // Load KML files when component opens
+  useEffect(() => {
+    if (isOpen && documents && documents.length > 0) {
+      loadKmlFiles()
+    }
+  }, [isOpen, documents])
+
+  const loadKmlFiles = async () => {
+    if (!documents) return
+
+    const kmlFiles = documents.filter(doc =>
+      doc.name.toLowerCase().endsWith('.kml') ||
+      doc.fileType.includes('kml') ||
+      doc.fileType.includes('xml')
+    )
+
+    if (kmlFiles.length === 0) return
+
+    setIsLoadingKml(true)
+    const layers: any[] = []
+
+    try {
+      for (const kmlFile of kmlFiles) {
+        try {
+          // Use the apiClient with proper authentication and base URL
+          const response = await apiClient.post('/dashboard/documents/download', {
+            items: [
+              { id: kmlFile.doc_id, type: "file" }
+            ]
+          }, {
+            responseType: 'text' // Ensure we get the raw text content
+          })
+
+          if (response.data) {
+            const kmlText = response.data
+
+            // Parse KML using DOMParser
+            const parser = new DOMParser()
+            const kmlDoc = parser.parseFromString(kmlText, 'text/xml')
+
+            // Extract coordinates from KML
+            const coordinates = extractKmlCoordinates(kmlDoc)
+            if (coordinates.length > 0) {
+              layers.push({
+                name: kmlFile.name,
+                coordinates: coordinates,
+                type: 'kml'
+              })
+              console.log(`✅ Loaded KML file: ${kmlFile.name} with ${coordinates.length} points`)
+            } else {
+              console.warn(`⚠️ No coordinates found in KML file: ${kmlFile.name}`)
+            }
+          } else {
+            console.error(`❌ Empty response for KML file: ${kmlFile.name}`)
+          }
+        } catch (error) {
+          console.error(`Error loading KML file ${kmlFile.name}:`, error)
+        }
+      }
+    } catch (error) {
+      console.error('Error loading KML files:', error)
+    }
+
+    setKmlLayers(layers)
+    setIsLoadingKml(false)
+  }
+
+  const extractKmlCoordinates = (kmlDoc: Document) => {
+    const coordinates: Array<[number, number]> = []
+
+    try {
+      // Extract coordinates from various KML elements
+      const coordElements = kmlDoc.querySelectorAll('coordinates')
+
+      coordElements.forEach(coordElement => {
+        const coordText = coordElement.textContent?.trim()
+        if (coordText) {
+          // KML coordinates are in format: longitude,latitude,altitude (or just longitude,latitude)
+          // Split by whitespace, newlines, or multiple spaces
+          const coordPairs = coordText.split(/[\s\n\r]+/).filter(pair => pair.trim())
+
+          coordPairs.forEach(pair => {
+            const coords = pair.split(',')
+            if (coords.length >= 2) {
+              const lng = parseFloat(coords[0])
+              const lat = parseFloat(coords[1])
+
+              // Validate coordinates are within valid ranges
+              if (!isNaN(lat) && !isNaN(lng) &&
+                  lat >= -90 && lat <= 90 &&
+                  lng >= -180 && lng <= 180) {
+                coordinates.push([lat, lng])
+              }
+            }
+          })
+        }
+      })
+
+      console.log(`📍 Extracted ${coordinates.length} coordinate points from KML`)
+
+      // If no coordinates found, try alternative KML structures
+      if (coordinates.length === 0) {
+        // Try looking for Point elements
+        const pointElements = kmlDoc.querySelectorAll('Point coordinates')
+        pointElements.forEach(pointElement => {
+          const coordText = pointElement.textContent?.trim()
+          if (coordText) {
+            const coords = coordText.split(',')
+            if (coords.length >= 2) {
+              const lng = parseFloat(coords[0])
+              const lat = parseFloat(coords[1])
+              if (!isNaN(lat) && !isNaN(lng)) {
+                coordinates.push([lat, lng])
+              }
+            }
+          }
+        })
+      }
+
+    } catch (error) {
+      console.error('Error extracting KML coordinates:', error)
+    }
+
+    return coordinates
+  }
 
   useEffect(() => {
     if (isOpen) {
@@ -96,7 +254,7 @@ const FullMapModal = ({
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-              <Marker 
+              <Marker
                 position={[coords.lat, coords.lng]}
               >
                 <Popup>
@@ -111,6 +269,34 @@ const FullMapModal = ({
                   </div>
                 </Popup>
               </Marker>
+
+              {/* Render KML Layers */}
+              {kmlLayers.map((layer, index) => (
+                <Polyline
+                  key={`kml-layer-${index}`}
+                  positions={layer.coordinates}
+                  color="#ff6b6b"
+                  weight={3}
+                  opacity={0.8}
+                >
+                  <Popup>
+                    <div className="p-2">
+                      <h3 className="font-semibold">KML Layer</h3>
+                      <p className="text-sm text-gray-600">{layer.name}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {layer.coordinates.length} points
+                      </p>
+                    </div>
+                  </Popup>
+                </Polyline>
+              ))}
+
+              {/* Loading indicator for KML */}
+              {isLoadingKml && (
+                <div className="absolute top-4 right-4 bg-white p-2 rounded shadow-md z-[1000]">
+                  <p className="text-sm text-gray-600">Loading KML files...</p>
+                </div>
+              )}
             </MapContainer>
           ) : (
             <div className="h-full flex items-center justify-center bg-gray-100">
@@ -127,9 +313,14 @@ const FullMapModal = ({
         {/* Footer */}
         <div className="p-4 bg-gray-50">
           <div className="flex justify-between items-center">
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-600 space-y-1">
               {coordinates && (
-                <span>Coordinates: {coordinates}</span>
+                <div>Coordinates: {coordinates}</div>
+              )}
+              {kmlLayers.length > 0 && (
+                <div className="text-xs">
+                  KML Layers: {kmlLayers.map(layer => layer.name).join(', ')}
+                </div>
               )}
             </div>
             <Button onClick={onClose}>

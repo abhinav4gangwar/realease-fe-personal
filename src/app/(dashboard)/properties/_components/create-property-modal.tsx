@@ -14,19 +14,19 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { useLocationAutoFill } from '@/hooks/useLocationAutoFill'
 import { cn } from '@/lib/utils'
-import {
-  CityType,
-  CountryType,
-  Properties,
-  StateType,
-} from '@/types/property.types'
+import { CountryType, Properties } from '@/types/property.types'
 import { apiClient } from '@/utils/api'
-import { City, Country, State } from 'country-state-city'
+import { formatCoordinates, parseCoordinates } from '@/utils/coordinateUtils'
+import { Country } from 'country-state-city'
 import {
+  AlertCircle,
   ArrowLeft,
   Check,
+  CheckCircle,
   ChevronDown,
+  Loader2,
   MoveRight,
   Plus,
   PlusIcon,
@@ -65,11 +65,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
   const [selectedCountry, setSelectedCountry] = useState<CountryType | null>(
     null
   )
-  const [selectedState, setSelectedState] = useState<StateType | null>(null)
-  const [selectedCity, setSelectedCity] = useState<CityType | null>(null)
   const [countries, setCountries] = useState<CountryType[]>([])
-  const [states, setStates] = useState<StateType[]>([])
-  const [cities, setCities] = useState<CityType[]>([])
 
   const [formData, setFormData] = useState<Properties>({
     name: '',
@@ -93,6 +89,35 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     value: '',
   })
 
+  // Add these validation functions
+  const validateStep1 = () => {
+    return (
+      formData.name.trim() !== '' &&
+      formData.type !== '' &&
+      formData.owner.trim() !== ''
+    )
+  }
+
+  const validateStep2 = () => {
+    const basicValidation =
+      formData.country?.trim() !== '' &&
+      formData.zipcode?.trim() !== '' &&
+      formData.coordinates?.trim() !== '' &&
+      formData.extent?.trim() !== '' &&
+      formData.valuePerSQ?.trim() !== '' &&
+      formData.value?.trim() !== ''
+
+    if (isDisputed) {
+      return (
+        basicValidation &&
+        formData.legalParties?.trim() !== '' &&
+        formData.nextHearing?.trim() !== ''
+      )
+    }
+
+    return basicValidation
+  }
+
   useEffect(() => {
     // Load all countries on component mount
     const allCountries = Country.getAllCountries()
@@ -101,38 +126,105 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
 
   useEffect(() => {
     if (selectedCountry) {
-      // Load states for selected country
-      const countryStates = State.getStatesOfCountry(selectedCountry.isoCode)
-      setStates(countryStates)
-      setSelectedState(null)
-      setSelectedCity(null)
-      setCities([])
-
       // Update form data
       updateFormData('country', selectedCountry.name)
     }
   }, [selectedCountry])
 
-  useEffect(() => {
-    if (selectedState && selectedCountry) {
-      // Load cities for selected state
-      const stateCities = City.getCitiesOfState(
-        selectedCountry.isoCode,
-        selectedState.isoCode
-      )
-      setCities(stateCities)
-      setSelectedCity(null)
+  // Track if we're currently auto-filling to prevent infinite loops
+  const [isAutoFilling, setIsAutoFilling] = useState(false)
+  const [lastAutoFilledZipcode, setLastAutoFilledZipcode] = useState('')
 
-      // Update form data
-      updateFormData('state', selectedState.name)
-    }
-  }, [selectedState])
+  // Location auto-fill functionality
+  const {
+    isLoading: isLocationLoading,
+    error: locationError,
+    isValidZipcode,
+  } = useLocationAutoFill({
+    country: selectedCountry?.name || '',
+    zipcode: formData.zipcode,
+    onLocationFound: (location) => {
+      // Prevent infinite loops by checking if we're already auto-filling
+      if (isAutoFilling || lastAutoFilledZipcode === formData.zipcode) {
+        return
+      }
 
+      setIsAutoFilling(true)
+      setLastAutoFilledZipcode(formData.zipcode)
+
+      console.log('🎯 Location found:', location)
+      console.log('🏁 Current selected country:', selectedCountry?.name)
+
+      // Only auto-select country if none is selected or if it matches the current selection
+      if (!selectedCountry) {
+        const foundCountry = countries.find(
+          (c) =>
+            c.name.toLowerCase().includes(location.country.toLowerCase()) ||
+            c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
+        )
+
+        if (foundCountry) {
+          console.log('🌍 Auto-selecting country:', foundCountry.name)
+          setSelectedCountry(foundCountry)
+        }
+      } else {
+        // Verify the current country matches the location result
+        const currentCountryMatches =
+          selectedCountry.name
+            .toLowerCase()
+            .includes(location.country.toLowerCase()) ||
+          selectedCountry.isoCode.toLowerCase() ===
+            location.countryCode.toLowerCase()
+
+        if (!currentCountryMatches) {
+          console.log(
+            '⚠️ Country mismatch - keeping user selection:',
+            selectedCountry.name
+          )
+        }
+      }
+
+      // Use the currently selected country for state/city lookup
+      const countryForLookup =
+        selectedCountry ||
+        countries.find(
+          (c) =>
+            c.name.toLowerCase().includes(location.country.toLowerCase()) ||
+            c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
+        )
+
+      // Auto-fill state and city from location data
+      console.log('🏛️ Auto-filling state:', location.state)
+      updateFormData('state', location.state)
+
+      console.log('🏙️ Auto-filling city:', location.city)
+      updateFormData('city', location.city)
+
+      // Auto-fill coordinates if available
+      if (location.latitude && location.longitude) {
+        const coordinateString = formatCoordinates(
+          location.latitude,
+          location.longitude
+        )
+        console.log('📍 Auto-filling coordinates:', coordinateString)
+        updateFormData('coordinates', coordinateString)
+      }
+
+      // Reset auto-filling flag after a short delay
+      setTimeout(() => {
+        setIsAutoFilling(false)
+      }, 100)
+    },
+    autoTrigger: !isAutoFilling, // Only auto-trigger when not already auto-filling
+    debounceMs: 1000,
+  })
+
+  // Reset auto-fill tracking when zipcode changes manually
   useEffect(() => {
-    if (selectedCity) {
-      updateFormData('city', selectedCity.name)
+    if (formData.zipcode !== lastAutoFilledZipcode) {
+      setLastAutoFilledZipcode('')
     }
-  }, [selectedCity])
+  }, [formData.zipcode, lastAutoFilledZipcode])
 
   const CountrySelect = () => {
     const [open, setOpen] = useState(false)
@@ -149,13 +241,13 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between h-14 truncate"
+            className="h-14 w-full justify-between truncate"
           >
             {selectedCountry?.name || 'Select Country'}
             <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0 border-gray-400" align="start">
+        <PopoverContent className="w-full border-gray-400 p-0" align="start">
           <Command>
             <CommandInput
               placeholder="Search country..."
@@ -184,130 +276,6 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                       )}
                     />
                     {country.name}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
-    )
-  }
-
-  // State Autocomplete Component
-  const StateSelect = () => {
-    const [open, setOpen] = useState(false)
-    const [searchValue, setSearchValue] = useState('')
-
-    const filteredStates = states.filter((state) =>
-      state.name.toLowerCase().includes(searchValue.toLowerCase())
-    )
-
-    return (
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between h-14 truncate"
-            disabled={!selectedCountry}
-          >
-            {selectedState?.name || 'Select State'}
-            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-full p-0 border-gray-400" align="start">
-          <Command>
-            <CommandInput
-              placeholder="Search state..."
-              value={searchValue}
-              onValueChange={setSearchValue}
-            />
-            <CommandList>
-              <CommandEmpty>No state found.</CommandEmpty>
-              <CommandGroup>
-                {filteredStates.map((state) => (
-                  <CommandItem
-                    key={state.isoCode}
-                    value={state.name}
-                    onSelect={() => {
-                      setSelectedState(state)
-                      setOpen(false)
-                      setSearchValue('')
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        'mr-2 h-4 w-4',
-                        selectedState?.isoCode === state.isoCode
-                          ? 'opacity-100'
-                          : 'opacity-0'
-                      )}
-                    />
-                    {state.name}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
-    )
-  }
-
-  // City Autocomplete Component
-  const CitySelect = () => {
-    const [open, setOpen] = useState(false)
-    const [searchValue, setSearchValue] = useState('')
-
-    const filteredCities = cities.filter((city) =>
-      city.name.toLowerCase().includes(searchValue.toLowerCase())
-    )
-
-    return (
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="w-full justify-between h-14 truncate"
-            disabled={!selectedState}
-          >
-            {selectedCity?.name || 'Select City'}
-            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-full p-0 border-gray-400" align="start">
-          <Command>
-            <CommandInput
-              placeholder="Search city..."
-              value={searchValue}
-              onValueChange={setSearchValue}
-            />
-            <CommandList>
-              <CommandEmpty>No city found.</CommandEmpty>
-              <CommandGroup>
-                {filteredCities.map((city, index) => (
-                  <CommandItem
-                    key={`${city.name}-${index}`}
-                    value={city.name}
-                    onSelect={() => {
-                      setSelectedCity(city)
-                      setOpen(false)
-                      setSearchValue('')
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        'mr-2 h-4 w-4',
-                        selectedCity?.name === city.name
-                          ? 'opacity-100'
-                          : 'opacity-0'
-                      )}
-                    />
-                    {city.name}
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -395,6 +363,9 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
         {}
       )
 
+      // Parse coordinates into separate latitude and longitude
+      const parsedCoordinates = parseCoordinates(formData.coordinates || '')
+
       const requestBody = {
         name: formData.name,
         type: formData.type,
@@ -407,6 +378,10 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
         district: formData.district,
         city: formData.city,
         state: formData.state,
+        // Send coordinates in the new format expected by backend
+        latitude: parsedCoordinates?.latitude || '',
+        longitude: parsedCoordinates?.longitude || '',
+        // Keep the original coordinates field for backward compatibility
         coordinates: formData.coordinates,
         isDisputed: isDisputed,
         legalStatus: isDisputed ? 'Disputed - Ongoing' : 'Undisputed',
@@ -498,7 +473,16 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
   }
 
   const handleNext = async () => {
+    if (currentStep === 1 && !validateStep1()) {
+      toast.error('Please fill in all required fields')
+      return
+    }
+
     if (currentStep === 2) {
+      if (!validateStep2()) {
+        toast.error('Please fill in all required fields')
+        return
+      }
       const success = await createProperty()
       if (success) {
         setCurrentStep(currentStep + 1)
@@ -659,22 +643,104 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                     <CountrySelect />
                   </div>
 
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-md text-secondary block">
+                  <div className="flex flex-col">
+                    <label className="text-md text-secondary block pb-1">
                       Zip-code <span className="text-primary">*</span>
                     </label>
+                    <div className="relative">
+                      <Input
+                        type="text"
+                        value={formData.zipcode}
+                        onChange={(e) =>
+                          updateFormData('zipcode', e.target.value)
+                        }
+                        className={`w-full rounded-md border px-3 py-2 pr-10 ${
+                          locationError || (!isValidZipcode && formData.zipcode)
+                            ? 'border-red-300 focus:border-red-500'
+                            : isLocationLoading
+                              ? 'border-blue-300 focus:border-blue-500'
+                              : 'border-gray-300'
+                        }`}
+                        placeholder="Enter zip-code"
+                        required
+                      />
+
+                      {/* Status Icon */}
+                      <div className="absolute top-1/2 right-3 -translate-y-1/2">
+                        {isLocationLoading && (
+                          <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                        )}
+                        {!isLocationLoading &&
+                          formData.zipcode &&
+                          isValidZipcode &&
+                          !locationError && (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          )}
+                        {(locationError ||
+                          (!isValidZipcode && formData.zipcode)) && (
+                          <AlertCircle className="h-4 w-4 text-red-500" />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Status Messages */}
+                    {!isValidZipcode && formData.zipcode && (
+                      <p className="text-xs text-red-500">
+                        Invalid zipcode format for{' '}
+                        {selectedCountry?.name || 'selected country'}
+                      </p>
+                    )}
+                    {locationError && (
+                      <p className="text-xs text-red-500">{locationError}</p>
+                    )}
+                    {isLocationLoading && (
+                      <p className="text-xs text-blue-600">
+                        🔍 Looking up location...
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 py-3">
+
+
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-md text-secondary block">City</label>
                     <Input
                       type="text"
-                      value={formData.zipcode}
-                      onChange={(e) =>
-                        updateFormData('zipcode', e.target.value)
-                      }
-                      className="w-full rounded-md border border-gray-300 px-3 py-2"
-                      placeholder="Select zip-code"
-                      required
+                      placeholder="Enter city"
+                      value={formData.city || ''}
+                      onChange={(e) => updateFormData('city', e.target.value)}
+                      className="h-14"
                     />
                   </div>
 
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-md text-secondary block">District</label>
+                    <Input
+                      type="text"
+                      placeholder="Enter district"
+                      value={formData.district || ''}
+                      onChange={(e) => updateFormData('district', e.target.value)}
+                      className="h-14"
+                    />
+                  </div>
+
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-md text-secondary block">
+                      State
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="Enter state"
+                      value={formData.state || ''}
+                      onChange={(e) => updateFormData('state', e.target.value)}
+                      className="h-14"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col space-y-1">
                     <label className="text-md text-secondary block">
                       Address line 1
@@ -705,254 +771,231 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                     />
                   </div>
                 </div>
-
-                <div className="grid grid-cols-3 gap-3 py-3">
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-md text-secondary block">
-                      District
-                    </label>
-                    <Input
-                      type="text"
-                      value={formData.district}
-                      onChange={(e) =>
-                        updateFormData('district', e.target.value)
-                      }
-                      className="w-full rounded-md border border-gray-300 px-3 py-2"
-                      placeholder="-"
-                    />
-                  </div>
-
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-md text-secondary block">City</label>
-                    <CitySelect />
-                  </div>
-
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-md text-secondary block">
-                      State
-                    </label>
-                    <StateSelect />
-                  </div>
-                </div>
               </div>
-            </div>
 
-            {/* coordinates */}
-            <div className="flex flex-col space-y-3">
-              <label className="text-md text-secondary block font-semibold">
-                Co-ordinates <span className="text-primary">*</span>
-              </label>
-
-              <div className="flex flex-col space-y-1">
-                <Input
-                  type="text"
-                  value={formData.coordinates}
-                  onChange={(e) =>
-                    updateFormData('coordinates', e.target.value)
-                  }
-                  className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                  placeholder="Coordinates"
-                />
-              </div>
-            </div>
-            {/* legal status */}
-            <div className="flex flex-col space-y-3">
-              <div className="flex items-center justify-between">
+              {/* coordinates */}
+              <div className="flex flex-col space-y-3">
                 <label className="text-md text-secondary block font-semibold">
-                  Legal Status <span className="text-primary">*</span>
+                  Co-ordinates <span className="text-primary">*</span>
                 </label>
 
-                <div className="flex rounded-4xl bg-[#F2F2F2] text-sm">
-                  <div
-                    className={`${!isDisputed ? 'bg-secondary text-white' : 'bg-transparent text-black'} cursor-pointer rounded-4xl px-4 py-2`}
-                    onClick={() => setIsDisputed(false)}
-                  >
-                    Undisputed
-                  </div>
-                  <div
-                    className={`${isDisputed ? 'bg-secondary text-white' : 'bg-transparent text-black'} cursor-pointer rounded-4xl px-4 py-2`}
-                    onClick={() => setIsDisputed(true)}
-                  >
-                    Disputed
-                  </div>
+                <div className="flex flex-col space-y-1">
+                  <Input
+                    type="text"
+                    value={formData.coordinates}
+                    onChange={(e) =>
+                      updateFormData('coordinates', e.target.value)
+                    }
+                    className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+                    placeholder="Latitude, Longitude (e.g., 32.7767, -96.797)"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Enter coordinates as "latitude, longitude" or they will be
+                    auto-filled from zipcode
+                  </p>
                 </div>
               </div>
-
-              {isDisputed && (
-                <div className="rounded-lg bg-[#F2F2F2] p-4">
-                  <label className="text-md text-secondary block pb-5 font-semibold">
-                    Legal Details <span className="text-primary">*</span>
+              {/* legal status */}
+              <div className="flex flex-col space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-md text-secondary block font-semibold">
+                    Legal Status <span className="text-primary">*</span>
                   </label>
 
-                  <div className="flex flex-col space-y-1 pb-3">
-                    <label className="text-md text-secondary block">
-                      Parties <span className="text-primary">*</span>
-                    </label>
-                    <Input
-                      type="text"
-                      value={formData.legalParties}
-                      onChange={(e) =>
-                        updateFormData('legalParties', e.target.value)
-                      }
-                      className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                      placeholder="Parties"
-                    />
+                  <div className="flex rounded-4xl bg-[#F2F2F2] text-sm">
+                    <div
+                      className={`${!isDisputed ? 'bg-secondary text-white' : 'bg-transparent text-black'} cursor-pointer rounded-4xl px-4 py-2`}
+                      onClick={() => setIsDisputed(false)}
+                    >
+                      Undisputed
+                    </div>
+                    <div
+                      className={`${isDisputed ? 'bg-secondary text-white' : 'bg-transparent text-black'} cursor-pointer rounded-4xl px-4 py-2`}
+                      onClick={() => setIsDisputed(true)}
+                    >
+                      Disputed
+                    </div>
                   </div>
+                </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex flex-col space-y-1">
+                {isDisputed && (
+                  <div className="rounded-lg bg-[#F2F2F2] p-4">
+                    <label className="text-md text-secondary block pb-5 font-semibold">
+                      Legal Details <span className="text-primary">*</span>
+                    </label>
+
+                    <div className="flex flex-col space-y-1 pb-3">
                       <label className="text-md text-secondary block">
-                        Case Number
+                        Parties <span className="text-primary">*</span>
                       </label>
                       <Input
                         type="text"
-                        value={formData.caseNumber}
+                        value={formData.legalParties}
                         onChange={(e) =>
-                          updateFormData('caseNumber', e.target.value)
+                          updateFormData('legalParties', e.target.value)
+                        }
+                        className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+                        placeholder="Parties"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex flex-col space-y-1">
+                        <label className="text-md text-secondary block">
+                          Case Number
+                        </label>
+                        <Input
+                          type="text"
+                          value={formData.caseNumber}
+                          onChange={(e) =>
+                            updateFormData('caseNumber', e.target.value)
+                          }
+                          className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+                          placeholder="Enter details"
+                        />
+                      </div>
+
+                      <div className="flex flex-col space-y-1">
+                        <label className="text-md text-secondary block">
+                          Case Status <span className="text-primary">*</span>
+                        </label>
+                        <Input
+                          type="text"
+                          value={formData.nextHearing}
+                          onChange={(e) =>
+                            updateFormData('nextHearing', e.target.value)
+                          }
+                          className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+                          placeholder="Select Status"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-col space-y-1 py-3">
+                      <label className="text-md text-secondary block">
+                        Case Type
+                      </label>
+                      <Input
+                        type="text"
+                        value={formData.caseType}
+                        onChange={(e) =>
+                          updateFormData('caseType', e.target.value)
                         }
                         className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
                         placeholder="Enter details"
                       />
                     </div>
+                  </div>
+                )}
+              </div>
 
-                    <div className="flex flex-col space-y-1">
-                      <label className="text-md text-secondary block">
-                        Case Status <span className="text-primary">*</span>
-                      </label>
-                      <Input
-                        type="text"
-                        value={formData.nextHearing}
-                        onChange={(e) =>
-                          updateFormData('nextHearing', e.target.value)
-                        }
-                        className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                        placeholder="Select Status"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex flex-col space-y-1 py-3">
-                    <label className="text-md text-secondary block">
-                      Case Type
-                    </label>
-                    <Input
-                      type="text"
-                      value={formData.caseType}
-                      onChange={(e) =>
-                        updateFormData('caseType', e.target.value)
-                      }
-                      className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                      placeholder="Enter details"
-                    />
-                  </div>
+              {/* {extent} */}
+              <div className="flex flex-col space-y-3">
+                <label className="text-md text-secondary block font-semibold">
+                  Extent <span className="text-primary">*</span>
+                </label>
+                <Input
+                  type="text"
+                  value={formData.extent}
+                  onChange={(e) => updateFormData('extent', e.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2"
+                  placeholder="Enter value (acres)"
+                  required
+                />
+              </div>
+
+              {/* value */}
+              <div className="flex flex-col space-y-3">
+                <div className="flex flex-col space-y-3">
+                  <label className="text-md text-secondary block font-semibold">
+                    Land value per acre <span className="text-primary">*</span>
+                  </label>
+                  <Input
+                    type="text"
+                    value={formData.valuePerSQ}
+                    onChange={(e) =>
+                      updateFormData('valuePerSQ', e.target.value)
+                    }
+                    className="w-full rounded-md border border-gray-300 px-3 py-2"
+                    placeholder="00.00"
+                    required
+                  />
                 </div>
-              )}
-            </div>
 
-            {/* {extent} */}
-            <div className="flex flex-col space-y-3">
-              <label className="text-md text-secondary block font-semibold">
-                Extent <span className="text-primary">*</span>
-              </label>
-              <Input
-                type="text"
-                value={formData.extent}
-                onChange={(e) => updateFormData('extent', e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2"
-                placeholder="Enter value (acres)"
-                required
-              />
-            </div>
-
-            {/* value */}
-            <div className="flex flex-col space-y-3">
-              <div className="flex flex-col space-y-3">
-                <label className="text-md text-secondary block font-semibold">
-                  Land value per acre <span className="text-primary">*</span>
-                </label>
-                <Input
-                  type="text"
-                  value={formData.valuePerSQ}
-                  onChange={(e) => updateFormData('valuePerSQ', e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2"
-                  placeholder="00.00"
-                  required
-                />
+                <div className="flex flex-col space-y-3">
+                  <label className="text-md text-secondary block font-semibold">
+                    Land value <span className="text-primary">*</span>
+                  </label>
+                  <Input
+                    type="text"
+                    value={formData.value}
+                    onChange={(e) => updateFormData('value', e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2"
+                    placeholder="00.00"
+                    required
+                  />
+                </div>
               </div>
 
+              {/* Custom Fields Section */}
               <div className="flex flex-col space-y-3">
-                <label className="text-md text-secondary block font-semibold">
-                  Land value <span className="text-primary">*</span>
-                </label>
-                <Input
-                  type="text"
-                  value={formData.value}
-                  onChange={(e) => updateFormData('value', e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2"
-                  placeholder="00.00"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Custom Fields Section */}
-            <div className="flex flex-col space-y-3">
-              {/* Existing custom fields */}
-              {customFields.map((field) => (
-                <div
-                  key={field.id}
-                  className="flex flex-col space-y-3 rounded-md bg-[#F8F8F8] p-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="mr-3 flex flex-1 flex-col space-y-1">
+                {/* Existing custom fields */}
+                {customFields.map((field) => (
+                  <div
+                    key={field.id}
+                    className="flex flex-col space-y-3 rounded-md bg-[#F8F8F8] p-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="mr-3 flex flex-1 flex-col space-y-1">
+                        <label className="text-md text-secondary block font-semibold">
+                          Field Label
+                        </label>
+                        <Input
+                          type="text"
+                          value={field.label}
+                          onChange={(e) =>
+                            updateCustomField(field.id, 'label', e.target.value)
+                          }
+                          className="w-full rounded-md border border-gray-300 px-3 py-2"
+                          placeholder="Enter field label"
+                        />
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeCustomField(field.id)}
+                        className="text-primary mt-6 cursor-pointer"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-col space-y-1">
                       <label className="text-md text-secondary block font-semibold">
-                        Field Label
+                        Value
                       </label>
                       <Input
                         type="text"
-                        value={field.label}
+                        value={field.value}
                         onChange={(e) =>
-                          updateCustomField(field.id, 'label', e.target.value)
+                          updateCustomField(field.id, 'value', e.target.value)
                         }
                         className="w-full rounded-md border border-gray-300 px-3 py-2"
-                        placeholder="Enter field label"
+                        placeholder="Enter value"
                       />
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeCustomField(field.id)}
-                      className="text-primary mt-6 cursor-pointer"
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
                   </div>
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-md text-secondary block font-semibold">
-                      Value
-                    </label>
-                    <Input
-                      type="text"
-                      value={field.value}
-                      onChange={(e) =>
-                        updateCustomField(field.id, 'value', e.target.value)
-                      }
-                      className="w-full rounded-md border border-gray-300 px-3 py-2"
-                      placeholder="Enter value"
-                    />
-                  </div>
-                </div>
-              ))}
+                ))}
 
-              {/* Add more information button */}
-              <div className="flex flex-col space-y-1">
-                <div
-                  className="flex cursor-pointer justify-between rounded-md bg-[#F2F2F2] p-3 transition-colors hover:bg-[#E8E8E8]"
-                  onClick={addCustomField}
-                >
-                  <p className="text-secondary font-semibold">
-                    Add more information
-                  </p>
-                  <PlusIcon className="size-5" />
+                {/* Add more information button */}
+                <div className="flex flex-col space-y-1">
+                  <div
+                    className="flex cursor-pointer justify-between rounded-md bg-[#F2F2F2] p-3 transition-colors hover:bg-[#E8E8E8]"
+                    onClick={addCustomField}
+                  >
+                    <p className="text-secondary font-semibold">
+                      Add more information
+                    </p>
+                    <PlusIcon className="size-5" />
+                  </div>
                 </div>
               </div>
             </div>
@@ -1052,9 +1095,13 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                 </>
               ) : currentStep < 3 ? (
                 <Button
-                  className="bg-primary hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 px-6"
+                  className="bg-primary hover:bg-secondary flex h-11 cursor-pointer items-center gap-2 px-6 disabled:cursor-not-allowed disabled:opacity-50"
                   onClick={handleNext}
-                  disabled={isLoading}
+                  disabled={
+                    isLoading ||
+                    (currentStep === 1 && !validateStep1()) ||
+                    (currentStep === 2 && !validateStep2())
+                  }
                 >
                   {currentStep === 2 && isLoading ? (
                     <>Creating Property...</>

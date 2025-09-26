@@ -1,23 +1,31 @@
-"use client"
+'use client'
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { cn } from "@/lib/utils"
-import { Comment, User } from "@/types/comment.types"
-import { Loader2, Pencil, Trash2 } from "lucide-react"
-import { useRef, useState, type ChangeEvent, type FC, type KeyboardEvent, type MouseEvent } from "react"
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
+import { Comment, User } from '@/types/comment.types'
+import { Loader2, Pencil, Trash2 } from 'lucide-react'
+import {
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FC,
+  type KeyboardEvent,
+  type MouseEvent,
+} from 'react'
 
 interface CommentMarkerProps {
   comment: Comment
-  users: User[] 
+  users: User[]
   onClick: () => void
   onEdit: () => void
   onDelete: () => void
   onReply: (parentId: number, text: string) => void
   onEditReply: (reply: Comment) => void
   onDeleteReply: (replyId: number) => void
+  onCancel?: () => void
   isDeleting?: boolean
   isActive?: boolean
   isReplying?: boolean
@@ -32,6 +40,7 @@ export const CommentMarker: FC<CommentMarkerProps> = ({
   onDelete,
   onReply,
   onEditReply,
+  onCancel,
   onDeleteReply,
   isDeleting = false,
   isActive = false,
@@ -40,7 +49,7 @@ export const CommentMarker: FC<CommentMarkerProps> = ({
 }) => {
   const [isHovered, setIsHovered] = useState(false)
   const [hoveredReplyId, setHoveredReplyId] = useState<number | null>(null)
-  const [replyText, setReplyText] = useState("")
+  const [replyText, setReplyText] = useState('')
   const [mentionSuggestions, setMentionSuggestions] = useState<User[]>([])
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0)
   const replyInputRef = useRef<HTMLInputElement>(null)
@@ -60,7 +69,10 @@ export const CommentMarker: FC<CommentMarkerProps> = ({
       setMentionSuggestions(
         users.filter((u) => {
           if (!u?.email) return false
-          return u.email.toLowerCase().includes(query) || getEmailUsername(u.email).toLowerCase().includes(query)
+          return (
+            u.email.toLowerCase().includes(query) ||
+            getEmailUsername(u.email).toLowerCase().includes(query)
+          )
         })
       )
       setActiveSuggestionIndex(0)
@@ -73,7 +85,7 @@ export const CommentMarker: FC<CommentMarkerProps> = ({
     if (!replyInputRef.current || !user?.email) return
     const currentText = replyInputRef.current.value
     const cursorPos = replyInputRef.current.selectionStart || 0
-    const atIndex = currentText.slice(0, cursorPos).lastIndexOf("@")
+    const atIndex = currentText.slice(0, cursorPos).lastIndexOf('@')
     const textBefore = currentText.substring(0, atIndex)
     const textAfter = currentText.substring(cursorPos)
     const username = getEmailUsername(user.email)
@@ -89,19 +101,24 @@ export const CommentMarker: FC<CommentMarkerProps> = ({
 
   const handleReplyKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (mentionSuggestions.length > 0) {
-      if (e.key === "ArrowDown") {
+      if (e.key === 'ArrowDown') {
         e.preventDefault()
-        setActiveSuggestionIndex((prev) => (prev + 1) % mentionSuggestions.length)
-      } else if (e.key === "ArrowUp") {
+        setActiveSuggestionIndex(
+          (prev) => (prev + 1) % mentionSuggestions.length
+        )
+      } else if (e.key === 'ArrowUp') {
         e.preventDefault()
-        setActiveSuggestionIndex((prev) => (prev - 1 + mentionSuggestions.length) % mentionSuggestions.length)
-      } else if (e.key === "Enter" || e.key === "Tab") {
+        setActiveSuggestionIndex(
+          (prev) =>
+            (prev - 1 + mentionSuggestions.length) % mentionSuggestions.length
+        )
+      } else if (e.key === 'Enter' || e.key === 'Tab') {
         e.preventDefault()
         handleSelectMention(mentionSuggestions[activeSuggestionIndex])
-      } else if (e.key === "Escape") {
+      } else if (e.key === 'Escape') {
         setMentionSuggestions([])
       }
-    } else if (e.key === "Enter" && replyText.trim()) {
+    } else if (e.key === 'Enter' && replyText.trim()) {
       e.preventDefault()
       handleReplySubmit()
     }
@@ -110,8 +127,18 @@ export const CommentMarker: FC<CommentMarkerProps> = ({
   const handleReplySubmit = () => {
     if (replyText.trim()) {
       onReply(comment.id, replyText)
-      setReplyText("")
+      setReplyText('')
       setMentionSuggestions([])
+    }
+  }
+
+  const handleCancelReply = () => {
+    setReplyText('')
+    setMentionSuggestions([])
+    if (onCancel) {
+      onCancel()
+    } else {
+      onClick()
     }
   }
 
@@ -121,7 +148,7 @@ export const CommentMarker: FC<CommentMarkerProps> = ({
       style={{
         left: `${comment.annotation.rect.x + comment.annotation.rect.width}%`,
         top: `${comment.annotation.rect.y}%`,
-        transform: "translate(-50%, -50%)",
+        transform: 'translate(-50%, -50%)',
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -130,9 +157,15 @@ export const CommentMarker: FC<CommentMarkerProps> = ({
         onClick()
       }}
     >
-      <Avatar className={cn("h-7 w-7 border-2 border-white shadow-md", isActive && "ring-secondary ring-2")}>
+      <Avatar
+        className={cn(
+          'h-7 w-7 border-2 border-white shadow-md',
+          isActive && 'ring-secondary ring-2'
+        )}
+      >
         <AvatarFallback className="bg-secondary text-xs text-white">
-          {comment.authorName?.charAt(0).toUpperCase() || comment.author.toString().charAt(0)}
+          {comment.authorName?.charAt(0).toUpperCase() ||
+            comment.author.toString().charAt(0)}
         </AvatarFallback>
       </Avatar>
       {(isHovered || isActive) && (
@@ -141,23 +174,29 @@ export const CommentMarker: FC<CommentMarkerProps> = ({
             <div className="flex items-start gap-2">
               <Avatar className="h-9 w-9">
                 <AvatarFallback className="bg-secondary text-xs text-white">
-                  {comment.authorName?.charAt(0).toUpperCase() || comment.author.toString().charAt(0)}
+                  {comment.authorName?.charAt(0).toUpperCase() ||
+                    comment.author.toString().charAt(0)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <div
-                  className="mb-1 flex justify-between group"
+                  className="group mb-1 flex justify-between"
                   onMouseEnter={() => setIsHovered(true)}
                   onMouseLeave={() => setIsHovered(false)}
                 >
                   <div className="text-md font-semibold">
                     {comment.authorName || `User ${comment.author}`}
-                    <p className="text-xs font-medium text-gray-500">{comment.timestamp}</p>
+                    <p className="text-xs font-medium text-gray-500">
+                      {comment.timestamp}
+                    </p>
                   </div>
                   <div
-                    className={cn("flex opacity-0 group-hover:opacity-100 transition-opacity", {
-                      "opacity-100": isHovered,
-                    })}
+                    className={cn(
+                      'flex opacity-0 transition-opacity group-hover:opacity-100',
+                      {
+                        'opacity-100': isHovered,
+                      }
+                    )}
                   >
                     <Button
                       variant="ghost"
@@ -198,25 +237,33 @@ export const CommentMarker: FC<CommentMarkerProps> = ({
                   {comment.children.map((reply) => (
                     <div
                       key={reply.id}
-                      className="flex items-start gap-2 group"
+                      className="group flex items-start gap-2"
                       onMouseEnter={() => setHoveredReplyId(reply.id)}
                       onMouseLeave={() => setHoveredReplyId(null)}
                     >
                       <Avatar className="h-6 w-6">
                         <AvatarFallback className="bg-gray-400 text-xs text-white">
-                          {reply.authorName?.charAt(0).toUpperCase() || reply.author.toString().charAt(0)}
+                          {reply.authorName?.charAt(0).toUpperCase() ||
+                            reply.author.toString().charAt(0)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <div className="flex-col items-center gap-2">
-                            <p className="text-xs font-medium">{reply.authorName || `User ${reply.author}`}</p>
-                            <p className="text-xs text-gray-500">{reply.timestamp}</p>
+                            <p className="text-xs font-medium">
+                              {reply.authorName || `User ${reply.author}`}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {reply.timestamp}
+                            </p>
                           </div>
                           <div
-                            className={cn("flex opacity-0 group-hover:opacity-100 transition-opacity", {
-                              "opacity-100": hoveredReplyId === reply.id,
-                            })}
+                            className={cn(
+                              'flex opacity-0 transition-opacity group-hover:opacity-100',
+                              {
+                                'opacity-100': hoveredReplyId === reply.id,
+                              }
+                            )}
                           >
                             <Button
                               variant="ghost"
@@ -263,9 +310,13 @@ export const CommentMarker: FC<CommentMarkerProps> = ({
                           {mentionSuggestions.map((user, index) => (
                             <li
                               key={user.id}
-                              className={cn("cursor-pointer px-3 py-1 text-xs hover:bg-gray-100", {
-                                "bg-gray-200": index === activeSuggestionIndex,
-                              })}
+                              className={cn(
+                                'cursor-pointer px-3 py-1 text-xs hover:bg-gray-100',
+                                {
+                                  'bg-gray-200':
+                                    index === activeSuggestionIndex,
+                                }
+                              )}
                               onMouseDown={(e: MouseEvent) => {
                                 e.preventDefault()
                                 handleSelectMention(user)
@@ -290,19 +341,30 @@ export const CommentMarker: FC<CommentMarkerProps> = ({
                         }}
                         disabled={isReplying}
                       />
-                      <div className="flex gap-3 mt-3">
-                        <Button type="button" variant="outline">
+                      <div className="mt-3 flex gap-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleCancelReply()
+                          }}
+                        >
                           Cancel
                         </Button>
                         <Button
-                          className=" cursor-pointer"
+                          className="cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation()
                             handleReplySubmit()
                           }}
                           disabled={!replyText.trim() || isReplying}
                         >
-                          {isReplying ? <Loader2 className="h-3 w-3 animate-spin" /> : <span>Reply</span>}
+                          {isReplying ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <span>Reply</span>
+                          )}
                         </Button>
                       </div>
                     </div>

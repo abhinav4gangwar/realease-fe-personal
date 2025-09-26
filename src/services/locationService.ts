@@ -1,0 +1,473 @@
+/**
+ * Location Service for auto-filling city and state based on country and zipcode
+ * Supports multiple APIs with fallback mechanisms
+ */
+
+export interface LocationData {
+  city: string
+  state: string
+  country: string
+  countryCode: string
+  latitude?: string
+  longitude?: string
+}
+
+export interface LocationServiceResponse {
+  success: boolean
+  data?: LocationData
+  error?: string
+}
+
+/**
+ * Nominatim OpenStreetMap API - Free, no API key required
+ * Uses geocodejson format for consistent admin level handling
+ */
+class NominatimService {
+  private baseUrl = 'https://nominatim.openstreetmap.org'
+
+  async lookup(countryCode: string, zipcode: string): Promise<LocationServiceResponse> {
+    try {
+      const url = `${this.baseUrl}/search?country=${countryCode.toUpperCase()}&postalcode=${zipcode}&format=geocodejson&addressdetails=1&limit=1`
+      const response = await fetch(url)
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data && data.features && data.features.length > 0) {
+        const feature = data.features[0]
+        const geocoding = feature.properties?.geocoding || {}
+        const admin = geocoding.admin || {}
+        const coordinates = feature.geometry?.coordinates || []
+
+        // Extract city and state using admin levels
+        const city = this.extractCity(geocoding, admin)
+        const state = admin.level4 || geocoding.state || 'Unknown'
+
+        return {
+          success: true,
+          data: {
+            city,
+            state,
+            country: geocoding.country || 'Unknown',
+            countryCode: geocoding.country_code?.toUpperCase() || countryCode.toUpperCase(),
+            latitude: coordinates[1]?.toString(),
+            longitude: coordinates[0]?.toString(),
+          }
+        }
+      }
+
+      return {
+        success: false,
+        error: 'No location data found'
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+
+  /**
+   * Extract city name from geocoding data using admin levels and properties
+   * Priority:
+   * 1. level8 (most specific, like "Noida")
+   * 2. level6 (district level)
+   * 3. level5 (if in English)
+   * 4. city property
+   * 5. district property
+   * 6. county property
+   */
+  private extractCity(geocoding: any, admin: any): string {
+    // First check level8 (most specific administrative level)
+    if (admin.level8) {
+      return admin.level8
+    }
+
+    // Check level6 (district level)
+    if (admin.level6) {
+      return admin.level6
+    }
+
+    // Check if level5 exists and is in English (contains only ASCII characters)
+    if (admin.level5) {
+      const isEnglish = /^[a-zA-Z\s\-'\.]+$/.test(admin.level5)
+      if (isEnglish) {
+        return admin.level5
+      }
+    }
+
+    // Fallback to direct properties
+    if (geocoding.city) {
+      return geocoding.city
+    }
+
+    if (geocoding.district) {
+      return geocoding.district
+    }
+
+    if (geocoding.county) {
+      return geocoding.county
+    }
+
+    return 'Unknown'
+  }
+}
+
+/**
+ * Zippopotam.us API - Free, no API key required
+ * Supports: US, CA, DE, FR, IT, ES, PT, NL, BE, AT, CH, LU, and more
+ */
+class ZippopotamService {
+  private baseUrl = 'https://api.zippopotam.us'
+
+  async lookup(countryCode: string, zipcode: string): Promise<LocationServiceResponse> {
+    try {
+      const response = await fetch(`${this.baseUrl}/${countryCode.toLowerCase()}/${zipcode}`)
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data.places && data.places.length > 0) {
+        const firstPlace = data.places[0]
+
+        return {
+          success: true,
+          data: {
+            city: firstPlace['place name'],
+            state: firstPlace.state,
+            country: data.country,
+            countryCode: data['country abbreviation'],
+            latitude: firstPlace.latitude,
+            longitude: firstPlace.longitude,
+          }
+        }
+      }
+
+      return {
+        success: false,
+        error: 'No location data found'
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+}
+
+/**
+ * PostalPincode API - Alternative free service
+ * Good for international coverage
+ */
+class PostalPincodeService {
+  private baseUrl = 'https://api.postalpincode.in'
+
+  async lookup(countryCode: string, zipcode: string): Promise<LocationServiceResponse> {
+    try {
+      // This API has different endpoints for different countries
+      let url = ''
+      
+      if (countryCode.toLowerCase() === 'in') {
+        url = `${this.baseUrl}/pincode/${zipcode}`
+      } else {
+        // For other countries, we'll skip this service
+        throw new Error('Country not supported by this service')
+      }
+
+      const response = await fetch(url)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+
+      const data = await response.json()
+      
+      if (data.Status === 'Success' && data.PostOffice && data.PostOffice.length > 0) {
+        const place = data.PostOffice[0]
+
+        return {
+          success: true,
+          data: {
+            city: place.District,
+            state: place.State,
+            country: 'India',
+            countryCode: 'IN',
+          }
+        }
+      }
+
+      return {
+        success: false,
+        error: 'No location data found'
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+}
+
+/**
+ * Main Location Service with fallback mechanism
+ */
+export class LocationService {
+  private services: Array<{ name: string; service: NominatimService | ZippopotamService | PostalPincodeService }> = [
+    { name: 'Nominatim', service: new NominatimService() },
+    { name: 'Zippopotam', service: new ZippopotamService() },
+    { name: 'PostalPincode', service: new PostalPincodeService() },
+  ]
+
+  // Simple cache to prevent duplicate requests
+  private cache = new Map<string, LocationServiceResponse>()
+  private pendingRequests = new Map<string, Promise<LocationServiceResponse>>()
+
+  /**
+   * Get country code from country name
+   */
+  private getCountryCode(country: string): string {
+    const countryMap: Record<string, string> = {
+      // Primary countries
+      'united states': 'us',
+      'united states of america': 'us',
+      'usa': 'us',
+      'america': 'us',
+      'canada': 'ca',
+      'india': 'in',
+      'republic of india': 'in',
+      'germany': 'de',
+      'deutschland': 'de',
+      'france': 'fr',
+      'italy': 'it',
+      'spain': 'es',
+      'portugal': 'pt',
+      'netherlands': 'nl',
+      'holland': 'nl',
+      'belgium': 'be',
+      'austria': 'at',
+      'switzerland': 'ch',
+      'luxembourg': 'lu',
+      'united kingdom': 'gb',
+      'uk': 'gb',
+      'britain': 'gb',
+      'great britain': 'gb',
+      'england': 'gb',
+      'scotland': 'gb',
+      'wales': 'gb',
+      'northern ireland': 'gb',
+
+      // Additional countries
+      'australia': 'au',
+      'new zealand': 'nz',
+      'japan': 'jp',
+      'south korea': 'kr',
+      'china': 'cn',
+      'brazil': 'br',
+      'mexico': 'mx',
+      'argentina': 'ar',
+      'chile': 'cl',
+      'colombia': 'co',
+      'peru': 'pe',
+      'venezuela': 've',
+      'south africa': 'za',
+      'egypt': 'eg',
+      'nigeria': 'ng',
+      'kenya': 'ke',
+      'morocco': 'ma',
+      'turkey': 'tr',
+      'russia': 'ru',
+      'poland': 'pl',
+      'czech republic': 'cz',
+      'hungary': 'hu',
+      'romania': 'ro',
+      'bulgaria': 'bg',
+      'croatia': 'hr',
+      'serbia': 'rs',
+      'slovenia': 'si',
+      'slovakia': 'sk',
+      'norway': 'no',
+      'sweden': 'se',
+      'denmark': 'dk',
+      'finland': 'fi',
+      'iceland': 'is',
+      'ireland': 'ie',
+      'malta': 'mt',
+      'cyprus': 'cy',
+      'greece': 'gr',
+      'israel': 'il',
+      'lebanon': 'lb',
+      'jordan': 'jo',
+      'saudi arabia': 'sa',
+      'united arab emirates': 'ae',
+      'uae': 'ae',
+      'qatar': 'qa',
+      'kuwait': 'kw',
+      'bahrain': 'bh',
+      'oman': 'om',
+      'iran': 'ir',
+      'iraq': 'iq',
+      'afghanistan': 'af',
+      'pakistan': 'pk',
+      'bangladesh': 'bd',
+      'sri lanka': 'lk',
+      'nepal': 'np',
+      'bhutan': 'bt',
+      'myanmar': 'mm',
+      'thailand': 'th',
+      'vietnam': 'vn',
+      'cambodia': 'kh',
+      'laos': 'la',
+      'malaysia': 'my',
+      'singapore': 'sg',
+      'indonesia': 'id',
+      'philippines': 'ph',
+      'taiwan': 'tw',
+      'hong kong': 'hk',
+      'macau': 'mo',
+      'mongolia': 'mn',
+      'kazakhstan': 'kz',
+      'uzbekistan': 'uz',
+      'kyrgyzstan': 'kg',
+      'tajikistan': 'tj',
+      'turkmenistan': 'tm',
+      'azerbaijan': 'az',
+      'armenia': 'am',
+      'georgia': 'ge',
+      'ukraine': 'ua',
+      'belarus': 'by',
+      'moldova': 'md',
+      'lithuania': 'lt',
+      'latvia': 'lv',
+      'estonia': 'ee',
+    }
+
+    const normalizedCountry = country.toLowerCase().trim()
+    const mappedCode = countryMap[normalizedCountry]
+
+    if (mappedCode) {
+      return mappedCode
+    }
+
+    // If no direct mapping found, try to extract a reasonable code
+    // This prevents weird mappings like "british indian ocean territory"
+    if (normalizedCountry.length === 2) {
+      return normalizedCountry // Already a country code
+    }
+
+    // For unmapped countries, return the first two letters as a fallback
+    // This is safer than returning the full name
+    return normalizedCountry.substring(0, 2)
+  }
+
+  /**
+   * Lookup location data by country and zipcode
+   */
+  async lookupLocation(country: string, zipcode: string): Promise<LocationServiceResponse> {
+    if (!country || !zipcode) {
+      return {
+        success: false,
+        error: 'Country and zipcode are required'
+      }
+    }
+
+    const countryCode = this.getCountryCode(country)
+    const cacheKey = `${countryCode}-${zipcode}`
+
+    // Check cache first
+    if (this.cache.has(cacheKey)) {
+      console.log(`📦 Cache hit for ${cacheKey}`)
+      return this.cache.get(cacheKey)!
+    }
+
+    // Check if there's already a pending request for this lookup
+    if (this.pendingRequests.has(cacheKey)) {
+      console.log(`⏳ Waiting for pending request ${cacheKey}`)
+      return await this.pendingRequests.get(cacheKey)!
+    }
+
+    // Create new request
+    const requestPromise = this.performLookup(countryCode, zipcode, cacheKey)
+    this.pendingRequests.set(cacheKey, requestPromise)
+
+    try {
+      const result = await requestPromise
+
+      // Cache successful results for 5 minutes
+      if (result.success) {
+        this.cache.set(cacheKey, result)
+        setTimeout(() => {
+          this.cache.delete(cacheKey)
+        }, 5 * 60 * 1000) // 5 minutes
+      }
+
+      return result
+    } finally {
+      // Clean up pending request
+      this.pendingRequests.delete(cacheKey)
+    }
+  }
+
+  /**
+   * Perform the actual lookup with all services
+   */
+  private async performLookup(countryCode: string, zipcode: string, cacheKey: string): Promise<LocationServiceResponse> {
+    // Try each service in order until one succeeds
+    for (const { name, service } of this.services) {
+      try {
+        console.log(`Trying ${name} service for ${cacheKey}`)
+        const result = await service.lookup(countryCode, zipcode)
+
+        if (result.success) {
+          console.log(`✅ ${name} service succeeded:`, result.data)
+          return result
+        } else {
+          console.log(`❌ ${name} service failed:`, result.error)
+        }
+      } catch (error) {
+        console.log(`❌ ${name} service error:`, error)
+        continue
+      }
+    }
+
+    return {
+      success: false,
+      error: 'All location services failed to find data for this zipcode'
+    }
+  }
+
+  /**
+   * Validate zipcode format based on country
+   */
+  validateZipcode(country: string, zipcode: string): boolean {
+    const countryCode = this.getCountryCode(country)
+    
+    const patterns: Record<string, RegExp> = {
+      'us': /^\d{5}(-\d{4})?$/, // 12345 or 12345-6789
+      'ca': /^[A-Za-z]\d[A-Za-z] ?\d[A-Za-z]\d$/, // A1A 1A1 or A1A1A1
+      'in': /^\d{6}$/, // 123456
+      'de': /^\d{5}$/, // 12345
+      'fr': /^\d{5}$/, // 12345
+      'gb': /^[A-Za-z]{1,2}\d[A-Za-z\d]? ?\d[A-Za-z]{2}$/, // SW1A 1AA
+    }
+
+    const pattern = patterns[countryCode]
+    if (!pattern) {
+      // If no specific pattern, just check it's not empty
+      return zipcode.trim().length > 0
+    }
+
+    return pattern.test(zipcode.trim())
+  }
+}
+
+// Export singleton instance
+export const locationService = new LocationService()

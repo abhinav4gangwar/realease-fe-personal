@@ -9,6 +9,7 @@ import { apiClient } from '@/utils/api'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import ScrollToTop from '../../documents/_components/scroll-to-top'
+import { handleDownloadClick } from '../_property_utils'
 import BulkDeletePropertyModal from '../archived/_components/bulk-delete-model'
 import DeletePropertyModal from '../archived/_components/delete-model'
 import BulkArchivePropertyModal from './archive-bulk-property-modal'
@@ -23,6 +24,7 @@ import { PropertiesFilterButton } from './properties-filter-button'
 import PropertiesFilterModel from './properties-filter-model'
 import PropertiesListView from './properties-list-view'
 import { PropertiesSortButton } from './properties-sort-button'
+import { SharePropertyModal } from './sharePropertyModel'
 
 export interface PropertiesViewerProps {
   allProperties: Properties[]
@@ -55,10 +57,36 @@ const PropertiesViewer = ({
     legalStatuses: [],
   })
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false)
+  const [isSharePropertyModalOpen, setIsSharePropertyModalOpen] =
+    useState(false)
+  const [isIndividualPropertyShare, setIsIndividualPropertyShare] =
+    useState(false)
+
+  const getSelectedPropertyObjects = () => {
+    return selectedProperties
+      .map((id) => sortedAndFilteredProperties.find((prop) => prop.id === id))
+      .filter(Boolean) as Properties[]
+  }
 
   const handleCreatePropertyClose = () => {
     setIsCreatePropertyModalOpen(false)
     onPropertyCreated()
+  }
+
+  const handleShareClick = (property: Properties) => {
+    setIsIndividualPropertyShare(true)
+    setSelectedProperties([property.id])
+    setSelectedProperty(property)
+    setIsSharePropertyModalOpen(true)
+  }
+
+  const handleShareModalClose = () => {
+    if (isIndividualPropertyShare) {
+      setSelectedProperties([])
+      setSelectedProperty(null)
+    }
+    setIsSharePropertyModalOpen(false)
+    setIsIndividualPropertyShare(false)
   }
 
   const handleEditPropertyClose = () => {
@@ -104,15 +132,6 @@ const PropertiesViewer = ({
     setSelectedProperty(property)
   }
 
-  const handleDownloadClick = (property: Properties) => {
-    console.log('Download', property)
-  }
-
-  const handleShareClick = (property: Properties) => {
-    setSelectedProperty(property)
-    console.log('Share property model open for', property)
-  }
-
   const handleApplyFilters = (filters: FilterState) => {
     setActiveFilters(filters)
   }
@@ -121,7 +140,8 @@ const PropertiesViewer = ({
     switch (actionType) {
       case 'share':
         if (selectedProperties.length > 0) {
-          console.log('Share property')
+          setIsIndividualPropertyShare(false)
+          setIsSharePropertyModalOpen(true)
         }
         break
       case 'delete':
@@ -453,6 +473,13 @@ const PropertiesViewer = ({
         }}
         onCancel={() => setOpenBulkArchiveModal(false)}
         selectedCount={selectedProperties.length}
+      />
+
+      <SharePropertyModal
+        isOpen={isSharePropertyModalOpen}
+        onClose={handleShareModalClose}
+        selectedProperties={getSelectedPropertyObjects()}
+        onCancel={handleShareModalClose}
       />
     </div>
   )

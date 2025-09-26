@@ -9,10 +9,10 @@ import 'react-pdf/dist/Page/TextLayer.css'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
-import { Download } from 'lucide-react'
+import { ChevronRight, Download, MessageSquare } from 'lucide-react'
 import Image from 'next/image'
 import { HiShare } from 'react-icons/hi2'
-import { isImageFile, isPdfFile } from '../doc_utils'
+import { isImageFile } from '../doc_utils'
 import { CommentService } from '../doc_utils/comment.services'
 import { Annotation } from './comment-components/annotation'
 import { CommentMarker } from './comment-components/comment-marker'
@@ -21,6 +21,20 @@ import { PDFHeader } from './comment-components/pdf-header'
 
 // Set up PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
+
+// API function to get users
+export const getUsers = async (documentId: number, apiClient: any) => {
+  try {
+    const response = await apiClient.get(
+      `/dashboard/documents/getUsers/${documentId}`
+    )
+    const users = response.data.users
+    return users
+  } catch (error) {
+    console.log(error)
+    return []
+  }
+}
 
 interface UnifiedDocumentViewerProps {
   isOpen: boolean
@@ -79,6 +93,9 @@ export function UnifiedDocumentViewer({
     y: number
   }>({ x: 0, y: 0 })
   const [editingComment, setEditingComment] = useState<Comment | null>(null)
+  
+  // Sidebar state
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false)
 
   // Refs
   const pageRef = useRef<HTMLDivElement>(null)
@@ -106,10 +123,14 @@ export function UnifiedDocumentViewer({
     if (!document) return
 
     setIsLoading(true)
+
+    setDocumentUrl(null)
+    setDocumentType(null)
+    setNumPages(null)
+
     try {
       // Determine document type
       const isImage = isImageFile(document)
-      const isPdf = isPdfFile(document)
 
       if (isImage) {
         setDocumentType('image')
@@ -141,6 +162,10 @@ export function UnifiedDocumentViewer({
     } catch (error) {
       console.error('Error loading document:', error)
       toast.error('Failed to load document')
+
+      setDocumentUrl(null)
+      setDocumentType(null)
+      setNumPages(null)
     } finally {
       setIsLoading(false)
     }
@@ -163,18 +188,20 @@ export function UnifiedDocumentViewer({
   }
 
   const loadUsers = async () => {
-    setIsLoadingUsers(true)
-    try {
-      const response = await apiClient.get(
-        `/dashboard/documents/getUsers/${document.id}`
-      )
-      setUsers(response.data || [])
-    } catch (error) {
-      console.error('Error loading users:', error)
-    } finally {
-      setIsLoadingUsers(false)
+      if (!document || !apiClient) return
+  
+      setIsLoadingUsers(true)
+      try {
+        const fetchedUsers = await getUsers(Number.parseInt(document.id), apiClient)
+        setUsers(fetchedUsers || [])
+      } catch (error) {
+        console.error("Error loading users:", error)
+        toast.error("Failed to load users")
+        setUsers([])
+      } finally {
+        setIsLoadingUsers(false)
+      }
     }
-  }
 
   // Handle text selection for PDFs
   const handleMouseUp = (e: MouseEvent): void => {
@@ -369,6 +396,131 @@ export function UnifiedDocumentViewer({
     }
   }
 
+  const handleCommentUpdate = async (commentId: number, text: string) => {
+    if (!commentService.current) return
+
+    setIsCreatingComment(true)
+    try {
+      const updatedComment = await commentService.current.updateComment({
+        commentId,
+        text,
+      })
+
+      setComments((prev) =>
+        prev.map((comment) =>
+          comment.id === commentId ? updatedComment : comment
+        )
+      )
+      setEditingComment(null)
+      setIsCommentModalOpen(false)
+      setActiveCommentId(null)
+      toast.success('Comment updated successfully')
+    } catch (error) {
+      console.error('Error updating comment:', error)
+      toast.error('Failed to update comment')
+    } finally {
+      setIsCreatingComment(false)
+    }
+  }
+
+  const handleCommentEdit = (comment: Comment) => {
+    setEditingComment(comment)
+    setCommentModalPosition({
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+    })
+    setActiveCommentId(null)
+    setIsCommentModalOpen(true)
+  }
+
+  const handleCommentDelete = async (commentId: number) => {
+    if (!commentService.current) return
+
+    setDeletingCommentId(commentId)
+    try {
+      await commentService.current.deleteComment(commentId)
+      setComments((prev) => prev.filter((comment) => comment.id !== commentId))
+      setActiveCommentId(null)
+      toast.success('Comment deleted successfully')
+    } catch (error) {
+      console.error('Error deleting comment:', error)
+      toast.error('Failed to delete comment')
+    } finally {
+      setDeletingCommentId(null)
+    }
+  }
+
+  const handleReply = async (parentId: number, text: string) => {
+    if (!document || !commentService.current) return
+
+    setReplyingToCommentId(parentId)
+    try {
+      const response = await commentService.current.createReply({
+        text,
+        documentId: Number.parseInt(document.id),
+        parentId,
+      })
+
+      setComments((prev) =>
+        prev.map((comment) => {
+          if (comment.id === parentId) {
+            return response
+          }
+          return comment
+        })
+      )
+      toast.success('Reply added successfully')
+    } catch (error) {
+      console.error('Error creating reply:', error)
+      toast.error('Failed to add reply')
+    } finally {
+      setReplyingToCommentId(null)
+    }
+  }
+
+  const handleEditReply = (reply: Comment) => {
+    setEditingComment(reply)
+    setCommentModalPosition({
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+    })
+    setActiveCommentId(null)
+    setIsCommentModalOpen(true)
+  }
+
+  const handleDeleteReply = async (replyId: number) => {
+    if (!commentService.current) return
+
+    setDeletingReplyId(replyId)
+    try {
+      await commentService.current.deleteComment(replyId)
+      setComments((prev) =>
+        prev.map((comment) => ({
+          ...comment,
+          children:
+            comment.children?.filter((child) => child.id !== replyId) || [],
+        }))
+      )
+      toast.success('Reply deleted successfully')
+    } catch (error) {
+      console.error('Error deleting reply:', error)
+      toast.error('Failed to delete reply')
+    } finally {
+      setDeletingReplyId(null)
+    }
+  }
+
+  const handleCommentModalClose = () => {
+    setIsCommentModalOpen(false)
+    setTempAnnotation(null)
+    setEditingComment(null)
+    setHasTextSelection(false)
+    const selection = window.getSelection()
+    if (selection) {
+      selection.removeAllRanges()
+    }
+  }
+
   // PDF navigation and zoom
   const onDocumentLoadSuccess = ({
     numPages: nextNumPages,
@@ -381,6 +533,15 @@ export function UnifiedDocumentViewer({
   const zoomIn = () => setScale((prev) => Math.min(prev + 0.2, 3.0))
   const zoomOut = () => setScale((prev) => Math.max(prev - 0.2, 0.5))
 
+  const handleCancelComment = () => {
+    setActiveCommentId(null)
+  }
+
+  const handleSidebarCommentClick = (commentId: number) => {
+    setActiveCommentId(commentId)
+    setIsSidebarOpen(false) // Close sidebar on mobile after selecting comment
+  }
+
   if (!isOpen) return null
 
   const allAnnotations: CommentAnnotation[] = [
@@ -388,250 +549,404 @@ export function UnifiedDocumentViewer({
     ...(tempAnnotation ? [tempAnnotation] : []),
   ]
 
+  const getUserById = (userId: number) => {
+    return users.find(user => user.id === userId)
+  }
+
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50">
-      <div className="bg-secondary flex h-full w-full max-w-7xl flex-col shadow-xl">
+      <div className="bg-secondary flex h-full w-full max-w-7xl shadow-xl">
         {/* Header */}
-        <PDFHeader
-          document={document}
-          isLoadingComments={isLoadingComments}
-          hasTextSelection={hasTextSelection}
-          onClose={onClose}
-          onShareClick={onShareClick}
-          onDownloadClick={onDownloadClick}
-          onMoveClick={onMoveClick}
-          onEditClick={handleEditClick}
-          onCommentClick={handleCommentIconClick}
-        />
+        <div className="flex flex-col flex-1">
+          <PDFHeader
+            document={document}
+            isLoadingComments={isLoadingComments}
+            hasTextSelection={hasTextSelection}
+            onClose={onClose}
+            onShareClick={onShareClick}
+            onDownloadClick={onDownloadClick}
+            onMoveClick={onMoveClick}
+            onEditClick={handleEditClick}
+            onCommentClick={handleCommentIconClick}
+            onSideClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          />
 
-        {/* Document Content */}
-        <div
-          className="relative flex-1 overflow-auto bg-gray-100"
-          onMouseUp={handleMouseUp}
-          onClick={handleClick}
-        >
-          {/* Zoom Controls - only show zoom for documents */}
-          {documentUrl && (
-            <div className="zoom-controls fixed right-6 bottom-6 z-30 flex items-center gap-1 rounded-lg bg-[#9B9B9D] p-1 text-white shadow-lg">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  zoomOut()
-                }}
-                disabled={scale <= 0.5}
-                className="h-8 w-8 rounded p-0 hover:bg-white/20 disabled:opacity-50"
-              >
-                <span className="text-sm">-</span>
-              </button>
-              <span className="min-w-[50px] px-2 text-center text-sm font-medium">
-                {Math.round(scale * 100)}%
-              </span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  zoomIn()
-                }}
-                disabled={scale >= 3.0}
-                className="h-8 w-8 rounded p-0 hover:bg-white/20 disabled:opacity-50"
-              >
-                <span className="text-sm">+</span>
-              </button>
-            </div>
-          )}
+          {/* Main Content with Sidebar Toggle */}
+          <div className="flex flex-1 overflow-hidden">
+            {/* Document Content */}
+            <div
+              className="relative flex-1 overflow-auto bg-gray-100"
+              onMouseUp={handleMouseUp}
+              onClick={handleClick}
+            >
+              
 
-          {isLoading ? (
-            <div className="flex h-full items-center justify-center">
-              <div className="text-center">
-                <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
-                <p className="mt-4 text-gray-600">Loading document...</p>
-              </div>
-            </div>
-          ) : documentUrl ? (
-            <div className="flex justify-center p-6">
-              {documentType === 'pdf' ? (
-                <PDFDocument
-                  file={documentUrl}
-                  onLoadSuccess={onDocumentLoadSuccess}
-                  onLoadError={console.error}
-                  loading={
-                    <div className="p-8 text-center">Loading document...</div>
-                  }
-                >
-                  <div ref={pageRef} className="space-y-4">
-                    {/* Render all pages for scroll functionality */}
-                    {Array.from({ length: numPages || 1 }, (_, index) => {
-                      const pageNumber = index + 1
-                      const pageComments = comments.filter(
-                        (comment) => comment.annotation.page === pageNumber
-                      )
-                      const pageAnnotations = allAnnotations.filter(
-                        (anno) => anno.page === pageNumber
-                      )
+              {/* Zoom Controls - only show zoom for documents */}
+              {documentUrl && (
+                <div className="zoom-controls fixed right-[47%] bottom-6 z-30 flex items-center gap-1 rounded-lg bg-[#9B9B9D] p-1 text-white shadow-lg">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      zoomOut()
+                    }}
+                    disabled={scale <= 0.5}
+                    className="h-8 w-8 rounded p-0 hover:bg-white/20 disabled:opacity-50"
+                  >
+                    <span className="text-sm">-</span>
+                  </button>
+                  <span className="min-w-[50px] px-2 text-center text-sm font-medium">
+                    {Math.round(scale * 100)}%
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      zoomIn()
+                    }}
+                    disabled={scale >= 3.0}
+                    className="h-8 w-8 rounded p-0 hover:bg-white/20 disabled:opacity-50"
+                  >
+                    <span className="text-sm">+</span>
+                  </button>
+                </div>
+              )}
 
-                      return (
-                        <div
-                          key={`page_${pageNumber}`}
-                          className="relative mb-4 bg-white shadow-lg"
-                        >
-                          <Page
-                            pageNumber={pageNumber}
-                            scale={scale}
-                            renderTextLayer={true}
-                          />
-
-                          {/* Annotations overlay */}
-                          <div className="pointer-events-none absolute top-0 left-0 h-full w-full">
-                            {pageAnnotations.map((anno) => (
-                              <Annotation
-                                key={anno.id}
-                                annotation={anno}
-                                isHighlighted={comments.some(
-                                  (c) => c.annotation.id === anno.id
-                                )}
-                              />
-                            ))}
-                          </div>
-
-                          {/* Comment markers */}
-                          <div className="absolute top-0 left-0 h-full w-full">
-                            {pageComments.map((comment) => (
-                              <div key={comment.id} className="comment-marker">
-                                <CommentMarker
-                                  comment={comment}
-                                  users={users}
-                                  onClick={() => setActiveCommentId(comment.id)}
-                                  onEdit={() => setEditingComment(comment)}
-                                  onDelete={() =>
-                                    setDeletingCommentId(comment.id)
-                                  }
-                                  onReply={() =>
-                                    setReplyingToCommentId(comment.id)
-                                  }
-                                  onEditReply={() => {}}
-                                  onDeleteReply={() => {}}
-                                  isDeleting={deletingCommentId === comment.id}
-                                  isActive={activeCommentId === comment.id}
-                                  isReplying={
-                                    replyingToCommentId === comment.id
-                                  }
-                                  deletingReplyId={deletingReplyId}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )
-                    })}
+              {isLoading ? (
+                <div className="flex h-full items-center justify-center">
+                  <div className="text-center">
+                    <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+                    <p className="mt-4 text-gray-600">Loading document...</p>
                   </div>
-                </PDFDocument>
-              ) : (
-                // Image viewer
-                <div
-                  ref={imageContainerRef}
-                  className="flex h-full w-full items-center justify-center"
-                >
-                  <div ref={imageRef} className="relative bg-white shadow-lg">
-                    <img
-                      src={documentUrl}
-                      alt={document?.name || 'Document'}
-                      style={{
-                        transform: `scale(${scale})`,
-                        transformOrigin: 'center',
-                        maxWidth: '100%',
-                        maxHeight: '100%',
-                        objectFit: 'contain',
-                      }}
-                      className="block"
-                    />
+                </div>
+              ) : documentUrl ? (
+                <div className="flex justify-center p-6">
+                  {documentType === 'pdf' ? (
+                    <PDFDocument
+                      file={documentUrl}
+                      onLoadSuccess={onDocumentLoadSuccess}
+                      onLoadError={console.error}
+                      loading={
+                        <div className="p-8 text-center">Loading document...</div>
+                      }
+                    >
+                      <div ref={pageRef} className="space-y-4">
+                        {/* Render all pages for scroll functionality */}
+                        {Array.from({ length: numPages || 1 }, (_, index) => {
+                          const pageNumber = index + 1
+                          const pageComments = comments.filter(
+                            (comment) => comment.annotation.page === pageNumber
+                          )
+                          const pageAnnotations = allAnnotations.filter(
+                            (anno) => anno.page === pageNumber
+                          )
 
-                    {/* Annotations overlay for images */}
-                    <div className="pointer-events-none absolute top-0 left-0 h-full w-full">
-                      {allAnnotations.map((anno) => (
-                        <Annotation
-                          key={anno.id}
-                          annotation={anno}
-                          isHighlighted={comments.some(
-                            (c) => c.annotation.id === anno.id
-                          )}
+                          return (
+                            <div
+                              key={`page_${pageNumber}`}
+                              className="relative mb-4 bg-white shadow-lg"
+                            >
+                              <Page
+                                pageNumber={pageNumber}
+                                scale={scale}
+                                renderTextLayer={true}
+                              />
+
+                              {/* Annotations overlay */}
+                              <div className="pointer-events-none absolute top-0 left-0 h-full w-full">
+                                {pageAnnotations.map((anno) => (
+                                  <Annotation
+                                    key={anno.id}
+                                    annotation={anno}
+                                    isHighlighted={comments.some(
+                                      (c) => c.annotation.id === anno.id
+                                    )}
+                                  />
+                                ))}
+                              </div>
+
+                              {/* Comment markers */}
+                              <div className="absolute top-0 left-0 h-full w-full">
+                                {pageComments.map((comment) => (
+                                  <div key={comment.id} className="comment-marker">
+                                    <CommentMarker
+                                      comment={comment}
+                                      users={users}
+                                      onClick={() => setActiveCommentId(comment.id)}
+                                      onEdit={() => handleCommentEdit(comment)}
+                                      onDelete={() =>
+                                        handleCommentDelete(comment.id)
+                                      }
+                                      onReply={handleReply}
+                                      onEditReply={handleEditReply}
+                                      onDeleteReply={handleDeleteReply}
+                                      isDeleting={deletingCommentId === comment.id}
+                                      isActive={activeCommentId === comment.id}
+                                      isReplying={
+                                        replyingToCommentId === comment.id
+                                      }
+                                      deletingReplyId={deletingReplyId}
+                                      onCancel={handleCancelComment}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </PDFDocument>
+                  ) : (
+                    // Image viewer
+                    <div
+                      ref={imageContainerRef}
+                      className="flex h-full w-full items-center justify-center"
+                    >
+                      <div ref={imageRef} className="relative bg-white shadow-lg">
+                        <img
+                          src={documentUrl}
+                          alt={document?.name || 'Document'}
+                          style={{
+                            transform: `scale(${scale})`,
+                            transformOrigin: 'center',
+                            maxWidth: '100%',
+                            maxHeight: '100%',
+                            objectFit: 'contain',
+                          }}
+                          className="block"
                         />
-                      ))}
-                    </div>
 
-                    {/* Comment markers for images */}
-                    <div className="absolute top-0 left-0 h-full w-full">
-                      {comments.map((comment) => (
-                        <div key={comment.id} className="comment-marker">
-                          <CommentMarker
-                            comment={comment}
-                            users={users}
-                            onClick={() => setActiveCommentId(comment.id)}
-                            onEdit={() => setEditingComment(comment)}
-                            onDelete={() => setDeletingCommentId(comment.id)}
-                            onReply={() => setReplyingToCommentId(comment.id)}
-                            onEditReply={() => {}}
-                            onDeleteReply={() => {}}
-                            isDeleting={deletingCommentId === comment.id}
-                            isActive={activeCommentId === comment.id}
-                            isReplying={replyingToCommentId === comment.id}
-                            deletingReplyId={deletingReplyId}
-                          />
+                        {/* Annotations overlay for images */}
+                        <div className="pointer-events-none absolute top-0 left-0 h-full w-full">
+                          {allAnnotations.map((anno) => (
+                            <Annotation
+                              key={anno.id}
+                              annotation={anno}
+                              isHighlighted={comments.some(
+                                (c) => c.annotation.id === anno.id
+                              )}
+                            />
+                          ))}
                         </div>
-                      ))}
+
+                        {/* Comment markers for images */}
+                        <div className="absolute top-0 left-0 h-full w-full">
+                          {comments.map((comment) => (
+                            <div key={comment.id} className="comment-marker">
+                              <CommentMarker
+                                comment={comment}
+                                users={users}
+                                onClick={() => setActiveCommentId(comment.id)}
+                                onEdit={() => handleCommentEdit(comment)}
+                                onDelete={() => handleCommentDelete(comment.id)}
+                                onReply={handleReply}
+                                onEditReply={handleEditReply}
+                                onDeleteReply={handleDeleteReply}
+                                isDeleting={deletingCommentId === comment.id}
+                                isActive={activeCommentId === comment.id}
+                                isReplying={replyingToCommentId === comment.id}
+                                deletingReplyId={deletingReplyId}
+                                onCancel={handleCancelComment}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex h-full items-center justify-center bg-black/75">
+                  <div className="bg-secondary flex h-[300px] w-[600px] flex-col items-center justify-center space-y-6 rounded-md">
+                    <Image
+                      src={'/assets/no-preview.svg'}
+                      alt="no preview"
+                      height={80}
+                      width={80}
+                    />
+                    <p className="font-semibold text-white lg:text-lg">
+                      Sorry, no preview available for this file format.
+                    </p>
+                    <div className="flex justify-center gap-4">
+                      <Button
+                        className="h-12 w-[200px] cursor-pointer bg-white px-6 text-lg font-semibold text-black hover:bg-white"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (onDownloadClick && document) {
+                            onDownloadClick(document)
+                          }
+                        }}
+                      >
+                        Download file <Download className="text-primary h-3 w-3" />
+                      </Button>
+                      <Button
+                        className="flex h-12 w-[200px] cursor-pointer items-center justify-center bg-white px-6 text-lg font-semibold text-black hover:bg-white"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (onShareClick && document) {
+                            onShareClick(document)
+                          }
+                        }}
+                      >
+                        Share file <HiShare className="text-primary" />
+                      </Button>
                     </div>
                   </div>
                 </div>
               )}
             </div>
-          ) : (
-            <div className="flex h-full items-center justify-center bg-black/75">
-              <div className="bg-secondary flex h-[300px] w-[600px] flex-col items-center justify-center space-y-6 rounded-md">
-                <Image
-                  src={'/assets/no-preview.svg'}
-                  alt="no preview"
-                  height={80}
-                  width={80}
-                />
-                <p className="lg:text-lg font-semibold text-white">
-                  Sorry, no preview available for this file format.
-                </p>
-                <div className="flex justify-center gap-4">
-                  <Button
-                    className="h-12 w-[200px] cursor-pointer bg-white px-6 text-lg font-semibold text-black hover:bg-white"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (onDownloadClick && document) {
-                        onDownloadClick(document)
-                      }
-                    }}
-                  >
-                    Download file <Download className="text-primary h-3 w-3" />
-                  </Button>
-                  <Button
-                    className="h-12 w-[200px] cursor-pointer bg-white px-6 text-lg font-semibold text-black hover:bg-white lg:block hidden"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (onShareClick && document) {
-                        onShareClick(document)
-                      }
-                    }}
-                  >
-                    Share file <HiShare className="text-primary h-3 w-3" />
-                  </Button>
+
+            {/* Comments Sidebar */}
+            <div className={`bg-white border-l border-gray-200 transition-all duration-300 ${
+              isSidebarOpen ? 'w-80' : 'w-0'
+            } overflow-hidden`}>
+              {isSidebarOpen && (
+                <div className="flex h-full flex-col">
+                  {/* Sidebar Header */}
+                  <div className="border-b border-gray-200 p-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-900">
+                        Comments ({comments.length})
+                      </h3>
+                      <button
+                        onClick={() => setIsSidebarOpen(false)}
+                        className="rounded-lg p-1 hover:bg-gray-100"
+                      >
+                        <ChevronRight size={16} className="text-gray-500" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Comments List */}
+                  <div className="flex-1 overflow-y-auto p-4">
+                    {isLoadingComments ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+                      </div>
+                    ) : comments.length === 0 ? (
+                      <div className="py-8 text-center">
+                        <MessageSquare className="mx-auto h-12 w-12 text-gray-300" />
+                        <p className="mt-2 text-sm text-gray-500">
+                          No comments yet. Select text or click to add a comment.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {comments.map((comment) => {
+                          const user = getUserById(comment.userId)
+                          return (
+                            <div
+                              key={comment.id}
+                              className={`rounded-lg border p-3 transition-colors cursor-pointer ${
+                                activeCommentId === comment.id
+                                  ? 'border-blue-500 bg-blue-50'
+                                  : 'border-gray-200 hover:bg-gray-50'
+                              }`}
+                              onClick={() => handleSidebarCommentClick(comment.id)}
+                            >
+                              {/* Comment Header */}
+                              <div className="mb-2 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-600">
+                                    {user?.name?.[0]?.toUpperCase() || '?'}
+                                  </div>
+                                  <span className="text-sm font-medium text-gray-700">
+                                    {user?.name || 'Unknown User'}
+                                  </span>
+                                </div>
+                                <span className="text-xs text-gray-500">
+                                  Page {comment.annotation.page}
+                                </span>
+                              </div>
+
+                              {/* Comment Text */}
+                              <p className="text-sm text-gray-800 line-clamp-3">
+                                {comment.text}
+                              </p>
+
+                              {/* Comment Actions */}
+                              <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleCommentEdit(comment)
+                                  }}
+                                  className="hover:text-blue-600"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleCommentDelete(comment.id)
+                                  }}
+                                  className="hover:text-red-600"
+                                  disabled={deletingCommentId === comment.id}
+                                >
+                                  {deletingCommentId === comment.id ? 'Deleting...' : 'Delete'}
+                                </button>
+                              </div>
+
+                              {/* Replies */}
+                              {comment.children && comment.children.length > 0 && (
+                                <div className="mt-3 space-y-2 border-l-2 border-gray-200 pl-3">
+                                  {comment.children.map((reply) => {
+                                    const replyUser = getUserById(reply.userId)
+                                    return (
+                                      <div key={reply.id} className="rounded bg-gray-50 p-2">
+                                        <div className="mb-1 flex items-center gap-2">
+                                          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold text-gray-600">
+                                            {replyUser?.name?.[0]?.toUpperCase() || '?'}
+                                          </div>
+                                          <span className="text-xs font-medium text-gray-600">
+                                            {replyUser?.name || 'Unknown User'}
+                                          </span>
+                                        </div>
+                                        <p className="text-xs text-gray-700">
+                                          {reply.text}
+                                        </p>
+                                        <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              handleEditReply(reply)
+                                            }}
+                                            className="hover:text-blue-600"
+                                          >
+                                            Edit
+                                          </button>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              handleDeleteReply(reply.id)
+                                            }}
+                                            className="hover:text-red-600"
+                                            disabled={deletingReplyId === reply.id}
+                                          >
+                                            {deletingReplyId === reply.id ? 'Deleting...' : 'Delete'}
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
         {/* Comment Modal */}
         <CommentModal
           isOpen={isCommentModalOpen}
-          onClose={() => {
-            setIsCommentModalOpen(false)
-            setTempAnnotation(null)
-            setHasTextSelection(false)
-          }}
+          onClose={handleCommentModalClose}
           onSubmit={handleCommentSubmit}
+          onUpdate={handleCommentUpdate}
           position={commentModalPosition}
           users={users}
           isLoading={isCreatingComment}

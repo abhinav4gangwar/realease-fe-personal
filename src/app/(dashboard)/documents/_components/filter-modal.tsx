@@ -25,20 +25,22 @@ export function FilterModal({ isOpen, onClose, filterType, documents, selectedIt
 
   const getUniqueItems = () => {
     if (filterType === "property") {
-      return [...new Set(documents.map((doc) => doc.linkedProperty))]
+      return [...new Set(documents.map((doc) => doc.linkedProperty).filter(Boolean))]
     } else {
       const friendlyTypes = documents.map((doc) => {
         if (doc.isFolder) return "Folder"
-      
+
         const friendlyType = getFileTypeFromMime(doc.fileType, doc.name)
         return friendlyType
-      })
-      
+      }).filter(Boolean) // Filter out undefined/null values
+
       return [...new Set(friendlyTypes)].sort()
     }
   }
 
-  const filteredItems = getUniqueItems().filter((item) => item.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredItems = getUniqueItems().filter((item) =>
+    item && typeof item === 'string' && item.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   const handleItemToggle = (item: string) => {
     setTempSelected((prev) => (prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]))
