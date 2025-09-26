@@ -27,6 +27,8 @@ export interface Properties {
   city?: string
   zipcode?: string
   coordinates?: string
+  latitude?: string
+  longitude?: string
   valuePerSQ?: string
   additionalDetails?: Record<string, any>
   documents?: uploadedDocuments[]
