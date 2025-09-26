@@ -129,7 +129,7 @@ const PropertySearch = () => {
         {showDropdown && (
           <div
             ref={dropdownRef}
-            className="absolute top-full right-0 left-0 z-50 mt-1 h-50 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg"
+            className="absolute top-full right-0 left-0 z-50 mt-1 max-h-50 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg"
           >
             {isLoading ? (
               <div className="text-primary flex h-full items-center justify-center px-4 py-2 text-sm">

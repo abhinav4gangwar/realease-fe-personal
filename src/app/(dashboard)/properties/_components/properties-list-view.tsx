@@ -77,12 +77,17 @@ const PropertiesListView = ({
           }`}
           onMouseEnter={() => setHoveredRow(property.id)}
           onMouseLeave={() => setHoveredRow(null)}
+          onClick={(e) => {
+            e.stopPropagation()
+            onPropertyInfo(property)
+          }}
         >
           <div className="col-span-4 flex items-center gap-3">
             <input
               type="checkbox"
               className="h-4 w-4 accent-[#f16969]"
               checked={selectedProperties.includes(property.id)}
+              onClick={(e) => e.stopPropagation()}
               onChange={(e) => {
                 e.stopPropagation()
                 onToggleSelect?.(property.id)

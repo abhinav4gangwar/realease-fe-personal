@@ -46,7 +46,7 @@ export const PDFHeader: FC<PDFHeaderProps> = ({
         <Button
           variant="ghost"
           size="icon"
-          className={`h-6 w-6 cursor-pointer text-white transition-all hidden lg:block ${
+          className={`h-6 w-6 cursor-pointer text-white transition-all hidden lg:flex justify-center items-center ${
             hasTextSelection ? "hover:text-primary ring-2 ring-blue-400 bg-blue-500/20" : "opacity-50 cursor-not-allowed"
           }`}
           onClick={(e) => {
@@ -64,7 +64,7 @@ export const PDFHeader: FC<PDFHeaderProps> = ({
         <Button
           variant="ghost"
           size="icon"
-          className="hover:text-primary h-6 w-6 cursor-pointer text-white hidden lg:block"
+          className="hover:text-primary h-6 w-6 cursor-pointer text-white hidden lg:flex justify-center items-center"
           onClick={(e) => {
             e.stopPropagation()
             if (onEditClick) {
@@ -79,7 +79,7 @@ export const PDFHeader: FC<PDFHeaderProps> = ({
         <Button
           variant="ghost"
           size="icon"
-          className="hover:text-primary h-6 w-6 cursor-pointer text-white hidden lg:block"
+          className="hover:text-primary h-6 w-6 cursor-pointer text-white hidden lg:flex justify-center items-center"
           onClick={(e) => {
             e.stopPropagation()
             if (onShareClick) {
@@ -107,7 +107,7 @@ export const PDFHeader: FC<PDFHeaderProps> = ({
         <Button
           variant="ghost"
           size="icon"
-          className="hover:text-primary h-6 w-6 cursor-pointer text-white hidden lg:block"
+          className="hover:text-primary h-6 w-6 cursor-pointer text-white hidden lg:flex justify-center items-center"
           onClick={(e) => {
             e.stopPropagation()
             if (onMoveClick) {
