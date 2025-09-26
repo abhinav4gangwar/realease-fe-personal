@@ -14,25 +14,19 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { cn } from '@/lib/utils'
-import {
-  CityType,
-  CountryType,
-  Properties,
-  StateType,
-} from '@/types/property.types'
-import { apiClient } from '@/utils/api'
-import { City, Country, State } from 'country-state-city'
 import { useLocationAutoFill } from '@/hooks/useLocationAutoFill'
+import { cn } from '@/lib/utils'
+import { CountryType, Properties } from '@/types/property.types'
+import { apiClient } from '@/utils/api'
 import { formatCoordinates, parseCoordinates } from '@/utils/coordinateUtils'
+import { Country } from 'country-state-city'
 import {
-  ArrowLeft,
   AlertCircle,
+  ArrowLeft,
   Check,
   CheckCircle,
   ChevronDown,
   Loader2,
-  MapPin,
   MoveRight,
   Plus,
   PlusIcon,
@@ -163,9 +157,10 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
 
       // Only auto-select country if none is selected or if it matches the current selection
       if (!selectedCountry) {
-        const foundCountry = countries.find(c =>
-          c.name.toLowerCase().includes(location.country.toLowerCase()) ||
-          c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
+        const foundCountry = countries.find(
+          (c) =>
+            c.name.toLowerCase().includes(location.country.toLowerCase()) ||
+            c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
         )
 
         if (foundCountry) {
@@ -175,19 +170,28 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
       } else {
         // Verify the current country matches the location result
         const currentCountryMatches =
-          selectedCountry.name.toLowerCase().includes(location.country.toLowerCase()) ||
-          selectedCountry.isoCode.toLowerCase() === location.countryCode.toLowerCase()
+          selectedCountry.name
+            .toLowerCase()
+            .includes(location.country.toLowerCase()) ||
+          selectedCountry.isoCode.toLowerCase() ===
+            location.countryCode.toLowerCase()
 
         if (!currentCountryMatches) {
-          console.log('⚠️ Country mismatch - keeping user selection:', selectedCountry.name)
+          console.log(
+            '⚠️ Country mismatch - keeping user selection:',
+            selectedCountry.name
+          )
         }
       }
 
       // Use the currently selected country for state/city lookup
-      const countryForLookup = selectedCountry || countries.find(c =>
-        c.name.toLowerCase().includes(location.country.toLowerCase()) ||
-        c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
-      )
+      const countryForLookup =
+        selectedCountry ||
+        countries.find(
+          (c) =>
+            c.name.toLowerCase().includes(location.country.toLowerCase()) ||
+            c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
+        )
 
       // Auto-fill state and city from location data
       console.log('🏛️ Auto-filling state:', location.state)
@@ -198,7 +202,10 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
 
       // Auto-fill coordinates if available
       if (location.latitude && location.longitude) {
-        const coordinateString = formatCoordinates(location.latitude, location.longitude)
+        const coordinateString = formatCoordinates(
+          location.latitude,
+          location.longitude
+        )
         console.log('📍 Auto-filling coordinates:', coordinateString)
         updateFormData('coordinates', coordinateString)
       }
@@ -278,8 +285,6 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
       </Popover>
     )
   }
-
-
 
   const updateFormData = (field: keyof Properties, value: string) => {
     setFormData((prev) => ({

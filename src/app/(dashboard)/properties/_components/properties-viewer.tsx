@@ -9,6 +9,7 @@ import { apiClient } from '@/utils/api'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import ScrollToTop from '../../documents/_components/scroll-to-top'
+import { handleDownloadClick } from '../_property_utils'
 import BulkDeletePropertyModal from '../archived/_components/bulk-delete-model'
 import DeletePropertyModal from '../archived/_components/delete-model'
 import BulkArchivePropertyModal from './archive-bulk-property-modal'
@@ -129,10 +130,6 @@ const PropertiesViewer = ({
   const handleArchiveClick = (property: Properties) => {
     setIsArchiveModalOpen(true)
     setSelectedProperty(property)
-  }
-
-  const handleDownloadClick = (property: Properties) => {
-    console.log('Download', property)
   }
 
   const handleApplyFilters = (filters: FilterState) => {
