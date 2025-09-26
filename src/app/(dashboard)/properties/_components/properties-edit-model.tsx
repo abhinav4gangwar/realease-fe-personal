@@ -9,6 +9,7 @@ import { apiClient } from '@/utils/api'
 import { CommandEmpty } from 'cmdk'
 import { City, Country, State } from 'country-state-city'
 import { useLocationAutoFill } from '@/hooks/useLocationAutoFill'
+import { formatCoordinates, parseCoordinates } from '@/utils/coordinateUtils'
 import {
   AlertCircle,
   ArrowLeft,
@@ -99,8 +100,17 @@ const [countries, setCountries] = useState<CountryType[]>([])
 
   useEffect(() => {
     if (property && isOpen) {
+      // Handle coordinate format conversion from backend
+      let coordinates = property.coordinates || ''
+
+      // If backend sends separate latitude/longitude, combine them
+      if (!coordinates && (property as any).latitude && (property as any).longitude) {
+        coordinates = formatCoordinates((property as any).latitude, (property as any).longitude)
+      }
+
       setFormData({
         ...property,
+        coordinates, // Use the formatted coordinates
       })
       setIsDisputed(property.isDisputed || false)
 
@@ -193,6 +203,13 @@ const {
 
     console.log('🏙️ Auto-filling city:', location.city)
     updateFormData('city', location.city)
+
+    // Auto-fill coordinates if available
+    if (location.latitude && location.longitude) {
+      const coordinateString = formatCoordinates(location.latitude, location.longitude)
+      console.log('📍 Auto-filling coordinates:', coordinateString)
+      updateFormData('coordinates', coordinateString)
+    }
 
     // Reset auto-filling flag after a short delay
     setTimeout(() => {
@@ -307,8 +324,17 @@ useEffect(() => {
 
   const resetForm = () => {
     if (property) {
+      // Handle coordinate format conversion from backend
+      let coordinates = property.coordinates || ''
+
+      // If backend sends separate latitude/longitude, combine them
+      if (!coordinates && (property as any).latitude && (property as any).longitude) {
+        coordinates = formatCoordinates((property as any).latitude, (property as any).longitude)
+      }
+
       setFormData({
         ...property,
+        coordinates, // Use the formatted coordinates
       })
       setIsDisputed(property.isDisputed || false)
 
@@ -355,6 +381,9 @@ useEffect(() => {
         {}
       )
 
+      // Parse coordinates into separate latitude and longitude
+      const parsedCoordinates = parseCoordinates(formData.coordinates || '')
+
       const requestBody = {
         name: formData.name,
         type: formData.type,
@@ -367,6 +396,10 @@ useEffect(() => {
         district: formData.district,
         city: formData.city,
         state: formData.state,
+        // Send coordinates in the new format expected by backend
+        latitude: parsedCoordinates?.latitude || '',
+        longitude: parsedCoordinates?.longitude || '',
+        // Keep the original coordinates field for backward compatibility
         coordinates: formData.coordinates,
         isDisputed: isDisputed,
         legalStatus: isDisputed ? 'Disputed - Ongoing' : 'Undisputed',
@@ -479,6 +512,10 @@ useEffect(() => {
         district: formData.district,
         city: formData.city,
         state: formData.state,
+        // Send coordinates in the new format expected by backend
+        latitude: parsedCoordinates?.latitude || '',
+        longitude: parsedCoordinates?.longitude || '',
+        // Keep the original coordinates field for backward compatibility
         coordinates: formData.coordinates,
         isDisputed: isDisputed,
         legalStatus: isDisputed ? 'Disputed - Ongoing' : 'Undisputed',
@@ -838,8 +875,11 @@ useEffect(() => {
                     updateFormData('coordinates', e.target.value)
                   }
                   className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                  placeholder="Coordinates"
+                  placeholder="Latitude, Longitude (e.g., 32.7767, -96.797)"
                 />
+                <p className="text-xs text-gray-500">
+                  Enter coordinates as "latitude, longitude" or they will be auto-filled from zipcode
+                </p>
               </div>
             </div>
 

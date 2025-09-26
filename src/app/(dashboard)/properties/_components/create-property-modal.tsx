@@ -24,6 +24,7 @@ import {
 import { apiClient } from '@/utils/api'
 import { City, Country, State } from 'country-state-city'
 import { useLocationAutoFill } from '@/hooks/useLocationAutoFill'
+import { formatCoordinates, parseCoordinates } from '@/utils/coordinateUtils'
 import {
   ArrowLeft,
   AlertCircle,
@@ -165,6 +166,13 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
 
       console.log('🏙️ Auto-filling city:', location.city)
       updateFormData('city', location.city)
+
+      // Auto-fill coordinates if available
+      if (location.latitude && location.longitude) {
+        const coordinateString = formatCoordinates(location.latitude, location.longitude)
+        console.log('📍 Auto-filling coordinates:', coordinateString)
+        updateFormData('coordinates', coordinateString)
+      }
 
       // Reset auto-filling flag after a short delay
       setTimeout(() => {
@@ -321,6 +329,9 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
         {}
       )
 
+      // Parse coordinates into separate latitude and longitude
+      const parsedCoordinates = parseCoordinates(formData.coordinates || '')
+
       const requestBody = {
         name: formData.name,
         type: formData.type,
@@ -333,6 +344,10 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
         district: formData.district,
         city: formData.city,
         state: formData.state,
+        // Send coordinates in the new format expected by backend
+        latitude: parsedCoordinates?.latitude || '',
+        longitude: parsedCoordinates?.longitude || '',
+        // Keep the original coordinates field for backward compatibility
         coordinates: formData.coordinates,
         isDisputed: isDisputed,
         legalStatus: isDisputed ? 'Disputed - Ongoing' : 'Undisputed',
@@ -725,8 +740,11 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                     updateFormData('coordinates', e.target.value)
                   }
                   className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                  placeholder="Coordinates"
+                  placeholder="Latitude, Longitude (e.g., 32.7767, -96.797)"
                 />
+                <p className="text-xs text-gray-500">
+                  Enter coordinates as "latitude, longitude" or they will be auto-filled from zipcode
+                </p>
               </div>
             </div>
             {/* legal status */}

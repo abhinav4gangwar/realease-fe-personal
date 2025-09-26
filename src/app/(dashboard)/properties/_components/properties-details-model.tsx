@@ -7,6 +7,7 @@ import { FileIcon } from '../../documents/_components/file-icon'
 import FullMapModal from './map-model'
 import MiniMap from './minimap'
 import { CustomField } from './properties-edit-model'
+import { formatCoordinates } from '@/utils/coordinateUtils'
 
 export interface PropertiesDetailsModelProps {
   property: Properties | null
@@ -33,6 +34,39 @@ const PropertiesDetailsModel = ({
 
   const handleMapModalClose = () => {
     setIsMapModalOpen(false)
+  }
+
+  // Helper function to get coordinates in the correct format for display
+  const getCoordinatesForDisplay = () => {
+    if (!property) return ''
+
+    // If backend sends separate latitude/longitude, combine them
+    if ((property as any).latitude && (property as any).longitude) {
+      return formatCoordinates((property as any).latitude, (property as any).longitude)
+    }
+
+    // Fallback to existing coordinates field
+    return property.coordinates || ''
+  }
+
+  // Helper function to get coordinates for map components (they expect the old format)
+  const getCoordinatesForMap = () => {
+    if (!property) return ''
+
+    // If backend sends separate latitude/longitude, convert to old format
+    if ((property as any).latitude && (property as any).longitude) {
+      const lat = parseFloat((property as any).latitude)
+      const lng = parseFloat((property as any).longitude)
+
+      if (!isNaN(lat) && !isNaN(lng)) {
+        const latDir = lat >= 0 ? 'N' : 'S'
+        const lngDir = lng >= 0 ? 'E' : 'W'
+        return `${Math.abs(lat)} ${latDir}; ${Math.abs(lng)} ${lngDir}`
+      }
+    }
+
+    // Fallback to existing coordinates field
+    return property.coordinates || ''
   }
 
   useEffect(() => {
@@ -161,7 +195,7 @@ const PropertiesDetailsModel = ({
                   </h3>
                   <div className="h-40">
                     <MiniMap
-                      coordinates={property?.coordinates}
+                      coordinates={getCoordinatesForMap()}
                       propertyName={property?.name}
                       onClick={handleMiniMapClick}
                     />
@@ -211,7 +245,7 @@ const PropertiesDetailsModel = ({
                     Co-ordinates
                   </h3>
                   <h2 className="truncate text-lg font-semibold">
-                    {property?.coordinates}
+                    {getCoordinatesForDisplay()}
                   </h2>
                 </div>
               </div>
@@ -317,9 +351,10 @@ const PropertiesDetailsModel = ({
       <FullMapModal
         isOpen={isMapModalOpen}
         onClose={handleMapModalClose}
-        coordinates={property?.coordinates}
+        coordinates={getCoordinatesForMap()}
         propertyName={property?.name}
         propertyAddress={property?.address}
+        documents={property?.documents}
       />
     </>
   )
