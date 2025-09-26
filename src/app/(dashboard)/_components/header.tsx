@@ -12,14 +12,16 @@ export function Header() {
   return (
     <header className="z-40 hidden bg-white px-6 py-4 shadow-sm lg:block">
       <div className="flex items-center justify-between">
+        <div className='w-full hidden lg:block'>
+          {pathname === '/properties' ? (
+            <PropertySearch />
+          ) : pathname === '/documents' ? (
+            <DocumentSearch />
+          ) : (
+            <GlobalSearch />
+          )}
+        </div>
         {/* Search Bar */}
-        {pathname === '/properties' ? (
-          <PropertySearch />
-        ) : pathname === '/documents' ? (
-          <DocumentSearch />
-        ) : (
-          <GlobalSearch />
-        )}
 
         <div className="block lg:hidden">
           <Image

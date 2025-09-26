@@ -2,21 +2,29 @@ import { useSearchContext } from '@/providers/doc-search-context'
 import { apiClient } from '@/utils/api'
 import { LoaderCircle, Search } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { Input } from '../ui/input'
+import { FileIcon } from '../ui/file-icon'
+
+interface SearchSuggestion {
+  text: string
+  mimeType: string
+  type: 'suggestion'
+}
 
 const DocumentSearch = () => {
   const [query, setQuery] = useState('')
-  const [suggestions, setSuggestions] = useState([])
+  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
-  const dropdownRef = useRef(null)
-  const inputRef = useRef(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const { setSearchResults, setSearchQuery, clearSearchResults } =
     useSearchContext()
 
-  const performSearch = async (searchQuery) => {
+  const performSearch = async (searchQuery: string) => {
     if (!searchQuery.trim()) {
       clearSearchResults()
       return
@@ -32,15 +40,15 @@ const DocumentSearch = () => {
       setSearchResults(response.data)
       setSearchQuery(searchQuery)
     } catch (error) {
-      console.error('❌ Error performing search:', error)
+      toast.error('❌ Error performing search:', error)
       clearSearchResults()
     } finally {
       setIsSearching(false)
-      console.log('🏁 Search completed')
+      toast.message('Showing Searched Results')
     }
   }
 
-  const fetchSuggestions = async (searchQuery) => {
+  const fetchSuggestions = async (searchQuery: string) => {
     if (!searchQuery.trim()) {
       setSuggestions([])
       setShowDropdown(false)
@@ -73,12 +81,12 @@ const DocumentSearch = () => {
 
   // Close dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event) => {
+    const handleClickOutside = (event: MouseEvent) => {
       if (
         dropdownRef.current &&
-        !dropdownRef.current.contains(event.target) &&
+        !dropdownRef.current.contains(event.target as Node) &&
         inputRef.current &&
-        !inputRef.current.contains(event.target)
+        !inputRef.current.contains(event.target as Node)
       ) {
         setShowDropdown(false)
       }
@@ -88,17 +96,18 @@ const DocumentSearch = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const handleSuggestionSelect = (suggestion) => {
+  const handleSuggestionSelect = (suggestion: SearchSuggestion) => {
     setQuery(suggestion.text)
     setShowDropdown(false)
     inputRef.current?.focus()
+    performSearch(suggestion.text)
   }
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(e.target.value)
   }
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault()
       setShowDropdown(false)
@@ -107,7 +116,7 @@ const DocumentSearch = () => {
   }
 
   return (
-    <div className="mx-8 hidden max-w-6xl flex-1 lg:block">
+    <div className="lg:mx-8 max-w-6xl flex-1">
       <div className="relative">
         <Search className="text-secondary absolute top-1/2 left-3 h-6 w-6 -translate-y-1/2 transform" />
         {isSearching && (
@@ -129,7 +138,7 @@ const DocumentSearch = () => {
         {showDropdown && (
           <div
             ref={dropdownRef}
-            className="absolute top-full right-0 left-0 z-50 mt-1 h-50 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg"
+            className="absolute top-full right-0 left-0 z-50 mt-1 max-h-50 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg"
           >
             {isLoading ? (
               <div className="text-primary flex h-full items-center justify-center px-4 py-2 text-sm">
@@ -142,7 +151,14 @@ const DocumentSearch = () => {
                   className="hover:text-primary cursor-pointer px-4 py-3 text-sm last:border-b-0 hover:bg-gray-100"
                   onClick={() => handleSuggestionSelect(suggestion)}
                 >
-                  {suggestion.text}
+                  <div className="flex items-center gap-3">
+                    <FileIcon
+                      mimeType={suggestion.mimeType}
+                      size={18}
+                      className="flex-shrink-0"
+                    />
+                    <span className="truncate">{suggestion.text}</span>
+                  </div>
                 </div>
               ))
             ) : (

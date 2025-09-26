@@ -1,12 +1,11 @@
 'use client'
-import { Input } from '@/components/ui/input'
+import PropertySearch from '@/components/searchbars/property-search'
 import {
   FilterState,
   Properties,
   PropertySortField,
   PropertySortOrder,
 } from '@/types/property.types'
-import { Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import ScrollToTop from '../../documents/_components/scroll-to-top'
 import { PropertiesFilterButton } from '../_components/properties-filter-button'
@@ -131,13 +130,8 @@ const MobilePropertiesViewer = ({ allProperties }: PropertiesViewerProps) => {
     <div>
       <div className="flex space-x-4">
         <div className="flex justify-center">
-          <div className="relative w-full">
-            <Search className="text-secondary absolute top-1/2 left-3 -translate-y-1/2 transform" />
-            <Input
-              type="text"
-              placeholder="Search Properties"
-              className="h-11 w-full bg-white pl-10"
-            />
+          <div className="w-full">
+            <PropertySearch />
           </div>
         </div>
         <div className="flex items-center gap-4">

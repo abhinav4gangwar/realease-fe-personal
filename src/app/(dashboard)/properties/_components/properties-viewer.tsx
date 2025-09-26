@@ -9,8 +9,11 @@ import { apiClient } from '@/utils/api'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import ScrollToTop from '../../documents/_components/scroll-to-top'
+import BulkDeletePropertyModal from '../archived/_components/bulk-delete-model'
+import DeletePropertyModal from '../archived/_components/delete-model'
 import BulkArchivePropertyModal from './archive-bulk-property-modal'
 import ArchivePropertyModal from './archive-property-model'
+import ArchiveToggle from './archive-toggle'
 import CreatePropertyModal from './create-property-modal'
 import { PropertiesActionsButton } from './properties-action-button'
 import { PropertiesAddButton } from './properties-add-button'
@@ -20,6 +23,7 @@ import { PropertiesFilterButton } from './properties-filter-button'
 import PropertiesFilterModel from './properties-filter-model'
 import PropertiesListView from './properties-list-view'
 import { PropertiesSortButton } from './properties-sort-button'
+import { SharePropertyModal } from './sharePropertyModel'
 
 export interface PropertiesViewerProps {
   allProperties: Properties[]
@@ -34,6 +38,8 @@ const PropertiesViewer = ({
     null
   )
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false)
   const [isCreatePropertyModalOpen, setIsCreatePropertyModalOpen] =
     useState(false)
   const [isEditPropertyModalOpen, setIsEditPropertyModalOpen] = useState(false)
@@ -50,10 +56,36 @@ const PropertiesViewer = ({
     legalStatuses: [],
   })
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false)
+  const [isSharePropertyModalOpen, setIsSharePropertyModalOpen] =
+    useState(false)
+  const [isIndividualPropertyShare, setIsIndividualPropertyShare] =
+    useState(false)
+
+  const getSelectedPropertyObjects = () => {
+    return selectedProperties
+      .map((id) => sortedAndFilteredProperties.find((prop) => prop.id === id))
+      .filter(Boolean) as Properties[]
+  }
 
   const handleCreatePropertyClose = () => {
     setIsCreatePropertyModalOpen(false)
     onPropertyCreated()
+  }
+
+  const handleShareClick = (property: Properties) => {
+    setIsIndividualPropertyShare(true)
+    setSelectedProperties([property.id])
+    setSelectedProperty(property)
+    setIsSharePropertyModalOpen(true)
+  }
+
+  const handleShareModalClose = () => {
+    if (isIndividualPropertyShare) {
+      setSelectedProperties([])
+      setSelectedProperty(null)
+    }
+    setIsSharePropertyModalOpen(false)
+    setIsIndividualPropertyShare(false)
   }
 
   const handleEditPropertyClose = () => {
@@ -84,6 +116,11 @@ const PropertiesViewer = ({
     setIsModalOpen(true)
   }
 
+  const handleDeleteClick = (property: Properties) => {
+    setSelectedProperty(property)
+    setIsDeleteModalOpen(true)
+  }
+
   const handleEditClick = (property: Properties) => {
     setSelectedProperty(property)
     setIsEditPropertyModalOpen(true)
@@ -98,11 +135,6 @@ const PropertiesViewer = ({
     console.log('Download', property)
   }
 
-  const handleShareClick = (property: Properties) => {
-    setSelectedProperty(property)
-    console.log('Share property model open for', property)
-  }
-
   const handleApplyFilters = (filters: FilterState) => {
     setActiveFilters(filters)
   }
@@ -111,7 +143,13 @@ const PropertiesViewer = ({
     switch (actionType) {
       case 'share':
         if (selectedProperties.length > 0) {
-          console.log('Share property')
+          setIsIndividualPropertyShare(false)
+          setIsSharePropertyModalOpen(true)
+        }
+        break
+      case 'delete':
+        if (selectedProperties.length > 0) {
+          setIsBulkDeleteModalOpen(true)
         }
         break
       case 'archive':
@@ -218,6 +256,32 @@ const PropertiesViewer = ({
     }
   }
 
+  const confirmDelete = async () => {
+    if (!selectedProperty) return
+
+    try {
+      const response = await apiClient.delete('/dashboard/properties/delete', {
+        data: [
+          {
+            itemId: Number.parseInt(selectedProperty.id),
+          },
+        ],
+      })
+      setSelectedProperty(null)
+      onPropertyCreated()
+      setIsDeleteModalOpen(false)
+
+      const successMessage =
+        response.data?.message || 'Property deleted successfully'
+      toast.success(successMessage)
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        'Failed to delete property. Please try again.'
+      toast.error(errorMessage)
+    }
+  }
+
   useEffect(() => {
     const visibleIds = new Set(sortedAndFilteredProperties.map((p) => p.id))
     setSelectedProperties((prev) => prev.filter((id) => visibleIds.has(id)))
@@ -276,6 +340,34 @@ const PropertiesViewer = ({
     }
   }
 
+  const handleBulkDelete = async () => {
+    if (selectedProperties.length === 0) return
+
+    try {
+      const archivePayload = selectedProperties.map((id) => ({
+        itemId: Number.parseInt(id),
+      }))
+
+      const response = await apiClient.delete('/dashboard/properties/delete', {
+        data: archivePayload,
+      })
+
+      setSelectedProperties([])
+      onPropertyCreated()
+      setIsBulkDeleteModalOpen(false)
+
+      const successMessage =
+        response.data?.message ||
+        `${selectedProperties.length} properties deleted successfully`
+      toast.success(successMessage)
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        'Failed to delete properties. Please try again.'
+      toast.error(errorMessage)
+    }
+  }
+
   return (
     <div>
       <div className="flex justify-between pb-4">
@@ -286,6 +378,7 @@ const PropertiesViewer = ({
         </div>
 
         <div className="flex items-center gap-4">
+          <ArchiveToggle />
           <PropertiesFilterButton onFilterSelect={handleFilterSelect} />
           <PropertiesSortButton onSortChange={handleSortChange} />
           <PropertiesActionsButton
@@ -309,6 +402,8 @@ const PropertiesViewer = ({
             onSelectAll={handleSelectAll}
             onToggleSelect={handleToggleSelect}
             selectAllState={getSelectAllState()}
+            onArchiveClick={handleArchiveClick}
+            onDeleteClick={handleDeleteClick}
           />
         </div>
       </div>
@@ -359,6 +454,21 @@ const PropertiesViewer = ({
         onConfirm={confirmArchive}
       />
 
+      <DeletePropertyModal
+        isOpen={isDeleteModalOpen}
+        onCancel={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+      />
+
+      <BulkDeletePropertyModal
+        isOpen={isBulkDeleteModalOpen}
+        onCancel={() => setIsBulkDeleteModalOpen(false)}
+        selectedCount={selectedProperties.length}
+        onConfirm={() => {
+          handleBulkDelete()
+        }}
+      />
+
       <BulkArchivePropertyModal
         isOpen={OpenBulkArchiveModal}
         onConfirm={() => {
@@ -366,6 +476,13 @@ const PropertiesViewer = ({
         }}
         onCancel={() => setOpenBulkArchiveModal(false)}
         selectedCount={selectedProperties.length}
+      />
+
+      <SharePropertyModal
+        isOpen={isSharePropertyModalOpen}
+        onClose={handleShareModalClose}
+        selectedProperties={getSelectedPropertyObjects()}
+        onCancel={handleShareModalClose}
       />
     </div>
   )

@@ -7,6 +7,11 @@ import mime from 'mime-types'
  * @returns User-friendly file type (e.g., 'PDF', 'Word Document', 'Image')
  */
 export function getFileTypeFromMime(mimeType: string, fileName?: string): string {
+  // Handle null/undefined mimeType
+  if (!mimeType || typeof mimeType !== 'string') {
+    return 'File'
+  }
+
   // Handle common cases with custom friendly names
   const friendlyTypes: Record<string, string> = {
     // Documents

@@ -1,7 +1,7 @@
 'use client'
 import { Button } from '@/components/ui/button'
 import { Properties } from '@/types/property.types'
-import { Download, Info, Pencil } from 'lucide-react'
+import { Archive, Download, Info, Pencil, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { HiShare } from 'react-icons/hi2'
 
@@ -11,6 +11,8 @@ export interface PropertiesListViewProps {
   onEditClick?: (property: Properties) => void
   onShareClick?: (property: Properties) => void
   onDownloadClick?: (property: Properties) => void
+  onArchiveClick?: (property: Properties) => void
+  onDeleteClick?: (property: Properties) => void
   onPropertyInfo: (property: Properties) => void
   selectedProperties?: string[]
   onSelectAll?: () => void
@@ -22,7 +24,9 @@ const PropertiesListView = ({
   properties,
   selectedPropertyId,
   onEditClick,
+  onArchiveClick,
   onDownloadClick,
+  onDeleteClick,
   onShareClick,
   onPropertyInfo,
   selectedProperties = [],
@@ -73,12 +77,17 @@ const PropertiesListView = ({
           }`}
           onMouseEnter={() => setHoveredRow(property.id)}
           onMouseLeave={() => setHoveredRow(null)}
+          onClick={(e) => {
+            e.stopPropagation()
+            onPropertyInfo(property)
+          }}
         >
           <div className="col-span-4 flex items-center gap-3">
             <input
               type="checkbox"
               className="h-4 w-4 accent-[#f16969]"
               checked={selectedProperties.includes(property.id)}
+              onClick={(e) => e.stopPropagation()}
               onChange={(e) => {
                 e.stopPropagation()
                 onToggleSelect?.(property.id)
@@ -120,6 +129,18 @@ const PropertiesListView = ({
                   className="hover:text-primary h-6 w-6 cursor-pointer"
                   onClick={(e) => {
                     e.stopPropagation()
+                    onArchiveClick?.(property)
+                  }}
+                >
+                  <Archive className="h-3 w-3" />
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="hover:text-primary h-6 w-6 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation()
                     onDownloadClick?.(property)
                   }}
                 >
@@ -136,6 +157,18 @@ const PropertiesListView = ({
                   }}
                 >
                   <HiShare className="h-3 w-3" />
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="hover:text-primary h-6 w-6 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onDeleteClick?.(property)
+                  }}
+                >
+                  <Trash2 className="h-3 w-3" />
                 </Button>
               </div>
             ) : (

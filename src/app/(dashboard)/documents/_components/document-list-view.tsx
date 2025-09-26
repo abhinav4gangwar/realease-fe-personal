@@ -60,7 +60,7 @@ export function DocumentListView({
     <div className="space-y-1">
       {/* Header */}
       <div className="text-md text-secondary grid grid-cols-13 gap-4 px-4 py-2 font-semibold">
-        <div className="col-span-4 flex gap-3 items-center">
+        <div className="col-span-5 flex gap-3 items-center">
           <input
             type="checkbox"
             className="h-4 w-4 accent-[#f16969]"
@@ -75,7 +75,7 @@ export function DocumentListView({
           <div>Name</div>
         </div>
         <div className="col-span-3 text-left">Linked Property</div>
-        <div className="col-span-3 text-left">Date Added</div>
+        <div className="col-span-2 text-left">Date Added</div>
         <div className="col-span-2 text-left">Tags</div>
       </div>
       {/* Document Rows */}
@@ -89,7 +89,7 @@ export function DocumentListView({
           onMouseLeave={() => setHoveredRow(null)}
           onClick={() => handleRowClick(document)}
         >
-          <div className="col-span-4 flex items-center gap-3">
+          <div className="col-span-5 flex items-center gap-3">
             <input
               type="checkbox"
               checked={selectedDocuments?.includes(document.id) || false}
@@ -104,7 +104,7 @@ export function DocumentListView({
             <span className="truncate text-sm font-medium">{document.name}</span>
           </div>
           <div className="col-span-3 truncate text-left text-sm text-[#9B9B9D] pl-2">{document.linkedProperty}</div>
-          <div className="col-span-3 text-left text-sm text-[#9B9B9D] pl-2">{document.dateAdded}</div>
+          <div className="col-span-2 text-left text-sm text-[#9B9B9D] pl-2">{document.dateAdded}</div>
           <div className="col-span-2 truncate text-left text-sm text-[#9B9B9D]">
             {hoveredRow === document.id && !isShareMode ? (
               <div className="flex gap-1">

@@ -1,31 +1,26 @@
 'use client'
 
+import { useSearchContext } from '@/providers/doc-search-context'
 import { apiClient } from '@/utils/api'
 import { getFileTypeFromMime } from '@/utils/fileTypeUtils'
-
-import { useSearchContext } from '@/providers/doc-search-context'
 import { X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { DocumentViewer } from './_components/document-viewer'
+import MobileDocumentViewer from './_mobile-components/mobile-document-viewer'
 
 const Documentspage = () => {
-  const [fetchedDocuments, setFetchedDocuments] = useState(null)
-  const {
-    searchResults,
-    searchQuery,
-    isSearchActive,
-    clearSearchResults,
-    getTransformedSearchDocuments,
-  } = useSearchContext()
+  const [fetchedDocuments, setFetchedDocuments] = useState([])
+  const { searchResults, searchQuery, isSearchActive, clearSearchResults } =
+    useSearchContext()
 
   useEffect(() => {
     const fetchDocuments = async () => {
       try {
         const response = await apiClient.get('/dashboard/documents/list')
         setFetchedDocuments(response.data)
-        console.log('📁 Fetched all documents:', response.data)
+        console.log('Fetched documents:', response.data)
       } catch (error) {
-        console.error('❌ Error fetching documents:', error)
+        console.error('Error fetching documents:', error)
       }
     }
 
@@ -33,9 +28,34 @@ const Documentspage = () => {
   }, [])
 
   // Transform API response to match component expectations
-  const transformApiResponse = (apiData) => {
+  const transformApiResponse = (apiData: any) => {
+    // Handle direct array (search results)
+    if (Array.isArray(apiData)) {
+      return apiData.map((item: any) => ({
+        id: item.id.toString(),
+        name: item.name,
+        icon:
+          item.type === 'folder'
+            ? 'folder'
+            : getFileTypeFromMimeType(item.mimeType),
+        linkedProperty: item.linkedProperty || 'No Property',
+        dateAdded: formatDate(item.modifiedOn),
+        dateModified: formatDate(item.modifiedOn),
+        lastOpened: formatDate(item.modifiedOn),
+        fileType: item.mimeType || 'Unknown',
+        tags: Array.isArray(item.tags) ? item.tags.join(', ') : item.tags || '',
+        isFolder: item.type === 'folder',
+        hasChildren: item.hasChildren,
+        children: [], // Will be populated when folder is clicked
+        size: item.size,
+        s3Key: item.s3Key,
+        parentId: item.parentId,
+      }))
+    }
+
+    // Handle object with children property (regular documents fetch)
     if (!apiData || !apiData.children) return []
-    return apiData.children.map((item) => ({
+    return apiData.children.map((item: any) => ({
       id: item.id.toString(),
       name: item.name,
       icon:
@@ -57,10 +77,14 @@ const Documentspage = () => {
     }))
   }
 
-  const getFileTypeFromMimeType = (mimeType, fileName) => {
+  const getFileTypeFromMimeType = (mimeType: string, fileName?: string) => {
     if (!mimeType) return 'file'
+
+    // Use our utility function to get user-friendly file type
     const friendlyType = getFileTypeFromMime(mimeType, fileName)
-    const iconTypeMap = {
+
+    // Map friendly types back to icon types for FileIcon component
+    const iconTypeMap: Record<string, string> = {
       PDF: 'pdf',
       'Word Document': 'word',
       'Excel Spreadsheet': 'excel',
@@ -81,10 +105,10 @@ const Documentspage = () => {
       'JavaScript File': 'js',
     }
 
-    return iconTypeMap[friendlyType] || friendlyType?.toLowerCase()
+    return iconTypeMap[friendlyType] || friendlyType.toLowerCase()
   }
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string) => {
     if (!dateString) return 'Unknown'
     const date = new Date(dateString)
     return date.toLocaleDateString('en-US', {
@@ -94,11 +118,17 @@ const Documentspage = () => {
     })
   }
 
+
+  const transformedDocuments = transformApiResponse(fetchedDocuments)
+  const transformedSearchResponse = transformApiResponse(
+    searchResults?.documents
+  )
+
   const getDocumentsToShow = () => {
     if (isSearchActive && searchResults) {
-      return getTransformedSearchDocuments()
+      return transformedSearchResponse
     } else {
-      return transformApiResponse(fetchedDocuments)
+      return transformedDocuments
     }
   }
 
@@ -108,11 +138,11 @@ const Documentspage = () => {
     clearSearchResults()
   }
 
+
   return (
     <div>
-      {/* Search Results Banner */}
       {isSearchActive && searchResults && (
-        <div className="mb-4 flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-4">
+        <div className="lg:mb-4 flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-4 mt-20 lg:mt-0">
           <div className="flex items-center gap-2">
             <div className="text-sm font-medium text-blue-900">
               Search Results for {searchQuery}
@@ -130,10 +160,10 @@ const Documentspage = () => {
           </button>
         </div>
       )}
-
       {/* for desktop */}
       <div className="hidden lg:block">
         <DocumentViewer
+          // recentlyAccessed={documentsData.recentlyAccessed}
           allFiles={documentsToShow}
           apiClient={apiClient}
           transformApiResponse={transformApiResponse}
@@ -141,13 +171,13 @@ const Documentspage = () => {
       </div>
 
       {/* for mobile */}
-      {/* <div className="block pt-14 lg:hidden">
-        <MobileDocumentViewer
+      <div className={`block ${ searchResults ? ("pt-4") : ("pt-14")} lg:hidden`}>
+        <MobileDocumentViewer // recentlyAccessed={documentsData.recentlyAccessed}
           allFiles={documentsToShow}
           apiClient={apiClient}
           transformApiResponse={transformApiResponse}
         />
-      </div> */}
+      </div>
     </div>
   )
 }

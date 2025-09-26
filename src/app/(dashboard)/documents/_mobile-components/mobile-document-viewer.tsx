@@ -1,6 +1,6 @@
 'use client'
 
-import { Input } from '@/components/ui/input'
+import DocumentSearch from '@/components/searchbars/document-search'
 import {
   BreadcrumbItem,
   Document,
@@ -11,7 +11,6 @@ import {
   ViewMode,
 } from '@/types/document.types'
 import { getFileTypeFromMime } from '@/utils/fileTypeUtils'
-import { Search } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -387,12 +386,7 @@ const MobileDocumentViewer = ({
       <div className="flex space-x-4 pb-4">
         <div className="flex justify-center">
           <div className="relative w-full">
-            <Search className="text-secondary absolute top-1/2 left-3 -translate-y-1/2 transform" />
-            <Input
-              type="text"
-              placeholder="Search Documents"
-              className="h-11 w-full bg-white pl-10"
-            />
+            <DocumentSearch />
           </div>
         </div>
         <div className="flex items-center gap-4">

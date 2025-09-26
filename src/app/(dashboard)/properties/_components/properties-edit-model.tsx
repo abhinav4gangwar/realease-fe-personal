@@ -1,11 +1,22 @@
 'use client'
 import { Button } from '@/components/ui/button'
+import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Input } from '@/components/ui/input'
-import { Properties } from '@/types/property.types'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { cn } from '@/lib/utils'
+import { CityType, CountryType, Properties, StateType } from '@/types/property.types'
 import { apiClient } from '@/utils/api'
+import { CommandEmpty } from 'cmdk'
+import { City, Country, State } from 'country-state-city'
+import { useLocationAutoFill } from '@/hooks/useLocationAutoFill'
+import { formatCoordinates, parseCoordinates } from '@/utils/coordinateUtils'
 import {
+  AlertCircle,
   ArrowLeft,
   Check,
+  CheckCircle,
+  ChevronDown,
+  Loader2,
   MoveRight,
   Pencil,
   Plus,
@@ -56,6 +67,9 @@ const PropertiesEditModel = ({
   const [createdDuplicates, setCreatedDuplicates] = useState<any[]>([])
   const [showDuplicatesModal, setShowDuplicatesModal] = useState(false)
 
+  const [selectedCountry, setSelectedCountry] = useState<CountryType | null>(null)
+const [countries, setCountries] = useState<CountryType[]>([])
+
   const [formData, setFormData] = useState<Properties>({
     name: '',
     type: '',
@@ -79,9 +93,24 @@ const PropertiesEditModel = ({
   })
 
   useEffect(() => {
+  // Load all countries on component mount
+  const allCountries = Country.getAllCountries()
+  setCountries(allCountries)
+}, [])
+
+  useEffect(() => {
     if (property && isOpen) {
+      // Handle coordinate format conversion from backend
+      let coordinates = property.coordinates || ''
+
+      // If backend sends separate latitude/longitude, combine them
+      if (!coordinates && (property as any).latitude && (property as any).longitude) {
+        coordinates = formatCoordinates((property as any).latitude, (property as any).longitude)
+      }
+
       setFormData({
         ...property,
+        coordinates, // Use the formatted coordinates
       })
       setIsDisputed(property.isDisputed || false)
 
@@ -98,6 +127,106 @@ const PropertiesEditModel = ({
       }
     }
   }, [property, isOpen])
+
+  useEffect(() => {
+  if (property && isOpen) {
+    if (formData.country) {
+      const country = countries.find(c => c.name === formData.country)
+      if (country) {
+        setSelectedCountry(country)
+      }
+    }
+  }
+}, [property, isOpen, countries, formData.country])
+
+useEffect(() => {
+  if (selectedCountry) {
+    updateFormData('country', selectedCountry.name)
+  }
+}, [selectedCountry])
+
+// Track if we're currently auto-filling to prevent infinite loops
+const [isAutoFilling, setIsAutoFilling] = useState(false)
+const [lastAutoFilledZipcode, setLastAutoFilledZipcode] = useState('')
+
+// Location auto-fill functionality
+const {
+  isLoading: isLocationLoading,
+  error: locationError,
+  isValidZipcode,
+} = useLocationAutoFill({
+  country: selectedCountry?.name || '',
+  zipcode: formData.zipcode,
+  onLocationFound: (location) => {
+    // Prevent infinite loops by checking if we're already auto-filling
+    if (isAutoFilling || lastAutoFilledZipcode === formData.zipcode) {
+      return
+    }
+
+    setIsAutoFilling(true)
+    setLastAutoFilledZipcode(formData.zipcode)
+
+    console.log('🎯 Location found:', location)
+    console.log('🏁 Current selected country:', selectedCountry?.name)
+
+    // Only auto-select country if none is selected or if it matches the current selection
+    if (!selectedCountry) {
+      const foundCountry = countries.find(c =>
+        c.name.toLowerCase().includes(location.country.toLowerCase()) ||
+        c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
+      )
+
+      if (foundCountry) {
+        console.log('🌍 Auto-selecting country:', foundCountry.name)
+        setSelectedCountry(foundCountry)
+      }
+    } else {
+      // Verify the current country matches the location result
+      const currentCountryMatches =
+        selectedCountry.name.toLowerCase().includes(location.country.toLowerCase()) ||
+        selectedCountry.isoCode.toLowerCase() === location.countryCode.toLowerCase()
+
+      if (!currentCountryMatches) {
+        console.log('⚠️ Country mismatch - keeping user selection:', selectedCountry.name)
+      }
+    }
+
+    // Use the currently selected country for state/city lookup
+    const countryForLookup = selectedCountry || countries.find(c =>
+      c.name.toLowerCase().includes(location.country.toLowerCase()) ||
+      c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
+    )
+
+    // Auto-fill state and city from location data
+    console.log('🏛️ Auto-filling state:', location.state)
+    updateFormData('state', location.state)
+
+    console.log('🏙️ Auto-filling city:', location.city)
+    updateFormData('city', location.city)
+
+    // Auto-fill coordinates if available
+    if (location.latitude && location.longitude) {
+      const coordinateString = formatCoordinates(location.latitude, location.longitude)
+      console.log('📍 Auto-filling coordinates:', coordinateString)
+      updateFormData('coordinates', coordinateString)
+    }
+
+    // Reset auto-filling flag after a short delay
+    setTimeout(() => {
+      setIsAutoFilling(false)
+    }, 100)
+  },
+  autoTrigger: !isAutoFilling, // Only auto-trigger when not already auto-filling
+  debounceMs: 1000,
+})
+
+// Reset auto-fill tracking when zipcode changes manually
+useEffect(() => {
+  if (formData.zipcode !== lastAutoFilledZipcode) {
+    setLastAutoFilledZipcode('')
+  }
+}, [formData.zipcode, lastAutoFilledZipcode])
+
 
   const updateFormData = (field: keyof Properties, value: string) => {
     setFormData((prev) => ({
@@ -133,10 +262,79 @@ const PropertiesEditModel = ({
     setCustomFields((prev) => prev.filter((field) => field.id !== id))
   }
 
+  const CountrySelect = () => {
+  const [open, setOpen] = useState(false)
+  const [searchValue, setSearchValue] = useState('')
+
+  const filteredCountries = countries.filter(country =>
+    country.name.toLowerCase().includes(searchValue.toLowerCase())
+  )
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between h-14 truncate"
+        >
+          {selectedCountry?.name || "Select Country"}
+          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-full p-0 border-gray-400" align="start">
+        <Command>
+          <CommandInput 
+            placeholder="Search country..." 
+            value={searchValue}
+            onValueChange={setSearchValue}
+          />
+          <CommandList>
+            <CommandEmpty>No country found.</CommandEmpty>
+            <CommandGroup>
+              {filteredCountries.map((country) => (
+                <CommandItem
+                  key={country.isoCode}
+                  value={country.name}
+                  onSelect={() => {
+                    setSelectedCountry(country)
+                    setOpen(false)
+                    setSearchValue('')
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      selectedCountry?.isoCode === country.isoCode ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {country.name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+
+
   const resetForm = () => {
     if (property) {
+      // Handle coordinate format conversion from backend
+      let coordinates = property.coordinates || ''
+
+      // If backend sends separate latitude/longitude, combine them
+      if (!coordinates && (property as any).latitude && (property as any).longitude) {
+        coordinates = formatCoordinates((property as any).latitude, (property as any).longitude)
+      }
+
       setFormData({
         ...property,
+        coordinates, // Use the formatted coordinates
       })
       setIsDisputed(property.isDisputed || false)
 
@@ -162,6 +360,8 @@ const PropertiesEditModel = ({
     setDuplicateNames([])
     setCreatedDuplicates([])
     setShowDuplicatesModal(false)
+
+    setSelectedCountry(null)
   }
 
   const updateProperty = async () => {
@@ -181,6 +381,9 @@ const PropertiesEditModel = ({
         {}
       )
 
+      // Parse coordinates into separate latitude and longitude
+      const parsedCoordinates = parseCoordinates(formData.coordinates || '')
+
       const requestBody = {
         name: formData.name,
         type: formData.type,
@@ -193,6 +396,10 @@ const PropertiesEditModel = ({
         district: formData.district,
         city: formData.city,
         state: formData.state,
+        // Send coordinates in the new format expected by backend
+        latitude: parsedCoordinates?.latitude || '',
+        longitude: parsedCoordinates?.longitude || '',
+        // Keep the original coordinates field for backward compatibility
         coordinates: formData.coordinates,
         isDisputed: isDisputed,
         legalStatus: isDisputed ? 'Disputed - Ongoing' : 'Undisputed',
@@ -305,6 +512,10 @@ const PropertiesEditModel = ({
         district: formData.district,
         city: formData.city,
         state: formData.state,
+        // Send coordinates in the new format expected by backend
+        latitude: parsedCoordinates?.latitude || '',
+        longitude: parsedCoordinates?.longitude || '',
+        // Keep the original coordinates field for backward compatibility
         coordinates: formData.coordinates,
         isDisputed: isDisputed,
         legalStatus: isDisputed ? 'Disputed - Ongoing' : 'Undisputed',
@@ -508,32 +719,61 @@ const PropertiesEditModel = ({
                     <label className="text-md text-secondary block">
                       Country <span className="text-primary">*</span>
                     </label>
-                    <Input
-                      type="text"
-                      value={formData.country}
-                      onChange={(e) =>
-                        updateFormData('country', e.target.value)
-                      }
-                      className="w-full rounded-md border border-gray-300 px-3 py-2"
-                      placeholder="Select Country"
-                      required
-                    />
+                    <CountrySelect />
                   </div>
 
                   <div className="flex flex-col space-y-1">
                     <label className="text-md text-secondary block">
                       Zip-code <span className="text-primary">*</span>
                     </label>
-                    <Input
-                      type="text"
-                      value={formData.zipcode}
-                      onChange={(e) =>
-                        updateFormData('zipcode', e.target.value)
-                      }
-                      className="w-full rounded-md border border-gray-300 px-3 py-2"
-                      placeholder="Select zip-code"
-                      required
-                    />
+                    <div className="relative">
+                      <Input
+                        type="text"
+                        value={formData.zipcode}
+                        onChange={(e) =>
+                          updateFormData('zipcode', e.target.value)
+                        }
+                        className={`w-full rounded-md border px-3 py-2 pr-10 ${
+                          locationError || (!isValidZipcode && formData.zipcode)
+                            ? 'border-red-300 focus:border-red-500'
+                            : isLocationLoading
+                            ? 'border-blue-300 focus:border-blue-500'
+                            : 'border-gray-300'
+                        }`}
+                        placeholder="Enter zip-code"
+                        required
+                      />
+
+                      {/* Status Icon */}
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        {isLocationLoading && (
+                          <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                        )}
+                        {!isLocationLoading && formData.zipcode && isValidZipcode && !locationError && (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        )}
+                        {(locationError || (!isValidZipcode && formData.zipcode)) && (
+                          <AlertCircle className="h-4 w-4 text-red-500" />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Status Messages */}
+                    {!isValidZipcode && formData.zipcode && (
+                      <p className="text-xs text-red-500">
+                        Invalid zipcode format for {selectedCountry?.name || 'selected country'}
+                      </p>
+                    )}
+                    {locationError && (
+                      <p className="text-xs text-red-500">
+                        {locationError}
+                      </p>
+                    )}
+                    {isLocationLoading && (
+                      <p className="text-xs text-blue-600">
+                        🔍 Looking up location...
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex flex-col space-y-1">
@@ -587,10 +827,21 @@ const PropertiesEditModel = ({
                     <label className="text-md text-secondary block">City</label>
                     <Input
                       type="text"
-                      value={formData.city}
+                      placeholder="Enter city"
+                      value={formData.city || ''}
                       onChange={(e) => updateFormData('city', e.target.value)}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2"
-                      placeholder="-"
+                      className="h-14"
+                    />
+                  </div>
+
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-md text-secondary block">District</label>
+                    <Input
+                      type="text"
+                      placeholder="Enter district"
+                      value={formData.district || ''}
+                      onChange={(e) => updateFormData('district', e.target.value)}
+                      className="h-14"
                     />
                   </div>
 
@@ -600,10 +851,10 @@ const PropertiesEditModel = ({
                     </label>
                     <Input
                       type="text"
-                      value={formData.state}
+                      placeholder="Enter state"
+                      value={formData.state || ''}
                       onChange={(e) => updateFormData('state', e.target.value)}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2"
-                      placeholder="-"
+                      className="h-14"
                     />
                   </div>
                 </div>
@@ -624,8 +875,11 @@ const PropertiesEditModel = ({
                     updateFormData('coordinates', e.target.value)
                   }
                   className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                  placeholder="Latitude"
+                  placeholder="Latitude, Longitude (e.g., 32.7767, -96.797)"
                 />
+                <p className="text-xs text-gray-500">
+                  Enter coordinates as "latitude, longitude" or they will be auto-filled from zipcode
+                </p>
               </div>
             </div>
 
@@ -669,7 +923,7 @@ const PropertiesEditModel = ({
                         updateFormData('legalParties', e.target.value)
                       }
                       className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                      placeholder="Party A"
+                      placeholder="Parties"
                     />
                   </div>
 

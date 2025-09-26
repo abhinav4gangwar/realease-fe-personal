@@ -8,10 +8,12 @@ import type {
   SortOrder,
   ViewMode,
 } from '@/types/document.types'
+import { Properties } from '@/types/property.types'
 import { getFileTypeFromMime } from '@/utils/fileTypeUtils'
 import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { propertiesApi } from '../../properties/_property_utils/property.services'
 import {
   findFolderById,
   getAllFolders,
@@ -102,6 +104,7 @@ export function DocumentViewer({
   const [loadingFolders, setLoadingFolders] = useState<Set<string>>(new Set())
   const [openBulkDeleteModal, setOpenBulkDeleteModal] = useState(false)
   const [isIndividualShare, setIsIndividualShare] = useState(false)
+  const [properties, setProperties] = useState<Properties[]>([])
 
   const itemsPerPage = 15
 
@@ -128,6 +131,23 @@ export function DocumentViewer({
     setOpenModalInEditMode(true)
     setIsModalOpen(true)
   }
+
+  useEffect(() => {
+    const loadProperties = async () => {
+      try {
+        const propertiesList = await propertiesApi.getProperties()
+        setProperties([
+          { id: '0', name: 'No Property' } as Properties,
+          ...propertiesList,
+        ])
+      } catch (error) {
+        console.error('Failed to load properties:', error)
+        setProperties([{ id: '0', name: 'No Property' } as Properties])
+      }
+    }
+
+    loadProperties()
+  }, [])
 
   const handleDocumentRename = async (documentId: string, newName: string) => {
     try {
@@ -176,14 +196,20 @@ export function DocumentViewer({
         tags: data.tags,
       })
 
+      // Get the property name from the properties list
+      const getPropertyName = (propertyId: string) => {
+        if (propertyId === '0') return 'No Property'
+        const property = properties.find((p) => p.id === propertyId)
+        return property ? property.name : 'Unknown Property'
+      }
+
       const updateDocumentInArray = (docs: Document[]): Document[] => {
         return docs.map((doc) => {
           if (doc.id === documentId) {
             return {
               ...doc,
               name: data.name,
-              linkedProperty:
-                data.propertyId === '0' ? 'Test Property' : data.propertyId,
+              linkedProperty: getPropertyName(data.propertyId),
               tags: data.tags.join(', '),
             }
           }
@@ -201,8 +227,7 @@ export function DocumentViewer({
             ? {
                 ...prev,
                 name: data.name,
-                linkedProperty:
-                  data.propertyId === '0' ? 'Test Property' : data.propertyId,
+                linkedProperty: getPropertyName(data.propertyId),
                 tags: data.tags.join(', '),
               }
             : null
@@ -214,8 +239,7 @@ export function DocumentViewer({
             ? {
                 ...prev,
                 name: data.name,
-                linkedProperty:
-                  data.propertyId === '0' ? 'Test Property' : data.propertyId,
+                linkedProperty: getPropertyName(data.propertyId),
                 tags: data.tags.join(', '),
               }
             : null

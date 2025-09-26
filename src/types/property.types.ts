@@ -65,3 +65,20 @@ export const filterCategories: FilterOption[] = [
   { key: 'propertyTypes', label: 'Property Type', field: 'type' },
   { key: 'legalStatuses', label: 'Legal Status', field: 'legalStatus' },
 ]
+
+export interface CountryType {
+  name: string
+  isoCode: string
+}
+
+export interface StateType {
+  name: string
+  isoCode: string
+  countryCode: string
+}
+
+export interface CityType {
+  name: string
+  stateCode: string
+  countryCode: string
+}

@@ -1,46 +1,48 @@
 'use client'
-import { Document } from '@/types/document.types'
+
+import { Properties } from '@/types/property.types'
 import { createContext, useContext, useState } from 'react'
 
-export interface SearchResults {
+export interface PropertySearchResults {
   query: string
   totalResults: number
-  documents: Document[]
-  groupedResults: {
-    byType: Record<string, Document[]>
-    byMimeType: Record<string, Document[]>
-  }
+  allProperties: Properties[]
   searchStats: {
     totalFound: number
     appliedFilters: {
       type: string | null
-      parentId: string | null
-      propertyId: string | null
-      mimeType: string | null
-      tags: string | null
+      owner: string | null
+      location: string | null
+      legalStatus: string | null
+      isDisputed: string | null
     }
   }
 }
 
 interface SearchContextType {
-  searchResults: SearchResults | null
+  searchResults: PropertySearchResults | null
   searchQuery: string
   isSearchActive: boolean
-  setSearchResults: (results: SearchResults) => void
+  setSearchResults: (results: PropertySearchResults) => void
   setSearchQuery: (query: string) => void
   clearSearchResults: () => void
 }
 
-const SearchContext = createContext<SearchContextType | undefined>(undefined)
+const PropertySearchContext = createContext<SearchContextType | undefined>(
+  undefined
+)
 
-export const SearchProvider = ({ children }) => {
-  const [searchResults, setSearchResultsState] = useState<SearchResults | null>(
-    null
-  )
+export const PropertySearchProvider = ({
+  children,
+}: Readonly<{
+  children: React.ReactNode
+}>) => {
+  const [searchResults, setSearchResultsState] =
+    useState<PropertySearchResults | null>(null)
   const [searchQuery, setSearchQueryState] = useState<string>('')
   const [isSearchActive, setIsSearchActive] = useState<boolean>(false)
 
-  const setSearchResults = (results: SearchResults) => {
+  const setSearchResults = (results: PropertySearchResults) => {
     setSearchResultsState(results)
     setIsSearchActive(true)
   }
@@ -56,7 +58,7 @@ export const SearchProvider = ({ children }) => {
   }
 
   return (
-    <SearchContext.Provider
+    <PropertySearchContext.Provider
       value={{
         searchResults,
         searchQuery,
@@ -67,12 +69,12 @@ export const SearchProvider = ({ children }) => {
       }}
     >
       {children}
-    </SearchContext.Provider>
+    </PropertySearchContext.Provider>
   )
 }
 
-export const useSearchContext = () => {
-  const context = useContext(SearchContext)
+export const usePropertySearchContext = () => {
+  const context = useContext(PropertySearchContext)
   if (context === undefined) {
     throw new Error('useSearchContext must be used within a SearchProvider')
   }
