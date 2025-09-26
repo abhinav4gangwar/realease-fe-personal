@@ -14,25 +14,19 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { cn } from '@/lib/utils'
-import {
-  CityType,
-  CountryType,
-  Properties,
-  StateType,
-} from '@/types/property.types'
-import { apiClient } from '@/utils/api'
-import { City, Country, State } from 'country-state-city'
 import { useLocationAutoFill } from '@/hooks/useLocationAutoFill'
+import { cn } from '@/lib/utils'
+import { CountryType, Properties } from '@/types/property.types'
+import { apiClient } from '@/utils/api'
 import { formatCoordinates, parseCoordinates } from '@/utils/coordinateUtils'
+import { Country } from 'country-state-city'
 import {
-  ArrowLeft,
   AlertCircle,
+  ArrowLeft,
   Check,
   CheckCircle,
   ChevronDown,
   Loader2,
-  MapPin,
   MoveRight,
   Plus,
   PlusIcon,
@@ -85,6 +79,8 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     city: '',
     state: '',
     coordinates: '',
+    latitude: '',
+    longitude: '',
     isDisputed: isDisputed,
     legalParties: '',
     caseNumber: '',
@@ -108,7 +104,8 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     const basicValidation =
       formData.country?.trim() !== '' &&
       formData.zipcode?.trim() !== '' &&
-      formData.coordinates?.trim() !== '' &&
+      formData.latitude?.trim() !== '' &&
+      formData.longitude?.trim() !== '' &&
       formData.extent?.trim() !== '' &&
       formData.valuePerSQ?.trim() !== '' &&
       formData.value?.trim() !== ''
@@ -148,7 +145,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     isValidZipcode,
   } = useLocationAutoFill({
     country: selectedCountry?.name || '',
-    zipcode: formData.zipcode,
+    zipcode: formData.zipcode || '',
     onLocationFound: (location) => {
       // Prevent infinite loops by checking if we're already auto-filling
       if (isAutoFilling || lastAutoFilledZipcode === formData.zipcode) {
@@ -156,16 +153,17 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
       }
 
       setIsAutoFilling(true)
-      setLastAutoFilledZipcode(formData.zipcode)
+      setLastAutoFilledZipcode(formData.zipcode || '')
 
       console.log('🎯 Location found:', location)
       console.log('🏁 Current selected country:', selectedCountry?.name)
 
       // Only auto-select country if none is selected or if it matches the current selection
       if (!selectedCountry) {
-        const foundCountry = countries.find(c =>
-          c.name.toLowerCase().includes(location.country.toLowerCase()) ||
-          c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
+        const foundCountry = countries.find(
+          (c) =>
+            c.name.toLowerCase().includes(location.country.toLowerCase()) ||
+            c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
         )
 
         if (foundCountry) {
@@ -175,19 +173,28 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
       } else {
         // Verify the current country matches the location result
         const currentCountryMatches =
-          selectedCountry.name.toLowerCase().includes(location.country.toLowerCase()) ||
-          selectedCountry.isoCode.toLowerCase() === location.countryCode.toLowerCase()
+          selectedCountry.name
+            .toLowerCase()
+            .includes(location.country.toLowerCase()) ||
+          selectedCountry.isoCode.toLowerCase() ===
+            location.countryCode.toLowerCase()
 
         if (!currentCountryMatches) {
-          console.log('⚠️ Country mismatch - keeping user selection:', selectedCountry.name)
+          console.log(
+            '⚠️ Country mismatch - keeping user selection:',
+            selectedCountry.name
+          )
         }
       }
 
       // Use the currently selected country for state/city lookup
-      const countryForLookup = selectedCountry || countries.find(c =>
-        c.name.toLowerCase().includes(location.country.toLowerCase()) ||
-        c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
-      )
+      const countryForLookup =
+        selectedCountry ||
+        countries.find(
+          (c) =>
+            c.name.toLowerCase().includes(location.country.toLowerCase()) ||
+            c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
+        )
 
       // Auto-fill state and city from location data
       console.log('🏛️ Auto-filling state:', location.state)
@@ -198,8 +205,17 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
 
       // Auto-fill coordinates if available
       if (location.latitude && location.longitude) {
-        const coordinateString = formatCoordinates(location.latitude, location.longitude)
-        console.log('📍 Auto-filling coordinates:', coordinateString)
+        console.log('📍 Auto-filling latitude:', location.latitude)
+        updateFormData('latitude', location.latitude.toString())
+        
+        console.log('📍 Auto-filling longitude:', location.longitude)
+        updateFormData('longitude', location.longitude.toString())
+        
+        // Keep coordinates field for backward compatibility (combining lat,lng)
+        const coordinateString = formatCoordinates(
+          location.latitude.toString(),
+          location.longitude.toString()
+        )
         updateFormData('coordinates', coordinateString)
       }
 
@@ -279,8 +295,6 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     )
   }
 
-
-
   const updateFormData = (field: keyof Properties, value: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -328,6 +342,8 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
       city: '',
       state: '',
       coordinates: '',
+      latitude: '',
+      longitude: '',
       isDisputed: isDisputed,
       legalParties: '',
       caseNumber: '',
@@ -358,9 +374,8 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
         {}
       )
 
-      // Parse coordinates into separate latitude and longitude
-      const parsedCoordinates = parseCoordinates(formData.coordinates || '')
-
+      // Remove parsing since we now have separate latitude and longitude fields
+      
       const requestBody = {
         name: formData.name,
         type: formData.type,
@@ -373,9 +388,9 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
         district: formData.district,
         city: formData.city,
         state: formData.state,
-        // Send coordinates in the new format expected by backend
-        latitude: parsedCoordinates?.latitude || '',
-        longitude: parsedCoordinates?.longitude || '',
+        // Send coordinates as decimal numbers expected by backend
+        latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+        longitude: formData.longitude ? parseFloat(formData.longitude) : null,
         // Keep the original coordinates field for backward compatibility
         coordinates: formData.coordinates,
         isDisputed: isDisputed,
@@ -759,18 +774,51 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
           Co-ordinates <span className="text-primary">*</span>
         </label>
 
-        <div className="flex flex-col space-y-1">
-          <Input
-            type="text"
-            value={formData.coordinates}
-            onChange={(e) => updateFormData('coordinates', e.target.value)}
-            className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-            placeholder="Latitude, Longitude (e.g., 32.7767, -96.797)"
-          />
-          <p className="text-xs text-gray-500">
-            Enter coordinates as "latitude, longitude" or they will be auto-filled from zipcode
-          </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Latitude */}
+          <div className="flex flex-col space-y-1">
+            <label className="text-sm text-gray-600">Latitude</label>
+            <Input
+              type="number"
+              step="any"
+              value={formData.latitude}
+              onChange={(e) => {
+                updateFormData('latitude', e.target.value)
+                // Update coordinates field for backward compatibility
+                if (e.target.value && formData.longitude) {
+                  const coordinateString = formatCoordinates(e.target.value, formData.longitude)
+                  updateFormData('coordinates', coordinateString)
+                }
+              }}
+              className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+              placeholder="e.g., 32.7767"
+            />
+          </div>
+
+          {/* Longitude */}
+          <div className="flex flex-col space-y-1">
+            <label className="text-sm text-gray-600">Longitude</label>
+            <Input
+              type="number"
+              step="any"
+              value={formData.longitude}
+              onChange={(e) => {
+                updateFormData('longitude', e.target.value)
+                // Update coordinates field for backward compatibility
+                if (formData.latitude && e.target.value) {
+                  const coordinateString = formatCoordinates(formData.latitude, e.target.value)
+                  updateFormData('coordinates', coordinateString)
+                }
+              }}
+              className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+              placeholder="e.g., -96.797"
+            />
+          </div>
         </div>
+        
+        <p className="text-xs text-gray-500">
+          Enter latitude and longitude as decimal numbers, or they will be auto-filled from location
+        </p>
       </div>
 
       {/* legal status */}

@@ -1,10 +1,18 @@
-"use client"
+'use client'
 
-import { Button } from "@/components/ui/button"
-import { Download, FolderInput, Loader2, MessageSquare, Pencil, X } from "lucide-react"
-import type { FC } from "react"
-import { HiShare } from "react-icons/hi2"
-import { FileIcon } from "../file-icon"
+import { Button } from '@/components/ui/button'
+import {
+  Download,
+  FolderInput,
+  List,
+  Loader2,
+  MessageSquare,
+  Pencil,
+  X
+} from 'lucide-react'
+import type { FC } from 'react'
+import { HiShare } from 'react-icons/hi2'
+import { FileIcon } from '../file-icon'
 
 interface PDFHeaderProps {
   document: any
@@ -16,6 +24,7 @@ interface PDFHeaderProps {
   onMoveClick?: (document: any) => void
   onEditClick?: () => void
   onCommentClick: () => void
+  onSideClick: () => void
 }
 
 export const PDFHeader: FC<PDFHeaderProps> = ({
@@ -28,12 +37,15 @@ export const PDFHeader: FC<PDFHeaderProps> = ({
   onMoveClick,
   onEditClick,
   onCommentClick,
+  onSideClick
 }) => {
   return (
     <div className="flex items-center justify-between p-5">
       <div className="flex h-12 items-center gap-3">
-        <FileIcon type={document?.icon || ""} />
-        <h2 className="text-lg font-semibold text-white">{document?.name || "PDF Preview"}</h2>
+        <FileIcon type={document?.icon || ''} />
+        <h2 className="text-lg font-semibold text-white">
+          {document?.name || 'PDF Preview'}
+        </h2>
         {isLoadingComments && (
           <div className="flex items-center gap-2 text-sm text-white">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -46,8 +58,10 @@ export const PDFHeader: FC<PDFHeaderProps> = ({
         <Button
           variant="ghost"
           size="icon"
-          className={`h-6 w-6 cursor-pointer text-white transition-all hidden lg:flex justify-center items-center ${
-            hasTextSelection ? "hover:text-primary ring-2 ring-blue-400 bg-blue-500/20" : "opacity-50 cursor-not-allowed"
+          className={`hidden h-6 w-6 cursor-pointer items-center justify-center text-white transition-all lg:flex ${
+            hasTextSelection
+              ? 'hover:text-primary bg-blue-500/20 ring-2 ring-blue-400'
+              : 'cursor-not-allowed opacity-50'
           }`}
           onClick={(e) => {
             e.stopPropagation()
@@ -56,7 +70,11 @@ export const PDFHeader: FC<PDFHeaderProps> = ({
             }
           }}
           disabled={!hasTextSelection}
-          title={hasTextSelection ? "Add comment to selection" : "Select text to comment"}
+          title={
+            hasTextSelection
+              ? 'Add comment to selection'
+              : 'Select text to comment'
+          }
         >
           <MessageSquare className="h-3 w-3" />
         </Button>
@@ -64,7 +82,7 @@ export const PDFHeader: FC<PDFHeaderProps> = ({
         <Button
           variant="ghost"
           size="icon"
-          className="hover:text-primary h-6 w-6 cursor-pointer text-white hidden lg:flex justify-center items-center"
+          className="hover:text-primary hidden h-6 w-6 cursor-pointer items-center justify-center text-white lg:flex"
           onClick={(e) => {
             e.stopPropagation()
             if (onEditClick) {
@@ -79,7 +97,7 @@ export const PDFHeader: FC<PDFHeaderProps> = ({
         <Button
           variant="ghost"
           size="icon"
-          className="hover:text-primary h-6 w-6 cursor-pointer text-white hidden lg:flex justify-center items-center"
+          className="hover:text-primary hidden h-6 w-6 cursor-pointer items-center justify-center text-white lg:flex"
           onClick={(e) => {
             e.stopPropagation()
             if (onShareClick) {
@@ -107,7 +125,7 @@ export const PDFHeader: FC<PDFHeaderProps> = ({
         <Button
           variant="ghost"
           size="icon"
-          className="hover:text-primary h-6 w-6 cursor-pointer text-white hidden lg:flex justify-center items-center"
+          className="hover:text-primary hidden h-6 w-6 cursor-pointer items-center justify-center text-white lg:flex"
           onClick={(e) => {
             e.stopPropagation()
             if (onMoveClick) {
@@ -116,6 +134,20 @@ export const PDFHeader: FC<PDFHeaderProps> = ({
           }}
         >
           <FolderInput className="h-3 w-3" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hover:text-primary hidden h-6 w-6 cursor-pointer items-center justify-center text-white lg:flex"
+          onClick={(e) => {
+            e.stopPropagation()
+            if (onSideClick) {
+              onSideClick()
+            }
+          }}
+        >
+          <List className="h-3 w-3" />
         </Button>
 
         <Button
