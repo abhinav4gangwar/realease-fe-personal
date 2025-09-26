@@ -3,13 +3,13 @@ import { Button } from '@/components/ui/button'
 import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { cn } from '@/lib/utils'
-import { CityType, CountryType, Properties, StateType } from '@/types/property.types'
-import { apiClient } from '@/utils/api'
-import { CommandEmpty } from 'cmdk'
-import { City, Country, State } from 'country-state-city'
 import { useLocationAutoFill } from '@/hooks/useLocationAutoFill'
+import { cn } from '@/lib/utils'
+import { CountryType, Properties } from '@/types/property.types'
+import { apiClient } from '@/utils/api'
 import { formatCoordinates, parseCoordinates } from '@/utils/coordinateUtils'
+import { CommandEmpty } from 'cmdk'
+import { Country } from 'country-state-city'
 import {
   AlertCircle,
   ArrowLeft,
@@ -834,16 +834,7 @@ useEffect(() => {
                     />
                   </div>
 
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-md text-secondary block">District</label>
-                    <Input
-                      type="text"
-                      placeholder="Enter district"
-                      value={formData.district || ''}
-                      onChange={(e) => updateFormData('district', e.target.value)}
-                      className="h-14"
-                    />
-                  </div>
+                  
 
                   <div className="flex flex-col space-y-1">
                     <label className="text-md text-secondary block">
