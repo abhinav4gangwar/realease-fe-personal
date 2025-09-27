@@ -10,7 +10,7 @@ import {
   Reply,
   Send,
   Trash2,
-  X
+  X,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { FileIcon } from '../../documents/_components/file-icon'
@@ -26,6 +26,10 @@ export interface PropertiesDetailsModelProps {
   isOpen: boolean
   onClose: () => void
   onEditClick?: (property: Properties) => void
+}
+
+const extractUsername = (email: string) => {
+  return email.split('@')[0]
 }
 
 const PropertiesDetailsModel = ({
@@ -48,11 +52,71 @@ const PropertiesDetailsModel = ({
   const [loadingComments, setLoadingComments] = useState(false)
   const [replyingToId, setReplyingToId] = useState<number | null>(null)
   const [replyText, setReplyText] = useState('')
+  const [showMentions, setShowMentions] = useState(false)
+  const [mentionQuery, setMentionQuery] = useState('')
+  const [cursorPosition, setCursorPosition] = useState(0)
+  const [filteredUsers, setFilteredUsers] = useState<SharedUser[]>([])
 
   const uploadedDocuments = property?.documents
 
   const handleMiniMapClick = () => {
     setIsMapModalOpen(true)
+  }
+
+  const handleCommentChange = (value: string, isReply = false) => {
+    if (isReply) {
+      setReplyText(value)
+    } else {
+      setNewComment(value)
+    }
+
+    // Check for @ mentions
+    const lastAtIndex = value.lastIndexOf('@')
+    if (lastAtIndex !== -1) {
+      const textAfterAt = value.substring(lastAtIndex + 1)
+      const spaceIndex = textAfterAt.indexOf(' ')
+      const query =
+        spaceIndex === -1 ? textAfterAt : textAfterAt.substring(0, spaceIndex)
+
+      if (spaceIndex === -1) {
+        // Only show mentions if we're still typing after @
+        setMentionQuery(query)
+        setShowMentions(true)
+        setCursorPosition(lastAtIndex)
+
+        // Filter users based on query
+        const filtered = sharedUsers.filter((user) =>
+          extractUsername(user.email)
+            .toLowerCase()
+            .includes(query.toLowerCase())
+        )
+        setFilteredUsers(filtered)
+      } else {
+        setShowMentions(false)
+      }
+    } else {
+      setShowMentions(false)
+    }
+  }
+
+  const selectMention = (user: SharedUser, isReply = false) => {
+    const username = extractUsername(user.email)
+    const currentText = isReply ? replyText : newComment
+    const beforeAt = currentText.substring(0, cursorPosition)
+    const afterMention = currentText.substring(
+      cursorPosition + 1 + mentionQuery.length
+    )
+
+    const newText = `${beforeAt}@${username} ${afterMention}`
+
+    if (isReply) {
+      setReplyText(newText)
+    } else {
+      setNewComment(newText)
+    }
+
+    setShowMentions(false)
+    setMentionQuery('')
   }
 
   const handleMapModalClose = () => {
@@ -277,16 +341,6 @@ const PropertiesDetailsModel = ({
                 <span>Author: {comment.author}</span>
                 <span>•</span>
                 <span>{formatDate(comment.createdAt)}</span>
-                {Array.isArray(comment.mentions) &&
-                  comment.mentions.length > 0 && (
-                    <>
-                      <span>•</span>
-                      <span>
-                        Mentions:{' '}
-                        {comment.mentions.map((m) => m.name).join(', ')}
-                      </span>
-                    </>
-                  )}
               </div>
             </div>
             <div className="flex gap-1">
@@ -322,13 +376,19 @@ const PropertiesDetailsModel = ({
           {/* Reply input */}
           {replyingToId === comment.id && (
             <div className="mt-3 space-y-2">
-              <textarea
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                className="w-full resize-none rounded-md border p-2"
-                rows={2}
-                placeholder="Write a reply..."
-              />
+              <div className="relative">
+                <textarea
+                  value={replyText}
+                  onChange={(e) => handleCommentChange(e.target.value, true)}
+                  className="w-full resize-none rounded-md border p-2"
+                  rows={2}
+                  placeholder="Write a reply..."
+                />
+
+                {/* Reply mention dropdown */}
+              
+              </div>
+
               <div className="flex gap-2">
                 <Button
                   onClick={() => handleAddReply(comment.id)}
@@ -341,6 +401,7 @@ const PropertiesDetailsModel = ({
                   onClick={() => {
                     setReplyingToId(null)
                     setReplyText('')
+                    setShowMentions(false)
                   }}
                 >
                   Cancel
@@ -629,14 +690,37 @@ const PropertiesDetailsModel = ({
                 <h3 className="text-sm font-medium text-gray-500">Comments</h3>
 
                 {/* Add Comment Input */}
-                <div className="space-y-2">
+                <div className="relative space-y-2">
                   <textarea
                     value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
+                    onChange={(e) => handleCommentChange(e.target.value)}
                     className="w-full resize-none rounded-md border p-3"
                     rows={3}
                     placeholder="Add a comment... You can use @mentions"
                   />
+
+                  {/* Mention dropdown */}
+                  {showMentions && filteredUsers.length > 0 && (
+                    <div className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                      {filteredUsers.map((user) => (
+                        <div
+                          key={user.id}
+                          onClick={() => selectMention(user)}
+                          className="cursor-pointer px-3 py-2 hover:bg-gray-100"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-secondary">
+                              @{extractUsername(user.email)}
+                            </span>
+                            <span className="text-sm text-gray-500">
+                              ({user.email})
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="flex justify-end">
                     <Button
                       onClick={handleAddComment}
