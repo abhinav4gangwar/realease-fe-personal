@@ -34,6 +34,10 @@ const MobileDocumentListView = ({
     }
   }
 
+  if (documents.length === 0) {
+    return <div className='text-lg font-semibold'>No documents to show</div>
+  }
+
   return (
     <div className="space-y-6">
       {documents.map((document) => (

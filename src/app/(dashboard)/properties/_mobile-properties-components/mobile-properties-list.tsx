@@ -7,6 +7,9 @@ const MobilePropertiesList = ({
   selectedPropertyId,
   onPropertyInfo,
 }: PropertiesListViewProps) => {
+  if (properties.length === 0) {
+    return <div className='text-lg font-semibold'>No properties to show</div>
+  }
   return (
     <div className="space-y-6">
       {properties.map((property) => (
@@ -25,13 +28,12 @@ const MobilePropertiesList = ({
               </span>
             </div>
 
-            <div className="flex items-center pt-2 text-xs text-[#9B9B9D] gap-6">
+            <div className="flex items-center gap-6 pt-2 text-xs text-[#9B9B9D]">
               <div className="flex w-[100px] flex-1 items-center gap-2">
                 <MapPin className="size-4" />
                 <span className="truncate">{property.location}</span>
               </div>
 
-              
               <div className="flex w-[100px] items-center justify-end gap-2">
                 <Map className="size-4" />
                 <span className="truncate">{property.extent}</span>

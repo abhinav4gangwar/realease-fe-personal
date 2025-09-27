@@ -79,6 +79,8 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     city: '',
     state: '',
     coordinates: '',
+    latitude: '',
+    longitude: '',
     isDisputed: isDisputed,
     legalParties: '',
     caseNumber: '',
@@ -102,7 +104,8 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     const basicValidation =
       formData.country?.trim() !== '' &&
       formData.zipcode?.trim() !== '' &&
-      formData.coordinates?.trim() !== '' &&
+      formData.latitude?.trim() !== '' &&
+      formData.longitude?.trim() !== '' &&
       formData.extent?.trim() !== '' &&
       formData.valuePerSQ?.trim() !== '' &&
       formData.value?.trim() !== ''
@@ -142,7 +145,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     isValidZipcode,
   } = useLocationAutoFill({
     country: selectedCountry?.name || '',
-    zipcode: formData.zipcode,
+    zipcode: formData.zipcode || '',
     onLocationFound: (location) => {
       // Prevent infinite loops by checking if we're already auto-filling
       if (isAutoFilling || lastAutoFilledZipcode === formData.zipcode) {
@@ -150,7 +153,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
       }
 
       setIsAutoFilling(true)
-      setLastAutoFilledZipcode(formData.zipcode)
+      setLastAutoFilledZipcode(formData.zipcode || '')
 
       console.log('🎯 Location found:', location)
       console.log('🏁 Current selected country:', selectedCountry?.name)
@@ -202,11 +205,17 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
 
       // Auto-fill coordinates if available
       if (location.latitude && location.longitude) {
+        console.log('📍 Auto-filling latitude:', location.latitude)
+        updateFormData('latitude', location.latitude.toString())
+        
+        console.log('📍 Auto-filling longitude:', location.longitude)
+        updateFormData('longitude', location.longitude.toString())
+        
+        // Keep coordinates field for backward compatibility (combining lat,lng)
         const coordinateString = formatCoordinates(
-          location.latitude,
-          location.longitude
+          location.latitude.toString(),
+          location.longitude.toString()
         )
-        console.log('📍 Auto-filling coordinates:', coordinateString)
         updateFormData('coordinates', coordinateString)
       }
 
@@ -333,6 +342,8 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
       city: '',
       state: '',
       coordinates: '',
+      latitude: '',
+      longitude: '',
       isDisputed: isDisputed,
       legalParties: '',
       caseNumber: '',
@@ -363,9 +374,8 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
         {}
       )
 
-      // Parse coordinates into separate latitude and longitude
-      const parsedCoordinates = parseCoordinates(formData.coordinates || '')
-
+      // Remove parsing since we now have separate latitude and longitude fields
+      
       const requestBody = {
         name: formData.name,
         type: formData.type,
@@ -378,9 +388,9 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
         district: formData.district,
         city: formData.city,
         state: formData.state,
-        // Send coordinates in the new format expected by backend
-        latitude: parsedCoordinates?.latitude || '',
-        longitude: parsedCoordinates?.longitude || '',
+        // Send coordinates as decimal numbers expected by backend
+        latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+        longitude: formData.longitude ? parseFloat(formData.longitude) : null,
         // Keep the original coordinates field for backward compatibility
         coordinates: formData.coordinates,
         isDisputed: isDisputed,
@@ -623,385 +633,372 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
             </div>
           </div>
         )
+      
 
       case 2:
-        return (
-          <div className="flex flex-col space-y-5 pb-20">
-            <p className="font-light">Fill in the Property details</p>
+  return (
+    <div className="flex flex-col space-y-5 pb-20">
+      <p className="font-light">Fill in the Property details</p>
 
-            {/* address */}
-            <div className="flex flex-col space-y-3">
-              <label className="text-md text-secondary block font-semibold">
-                Address <span className="text-primary">*</span>
+      {/* address */}
+      <div className="flex flex-col space-y-3">
+        <label className="text-md text-secondary block font-semibold">
+          Address <span className="text-primary">*</span>
+        </label>
+
+        <div className="rounded-lg border border-gray-400 p-4">
+          {/* Country + State */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col space-y-1">
+              <label className="text-md text-secondary block">
+                Country <span className="text-primary">*</span>
               </label>
-              <div className="rounded-lg border border-gray-400 p-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-md text-secondary block">
-                      Country <span className="text-primary">*</span>
-                    </label>
-                    <CountrySelect />
-                  </div>
+              <CountrySelect />
+            </div>
 
-                  <div className="flex flex-col">
-                    <label className="text-md text-secondary block pb-1">
-                      Zip-code <span className="text-primary">*</span>
-                    </label>
-                    <div className="relative">
-                      <Input
-                        type="text"
-                        value={formData.zipcode}
-                        onChange={(e) =>
-                          updateFormData('zipcode', e.target.value)
-                        }
-                        className={`w-full rounded-md border px-3 py-2 pr-10 ${
-                          locationError || (!isValidZipcode && formData.zipcode)
-                            ? 'border-red-300 focus:border-red-500'
-                            : isLocationLoading
-                              ? 'border-blue-300 focus:border-blue-500'
-                              : 'border-gray-300'
-                        }`}
-                        placeholder="Enter zip-code"
-                        required
-                      />
+            <div className="flex flex-col space-y-1">
+              <label className="text-md text-secondary block">
+                State
+              </label>
+              <Input
+                type="text"
+                value={formData.state}
+                onChange={(e) => updateFormData('state', e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                placeholder="Enter state"
+              />
+            </div>
+          </div>
 
-                      {/* Status Icon */}
-                      <div className="absolute top-1/2 right-3 -translate-y-1/2">
-                        {isLocationLoading && (
-                          <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                        )}
-                        {!isLocationLoading &&
-                          formData.zipcode &&
-                          isValidZipcode &&
-                          !locationError && (
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                          )}
-                        {(locationError ||
-                          (!isValidZipcode && formData.zipcode)) && (
-                          <AlertCircle className="h-4 w-4 text-red-500" />
-                        )}
-                      </div>
-                    </div>
+          {/* District + City + Zip */}
+          <div className="grid grid-cols-3 gap-3 py-3">
+            <div className="flex flex-col space-y-1">
+              <label className="text-md text-secondary block">District</label>
+              <Input
+                type="text"
+                value={formData.district}
+                onChange={(e) => updateFormData('district', e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                placeholder="-"
+              />
+            </div>
 
-                    {/* Status Messages */}
-                    {!isValidZipcode && formData.zipcode && (
-                      <p className="text-xs text-red-500">
-                        Invalid zipcode format for{' '}
-                        {selectedCountry?.name || 'selected country'}
-                      </p>
-                    )}
-                    {locationError && (
-                      <p className="text-xs text-red-500">{locationError}</p>
-                    )}
-                    {isLocationLoading && (
-                      <p className="text-xs text-blue-600">
-                        🔍 Looking up location...
-                      </p>
-                    )}
-                  </div>
-                </div>
+            <div className="flex flex-col space-y-1">
+              <label className="text-md text-secondary block">City</label>
+              <Input
+                type="text"
+                value={formData.city}
+                onChange={(e) => updateFormData('city', e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                placeholder="Enter city"
+              />
+            </div>
 
-                <div className="grid grid-cols-3 gap-3 py-3">
+            <div className="flex flex-col space-y-1">
+              <label className="text-md text-secondary block">
+                Zip-code <span className="text-primary">*</span>
+              </label>
 
-
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-md text-secondary block">City</label>
-                    <Input
-                      type="text"
-                      placeholder="Enter city"
-                      value={formData.city || ''}
-                      onChange={(e) => updateFormData('city', e.target.value)}
-                      className="h-14"
-                    />
-                  </div>
-
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-md text-secondary block">District</label>
-                    <Input
-                      type="text"
-                      placeholder="Enter district"
-                      value={formData.district || ''}
-                      onChange={(e) => updateFormData('district', e.target.value)}
-                      className="h-14"
-                    />
-                  </div>
-
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-md text-secondary block">
-                      State
-                    </label>
-                    <Input
-                      type="text"
-                      placeholder="Enter state"
-                      value={formData.state || ''}
-                      onChange={(e) => updateFormData('state', e.target.value)}
-                      className="h-14"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-md text-secondary block">
-                      Address line 1
-                    </label>
-                    <Input
-                      type="text"
-                      value={formData.address}
-                      onChange={(e) =>
-                        updateFormData('address', e.target.value)
-                      }
-                      className="w-full rounded-md border border-gray-300 px-3 py-2"
-                      placeholder="Enter details"
-                    />
-                  </div>
-
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-md text-secondary block">
-                      Locality
-                    </label>
-                    <Input
-                      type="text"
-                      value={formData.location}
-                      onChange={(e) =>
-                        updateFormData('location', e.target.value)
-                      }
-                      className="w-full rounded-md border border-gray-300 px-3 py-2"
-                      placeholder="Enter locality name"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* coordinates */}
-              <div className="flex flex-col space-y-3">
-                <label className="text-md text-secondary block font-semibold">
-                  Co-ordinates <span className="text-primary">*</span>
-                </label>
-
-                <div className="flex flex-col space-y-1">
-                  <Input
-                    type="text"
-                    value={formData.coordinates}
-                    onChange={(e) =>
-                      updateFormData('coordinates', e.target.value)
-                    }
-                    className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                    placeholder="Latitude, Longitude (e.g., 32.7767, -96.797)"
-                  />
-                  <p className="text-xs text-gray-500">
-                    Enter coordinates as "latitude, longitude" or they will be
-                    auto-filled from zipcode
-                  </p>
-                </div>
-              </div>
-              {/* legal status */}
-              <div className="flex flex-col space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-md text-secondary block font-semibold">
-                    Legal Status <span className="text-primary">*</span>
-                  </label>
-
-                  <div className="flex rounded-4xl bg-[#F2F2F2] text-sm">
-                    <div
-                      className={`${!isDisputed ? 'bg-secondary text-white' : 'bg-transparent text-black'} cursor-pointer rounded-4xl px-4 py-2`}
-                      onClick={() => setIsDisputed(false)}
-                    >
-                      Undisputed
-                    </div>
-                    <div
-                      className={`${isDisputed ? 'bg-secondary text-white' : 'bg-transparent text-black'} cursor-pointer rounded-4xl px-4 py-2`}
-                      onClick={() => setIsDisputed(true)}
-                    >
-                      Disputed
-                    </div>
-                  </div>
-                </div>
-
-                {isDisputed && (
-                  <div className="rounded-lg bg-[#F2F2F2] p-4">
-                    <label className="text-md text-secondary block pb-5 font-semibold">
-                      Legal Details <span className="text-primary">*</span>
-                    </label>
-
-                    <div className="flex flex-col space-y-1 pb-3">
-                      <label className="text-md text-secondary block">
-                        Parties <span className="text-primary">*</span>
-                      </label>
-                      <Input
-                        type="text"
-                        value={formData.legalParties}
-                        onChange={(e) =>
-                          updateFormData('legalParties', e.target.value)
-                        }
-                        className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                        placeholder="Parties"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="flex flex-col space-y-1">
-                        <label className="text-md text-secondary block">
-                          Case Number
-                        </label>
-                        <Input
-                          type="text"
-                          value={formData.caseNumber}
-                          onChange={(e) =>
-                            updateFormData('caseNumber', e.target.value)
-                          }
-                          className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                          placeholder="Enter details"
-                        />
-                      </div>
-
-                      <div className="flex flex-col space-y-1">
-                        <label className="text-md text-secondary block">
-                          Case Status <span className="text-primary">*</span>
-                        </label>
-                        <Input
-                          type="text"
-                          value={formData.nextHearing}
-                          onChange={(e) =>
-                            updateFormData('nextHearing', e.target.value)
-                          }
-                          className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                          placeholder="Select Status"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex flex-col space-y-1 py-3">
-                      <label className="text-md text-secondary block">
-                        Case Type
-                      </label>
-                      <Input
-                        type="text"
-                        value={formData.caseType}
-                        onChange={(e) =>
-                          updateFormData('caseType', e.target.value)
-                        }
-                        className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                        placeholder="Enter details"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* {extent} */}
-              <div className="flex flex-col space-y-3">
-                <label className="text-md text-secondary block font-semibold">
-                  Extent <span className="text-primary">*</span>
-                </label>
+              <div className="relative">
                 <Input
                   type="text"
-                  value={formData.extent}
-                  onChange={(e) => updateFormData('extent', e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2"
-                  placeholder="Enter value (acres)"
+                  value={formData.zipcode}
+                  onChange={(e) => updateFormData('zipcode', e.target.value)}
+                  className={`w-full rounded-md border px-3 py-2 pr-10 ${
+                    locationError || (!isValidZipcode && formData.zipcode)
+                      ? 'border-red-300 focus:border-red-500'
+                      : isLocationLoading
+                      ? 'border-blue-300 focus:border-blue-500'
+                      : 'border-gray-300'
+                  }`}
+                  placeholder="Enter zip-code"
                   required
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {isLocationLoading && (
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                  )}
+                  {!isLocationLoading && formData.zipcode && isValidZipcode && !locationError && (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  )}
+                  {(locationError || (!isValidZipcode && formData.zipcode)) && (
+                    <AlertCircle className="h-4 w-4 text-red-500" />
+                  )}
+                </div>
+              </div>
+
+              {!isValidZipcode && formData.zipcode && (
+                <p className="text-xs text-red-500">
+                  Invalid zipcode format for {selectedCountry?.name || 'selected country'}
+                </p>
+              )}
+              {locationError && (
+                <p className="text-xs text-red-500">{locationError}</p>
+              )}
+              {isLocationLoading && (
+                <p className="text-xs text-blue-600">🔍 Looking up location...</p>
+              )}
+            </div>
+          </div>
+
+          {/* Address line + Locality */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col space-y-1">
+              <label className="text-md text-secondary block">Address line 1</label>
+              <Input
+                type="text"
+                value={formData.address}
+                onChange={(e) => updateFormData('address', e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                placeholder="Enter details"
+              />
+            </div>
+
+            <div className="flex flex-col space-y-1">
+              <label className="text-md text-secondary block">Locality</label>
+              <Input
+                type="text"
+                value={formData.location}
+                onChange={(e) => updateFormData('location', e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                placeholder="Enter locality name"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* coordinates */}
+      <div className="flex flex-col space-y-3">
+        <label className="text-md text-secondary block font-semibold">
+          Co-ordinates <span className="text-primary">*</span>
+        </label>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Latitude */}
+          <div className="flex flex-col space-y-1">
+            <label className="text-sm text-gray-600">Latitude</label>
+            <Input
+              type="number"
+              step="any"
+              value={formData.latitude}
+              onChange={(e) => {
+                updateFormData('latitude', e.target.value)
+                // Update coordinates field for backward compatibility
+                if (e.target.value && formData.longitude) {
+                  const coordinateString = formatCoordinates(e.target.value, formData.longitude)
+                  updateFormData('coordinates', coordinateString)
+                }
+              }}
+              className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+              placeholder="e.g., 32.7767"
+            />
+          </div>
+
+          {/* Longitude */}
+          <div className="flex flex-col space-y-1">
+            <label className="text-sm text-gray-600">Longitude</label>
+            <Input
+              type="number"
+              step="any"
+              value={formData.longitude}
+              onChange={(e) => {
+                updateFormData('longitude', e.target.value)
+                // Update coordinates field for backward compatibility
+                if (formData.latitude && e.target.value) {
+                  const coordinateString = formatCoordinates(formData.latitude, e.target.value)
+                  updateFormData('coordinates', coordinateString)
+                }
+              }}
+              className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+              placeholder="e.g., -96.797"
+            />
+          </div>
+        </div>
+        
+        <p className="text-xs text-gray-500">
+          Enter latitude and longitude as decimal numbers, or they will be auto-filled from location
+        </p>
+      </div>
+
+      {/* legal status */}
+      <div className="flex flex-col space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="text-md text-secondary block font-semibold">
+            Legal Status <span className="text-primary">*</span>
+          </label>
+
+          <div className="flex rounded-4xl bg-[#F2F2F2] text-sm">
+            <div
+              className={`${!isDisputed ? 'bg-secondary text-white' : 'bg-transparent text-black'} cursor-pointer rounded-4xl px-4 py-2`}
+              onClick={() => setIsDisputed(false)}
+            >
+              Undisputed
+            </div>
+            <div
+              className={`${isDisputed ? 'bg-secondary text-white' : 'bg-transparent text-black'} cursor-pointer rounded-4xl px-4 py-2`}
+              onClick={() => setIsDisputed(true)}
+            >
+              Disputed
+            </div>
+          </div>
+        </div>
+
+        {isDisputed && (
+          <div className="rounded-lg bg-[#F2F2F2] p-4">
+            <label className="text-md text-secondary block pb-5 font-semibold">
+              Legal Details <span className="text-primary">*</span>
+            </label>
+
+            <div className="flex flex-col space-y-1 pb-3">
+              <label className="text-md text-secondary block">
+                Parties <span className="text-primary">*</span>
+              </label>
+              <Input
+                type="text"
+                value={formData.legalParties}
+                onChange={(e) => updateFormData('legalParties', e.target.value)}
+                className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+                placeholder="Parties"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col space-y-1">
+                <label className="text-md text-secondary block">Case Number</label>
+                <Input
+                  type="text"
+                  value={formData.caseNumber}
+                  onChange={(e) => updateFormData('caseNumber', e.target.value)}
+                  className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+                  placeholder="Enter details"
                 />
               </div>
 
-              {/* value */}
-              <div className="flex flex-col space-y-3">
-                <div className="flex flex-col space-y-3">
-                  <label className="text-md text-secondary block font-semibold">
-                    Land value per acre <span className="text-primary">*</span>
-                  </label>
-                  <Input
-                    type="text"
-                    value={formData.valuePerSQ}
-                    onChange={(e) =>
-                      updateFormData('valuePerSQ', e.target.value)
-                    }
-                    className="w-full rounded-md border border-gray-300 px-3 py-2"
-                    placeholder="00.00"
-                    required
-                  />
-                </div>
-
-                <div className="flex flex-col space-y-3">
-                  <label className="text-md text-secondary block font-semibold">
-                    Land value <span className="text-primary">*</span>
-                  </label>
-                  <Input
-                    type="text"
-                    value={formData.value}
-                    onChange={(e) => updateFormData('value', e.target.value)}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2"
-                    placeholder="00.00"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Custom Fields Section */}
-              <div className="flex flex-col space-y-3">
-                {/* Existing custom fields */}
-                {customFields.map((field) => (
-                  <div
-                    key={field.id}
-                    className="flex flex-col space-y-3 rounded-md bg-[#F8F8F8] p-4"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="mr-3 flex flex-1 flex-col space-y-1">
-                        <label className="text-md text-secondary block font-semibold">
-                          Field Label
-                        </label>
-                        <Input
-                          type="text"
-                          value={field.label}
-                          onChange={(e) =>
-                            updateCustomField(field.id, 'label', e.target.value)
-                          }
-                          className="w-full rounded-md border border-gray-300 px-3 py-2"
-                          placeholder="Enter field label"
-                        />
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeCustomField(field.id)}
-                        className="text-primary mt-6 cursor-pointer"
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </div>
-                    <div className="flex flex-col space-y-1">
-                      <label className="text-md text-secondary block font-semibold">
-                        Value
-                      </label>
-                      <Input
-                        type="text"
-                        value={field.value}
-                        onChange={(e) =>
-                          updateCustomField(field.id, 'value', e.target.value)
-                        }
-                        className="w-full rounded-md border border-gray-300 px-3 py-2"
-                        placeholder="Enter value"
-                      />
-                    </div>
-                  </div>
-                ))}
-
-                {/* Add more information button */}
-                <div className="flex flex-col space-y-1">
-                  <div
-                    className="flex cursor-pointer justify-between rounded-md bg-[#F2F2F2] p-3 transition-colors hover:bg-[#E8E8E8]"
-                    onClick={addCustomField}
-                  >
-                    <p className="text-secondary font-semibold">
-                      Add more information
-                    </p>
-                    <PlusIcon className="size-5" />
-                  </div>
-                </div>
+              <div className="flex flex-col space-y-1">
+                <label className="text-md text-secondary block">
+                  Case Status <span className="text-primary">*</span>
+                </label>
+                <Input
+                  type="text"
+                  value={formData.nextHearing}
+                  onChange={(e) => updateFormData('nextHearing', e.target.value)}
+                  className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+                  placeholder="Select Status"
+                />
               </div>
             </div>
-          </div>
-        )
 
+            <div className="flex flex-col space-y-1 py-3">
+              <label className="text-md text-secondary block">Case Type</label>
+              <Input
+                type="text"
+                value={formData.caseType}
+                onChange={(e) => updateFormData('caseType', e.target.value)}
+                className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+                placeholder="Enter details"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* extent */}
+      <div className="flex flex-col space-y-3">
+        <label className="text-md text-secondary block font-semibold">
+          Extent <span className="text-primary">*</span>
+        </label>
+        <Input
+          type="text"
+          value={formData.extent}
+          onChange={(e) => updateFormData('extent', e.target.value)}
+          className="w-full rounded-md border border-gray-300 px-3 py-2"
+          placeholder="Enter value (acres)"
+          required
+        />
+      </div>
+
+      {/* values */}
+      <div className="flex flex-col space-y-3">
+        <div className="flex flex-col space-y-3">
+          <label className="text-md text-secondary block font-semibold">
+            Land value per acre <span className="text-primary">*</span>
+          </label>
+          <Input
+            type="text"
+            value={formData.valuePerSQ}
+            onChange={(e) => updateFormData('valuePerSQ', e.target.value)}
+            className="w-full rounded-md border border-gray-300 px-3 py-2"
+            placeholder="00.00"
+            required
+          />
+        </div>
+
+        <div className="flex flex-col space-y-3">
+          <label className="text-md text-secondary block font-semibold">
+            Land value <span className="text-primary">*</span>
+          </label>
+          <Input
+            type="text"
+            value={formData.value}
+            onChange={(e) => updateFormData('value', e.target.value)}
+            className="w-full rounded-md border border-gray-300 px-3 py-2"
+            placeholder="00.00"
+            required
+          />
+        </div>
+      </div>
+
+      {/* Custom Fields */}
+      <div className="flex flex-col space-y-3">
+        {customFields.map((field) => (
+          <div key={field.id} className="flex flex-col space-y-3 rounded-md bg-[#F8F8F8] p-4">
+            <div className="flex items-center justify-between">
+              <div className="mr-3 flex flex-1 flex-col space-y-1">
+                <label className="text-md text-secondary block font-semibold">Field Label</label>
+                <Input
+                  type="text"
+                  value={field.label}
+                  onChange={(e) => updateCustomField(field.id, 'label', e.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2"
+                  placeholder="Enter field label"
+                />
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => removeCustomField(field.id)}
+                className="text-primary mt-6 cursor-pointer"
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            </div>
+
+            <div className="flex flex-col space-y-1">
+              <label className="text-md text-secondary block font-semibold">Value</label>
+              <Input
+                type="text"
+                value={field.value}
+                onChange={(e) => updateCustomField(field.id, 'value', e.target.value)}
+                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                placeholder="Enter value"
+              />
+            </div>
+          </div>
+        ))}
+
+        <div
+          className="flex cursor-pointer justify-between rounded-md bg-[#F2F2F2] p-3 transition-colors hover:bg-[#E8E8E8]"
+          onClick={addCustomField}
+        >
+          <p className="text-secondary font-semibold">Add more information</p>
+          <PlusIcon className="size-5" />
+        </div>
+      </div>
+    </div>
+  )
+
+      
       case 3:
         return (
           <div>

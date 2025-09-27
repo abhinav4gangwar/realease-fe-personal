@@ -365,6 +365,26 @@ const PropertiesViewer = ({
     }
   }
 
+  if (allProperties.length === 0) {
+    return (
+      <div className="flex items-center justify-center rounded-lg border border-gray-300 bg-white p-20">
+        <div>
+          <h1 className="text-secondary text-3xl">No Properties Added Yet</h1>
+          <p className="text-primary py-4 text-center text-lg">
+            Add a new property
+          </p>
+          <div className="flex items-center justify-center">
+            <PropertiesAddButton onAddSelect={handleAddSelect} />
+          </div>
+        </div>
+        <CreatePropertyModal
+          isOpen={isCreatePropertyModalOpen}
+          onClose={handleCreatePropertyClose}
+        />
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="flex justify-between pb-4">

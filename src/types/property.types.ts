@@ -27,6 +27,8 @@ export interface Properties {
   city?: string
   zipcode?: string
   coordinates?: string
+  latitude?: string
+  longitude?: string
   valuePerSQ?: string
   additionalDetails?: Record<string, any>
   documents?: uploadedDocuments[]
@@ -81,4 +83,31 @@ export interface CityType {
   name: string
   stateCode: string
   countryCode: string
+}
+
+export interface Comment {
+  id: number
+  propertyId: number
+  parentId: number
+  deleted: boolean
+  mentions: Array<{
+    name: string
+    email: string
+    userId: number
+    userType: string
+    mentionText: string
+  }>
+  author: number
+  text: string
+  createdAt: string
+  updatedAt: string
+  children?: Comment[]
+}
+
+export interface SharedUser {
+  id: number
+  email: string
+  sharedAt: string
+  expiresAt: string
+  isExpired: boolean
 }

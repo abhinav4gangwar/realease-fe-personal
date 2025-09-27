@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { ChevronRight, Download, MessageSquare } from 'lucide-react'
 import Image from 'next/image'
 import { HiShare } from 'react-icons/hi2'
-import { isImageFile } from '../doc_utils'
+import { getInitialScale, isImageFile } from '../doc_utils'
 import { CommentService } from '../doc_utils/comment.services'
 import { Annotation } from './comment-components/annotation'
 import { CommentMarker } from './comment-components/comment-marker'
@@ -61,7 +61,7 @@ export function UnifiedDocumentViewer({
   const [documentUrl, setDocumentUrl] = useState<string | null>(null)
   const [documentType, setDocumentType] = useState<'pdf' | 'image' | null>(null)
   const [numPages, setNumPages] = useState<number | null>(null)
-  const [scale, setScale] = useState<number>(1.2)
+  const [scale, setScale] = useState<number>(getInitialScale())
   const [isLoading, setIsLoading] = useState<boolean>(false)
 
   // Comment and annotation state
@@ -93,9 +93,9 @@ export function UnifiedDocumentViewer({
     y: number
   }>({ x: 0, y: 0 })
   const [editingComment, setEditingComment] = useState<Comment | null>(null)
-  
+
   // Sidebar state
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true)
 
   // Refs
   const pageRef = useRef<HTMLDivElement>(null)
@@ -134,6 +134,7 @@ export function UnifiedDocumentViewer({
 
       if (isImage) {
         setDocumentType('image')
+        setScale(getInitialScale())
         // For images, get the original file
         const response = await apiClient.get(
           `/dashboard/documents/view/${document.id}?original=true`,
@@ -188,20 +189,23 @@ export function UnifiedDocumentViewer({
   }
 
   const loadUsers = async () => {
-      if (!document || !apiClient) return
-  
-      setIsLoadingUsers(true)
-      try {
-        const fetchedUsers = await getUsers(Number.parseInt(document.id), apiClient)
-        setUsers(fetchedUsers || [])
-      } catch (error) {
-        console.error("Error loading users:", error)
-        toast.error("Failed to load users")
-        setUsers([])
-      } finally {
-        setIsLoadingUsers(false)
-      }
+    if (!document || !apiClient) return
+
+    setIsLoadingUsers(true)
+    try {
+      const fetchedUsers = await getUsers(
+        Number.parseInt(document.id),
+        apiClient
+      )
+      setUsers(fetchedUsers || [])
+    } catch (error) {
+      console.error('Error loading users:', error)
+      toast.error('Failed to load users')
+      setUsers([])
+    } finally {
+      setIsLoadingUsers(false)
     }
+  }
 
   // Handle text selection for PDFs
   const handleMouseUp = (e: MouseEvent): void => {
@@ -550,19 +554,24 @@ export function UnifiedDocumentViewer({
   ]
 
   const getUserById = (userId: number) => {
-    return users.find(user => user.id === userId)
+    return users.find((user) => user.id === userId)
+  }
+
+  const handlePreviewClose = () => {
+    onClose()
+    setIsSidebarOpen(true)
   }
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50">
-      <div className="bg-secondary flex h-full w-full max-w-7xl shadow-xl">
+      <div className="bg-secondary flex h-full w-full shadow-xl">
         {/* Header */}
-        <div className="flex flex-col flex-1">
+        <div className="flex flex-1 flex-col">
           <PDFHeader
             document={document}
             isLoadingComments={isLoadingComments}
             hasTextSelection={hasTextSelection}
-            onClose={onClose}
+            onClose={handlePreviewClose}
             onShareClick={onShareClick}
             onDownloadClick={onDownloadClick}
             onMoveClick={onMoveClick}
@@ -579,11 +588,9 @@ export function UnifiedDocumentViewer({
               onMouseUp={handleMouseUp}
               onClick={handleClick}
             >
-              
-
               {/* Zoom Controls - only show zoom for documents */}
               {documentUrl && (
-                <div className="zoom-controls fixed right-[47%] bottom-6 z-30 flex items-center gap-1 rounded-lg bg-[#9B9B9D] p-1 text-white shadow-lg">
+                <div className="zoom-controls fixed right-[47%] bottom-6 z-30 hidden items-center gap-1 rounded-lg bg-[#9B9B9D] p-1 text-white shadow-lg lg:flex">
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
@@ -602,7 +609,7 @@ export function UnifiedDocumentViewer({
                       e.stopPropagation()
                       zoomIn()
                     }}
-                    disabled={scale >= 3.0}
+                    disabled={scale >= 2}
                     className="h-8 w-8 rounded p-0 hover:bg-white/20 disabled:opacity-50"
                   >
                     <span className="text-sm">+</span>
@@ -625,7 +632,9 @@ export function UnifiedDocumentViewer({
                       onLoadSuccess={onDocumentLoadSuccess}
                       onLoadError={console.error}
                       loading={
-                        <div className="p-8 text-center">Loading document...</div>
+                        <div className="p-8 text-center">
+                          Loading document...
+                        </div>
                       }
                     >
                       <div ref={pageRef} className="space-y-4">
@@ -666,11 +675,16 @@ export function UnifiedDocumentViewer({
                               {/* Comment markers */}
                               <div className="absolute top-0 left-0 h-full w-full">
                                 {pageComments.map((comment) => (
-                                  <div key={comment.id} className="comment-marker">
+                                  <div
+                                    key={comment.id}
+                                    className="comment-marker"
+                                  >
                                     <CommentMarker
                                       comment={comment}
                                       users={users}
-                                      onClick={() => setActiveCommentId(comment.id)}
+                                      onClick={() =>
+                                        setActiveCommentId(comment.id)
+                                      }
                                       onEdit={() => handleCommentEdit(comment)}
                                       onDelete={() =>
                                         handleCommentDelete(comment.id)
@@ -678,7 +692,9 @@ export function UnifiedDocumentViewer({
                                       onReply={handleReply}
                                       onEditReply={handleEditReply}
                                       onDeleteReply={handleDeleteReply}
-                                      isDeleting={deletingCommentId === comment.id}
+                                      isDeleting={
+                                        deletingCommentId === comment.id
+                                      }
                                       isActive={activeCommentId === comment.id}
                                       isReplying={
                                         replyingToCommentId === comment.id
@@ -700,7 +716,10 @@ export function UnifiedDocumentViewer({
                       ref={imageContainerRef}
                       className="flex h-full w-full items-center justify-center"
                     >
-                      <div ref={imageRef} className="relative bg-white shadow-lg">
+                      <div
+                        ref={imageRef}
+                        className="relative bg-white shadow-lg"
+                      >
                         <img
                           src={documentUrl}
                           alt={document?.name || 'Document'}
@@ -775,7 +794,8 @@ export function UnifiedDocumentViewer({
                           }
                         }}
                       >
-                        Download file <Download className="text-primary h-3 w-3" />
+                        Download file{' '}
+                        <Download className="text-primary h-3 w-3" />
                       </Button>
                       <Button
                         className="flex h-12 w-[200px] cursor-pointer items-center justify-center bg-white px-6 text-lg font-semibold text-black hover:bg-white"
@@ -795,9 +815,11 @@ export function UnifiedDocumentViewer({
             </div>
 
             {/* Comments Sidebar */}
-            <div className={`bg-white border-l border-gray-200 transition-all duration-300 ${
-              isSidebarOpen ? 'w-80' : 'w-0'
-            } overflow-hidden`}>
+            <div
+              className={`border-l border-gray-200 bg-white transition-all duration-300 ${
+                isSidebarOpen ? 'w-80' : 'w-0'
+              } hidden overflow-hidden lg:block`}
+            >
               {isSidebarOpen && (
                 <div className="flex h-full flex-col">
                   {/* Sidebar Header */}
@@ -825,7 +847,8 @@ export function UnifiedDocumentViewer({
                       <div className="py-8 text-center">
                         <MessageSquare className="mx-auto h-12 w-12 text-gray-300" />
                         <p className="mt-2 text-sm text-gray-500">
-                          No comments yet. Select text or click to add a comment.
+                          No comments yet. Select text or click to add a
+                          comment.
                         </p>
                       </div>
                     ) : (
@@ -835,12 +858,14 @@ export function UnifiedDocumentViewer({
                           return (
                             <div
                               key={comment.id}
-                              className={`rounded-lg border p-3 transition-colors cursor-pointer ${
+                              className={`cursor-pointer rounded-lg border p-3 transition-colors ${
                                 activeCommentId === comment.id
                                   ? 'border-blue-500 bg-blue-50'
                                   : 'border-gray-200 hover:bg-gray-50'
                               }`}
-                              onClick={() => handleSidebarCommentClick(comment.id)}
+                              onClick={() =>
+                                handleSidebarCommentClick(comment.id)
+                              }
                             >
                               {/* Comment Header */}
                               <div className="mb-2 flex items-center justify-between">
@@ -858,7 +883,7 @@ export function UnifiedDocumentViewer({
                               </div>
 
                               {/* Comment Text */}
-                              <p className="text-sm text-gray-800 line-clamp-3">
+                              <p className="line-clamp-3 text-sm text-gray-800">
                                 {comment.text}
                               </p>
 
@@ -881,54 +906,68 @@ export function UnifiedDocumentViewer({
                                   className="hover:text-red-600"
                                   disabled={deletingCommentId === comment.id}
                                 >
-                                  {deletingCommentId === comment.id ? 'Deleting...' : 'Delete'}
+                                  {deletingCommentId === comment.id
+                                    ? 'Deleting...'
+                                    : 'Delete'}
                                 </button>
                               </div>
 
                               {/* Replies */}
-                              {comment.children && comment.children.length > 0 && (
-                                <div className="mt-3 space-y-2 border-l-2 border-gray-200 pl-3">
-                                  {comment.children.map((reply) => {
-                                    const replyUser = getUserById(reply.userId)
-                                    return (
-                                      <div key={reply.id} className="rounded bg-gray-50 p-2">
-                                        <div className="mb-1 flex items-center gap-2">
-                                          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold text-gray-600">
-                                            {replyUser?.name?.[0]?.toUpperCase() || '?'}
+                              {comment.children &&
+                                comment.children.length > 0 && (
+                                  <div className="mt-3 space-y-2 border-l-2 border-gray-200 pl-3">
+                                    {comment.children.map((reply) => {
+                                      const replyUser = getUserById(
+                                        reply.userId
+                                      )
+                                      return (
+                                        <div
+                                          key={reply.id}
+                                          className="rounded bg-gray-50 p-2"
+                                        >
+                                          <div className="mb-1 flex items-center gap-2">
+                                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold text-gray-600">
+                                              {replyUser?.name?.[0]?.toUpperCase() ||
+                                                '?'}
+                                            </div>
+                                            <span className="text-xs font-medium text-gray-600">
+                                              {replyUser?.name ||
+                                                'Unknown User'}
+                                            </span>
                                           </div>
-                                          <span className="text-xs font-medium text-gray-600">
-                                            {replyUser?.name || 'Unknown User'}
-                                          </span>
+                                          <p className="text-xs text-gray-700">
+                                            {reply.text}
+                                          </p>
+                                          <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                handleEditReply(reply)
+                                              }}
+                                              className="hover:text-blue-600"
+                                            >
+                                              Edit
+                                            </button>
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                handleDeleteReply(reply.id)
+                                              }}
+                                              className="hover:text-red-600"
+                                              disabled={
+                                                deletingReplyId === reply.id
+                                              }
+                                            >
+                                              {deletingReplyId === reply.id
+                                                ? 'Deleting...'
+                                                : 'Delete'}
+                                            </button>
+                                          </div>
                                         </div>
-                                        <p className="text-xs text-gray-700">
-                                          {reply.text}
-                                        </p>
-                                        <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation()
-                                              handleEditReply(reply)
-                                            }}
-                                            className="hover:text-blue-600"
-                                          >
-                                            Edit
-                                          </button>
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation()
-                                              handleDeleteReply(reply.id)
-                                            }}
-                                            className="hover:text-red-600"
-                                            disabled={deletingReplyId === reply.id}
-                                          >
-                                            {deletingReplyId === reply.id ? 'Deleting...' : 'Delete'}
-                                          </button>
-                                        </div>
-                                      </div>
-                                    )
-                                  })}
-                                </div>
-                              )}
+                                      )
+                                    })}
+                                  </div>
+                                )}
                             </div>
                           )
                         })}
