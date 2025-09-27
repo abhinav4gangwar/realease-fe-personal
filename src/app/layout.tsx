@@ -1,5 +1,6 @@
 import { Toaster } from '@/components/ui/sonner'
 import { SearchProvider } from '@/providers/doc-search-context'
+import { GlobalContextProvider } from '@/providers/global-context'
 import { PropertySearchProvider } from '@/providers/property-search-context'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
@@ -59,12 +60,14 @@ export default function RootLayout({
       </head>
       <body className="bg-gray-50 font-sans text-gray-900 antialiased">
         <div id="root">
-          <SearchProvider>
-            <PropertySearchProvider>
-              {children}
-              <Toaster />
-            </PropertySearchProvider>
-          </SearchProvider>
+          <GlobalContextProvider>
+            <SearchProvider>
+              <PropertySearchProvider>
+                {children}
+                <Toaster />
+              </PropertySearchProvider>
+            </SearchProvider>
+          </GlobalContextProvider>
         </div>
       </body>
     </html>
