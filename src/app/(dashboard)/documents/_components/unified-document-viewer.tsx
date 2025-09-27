@@ -563,7 +563,7 @@ export function UnifiedDocumentViewer({
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50">
-      <div className="bg-secondary flex h-full w-full max-w-7xl shadow-xl">
+      <div className="bg-secondary flex h-full w-full min-w-7xl shadow-xl">
         {/* Header */}
         <div className="flex flex-1 flex-col">
           <PDFHeader
@@ -608,7 +608,7 @@ export function UnifiedDocumentViewer({
                       e.stopPropagation()
                       zoomIn()
                     }}
-                    disabled={scale >= 3.0}
+                    disabled={scale >= 2}
                     className="h-8 w-8 rounded p-0 hover:bg-white/20 disabled:opacity-50"
                   >
                     <span className="text-sm">+</span>

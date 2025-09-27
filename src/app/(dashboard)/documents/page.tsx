@@ -61,7 +61,7 @@ const Documentspage = () => {
       icon:
         item.type === 'folder'
           ? 'folder'
-          : getFileTypeFromMimeType(item.mimeType),
+          : getFileTypeFromMimeType(item.mimeType, item.name),
       linkedProperty: item.linkedProperty || 'No Property',
       dateAdded: formatDate(item.modifiedOn),
       dateModified: formatDate(item.modifiedOn),
@@ -78,12 +78,17 @@ const Documentspage = () => {
   }
 
   const getFileTypeFromMimeType = (mimeType: string, fileName?: string) => {
-    if (!mimeType) return 'file'
+    if (!mimeType && !fileName) return 'file'
 
-    // Use our utility function to get user-friendly file type
+    if (fileName) {
+      const extension = fileName.split('.').pop()?.toLowerCase()
+      if (extension === 'kml') {
+        return 'kml'
+      }
+    }
+
     const friendlyType = getFileTypeFromMime(mimeType, fileName)
 
-    // Map friendly types back to icon types for FileIcon component
     const iconTypeMap: Record<string, string> = {
       PDF: 'pdf',
       'Word Document': 'word',
@@ -118,7 +123,6 @@ const Documentspage = () => {
     })
   }
 
-
   const transformedDocuments = transformApiResponse(fetchedDocuments)
   const transformedSearchResponse = transformApiResponse(
     searchResults?.documents
@@ -138,11 +142,10 @@ const Documentspage = () => {
     clearSearchResults()
   }
 
-
   return (
     <div>
       {isSearchActive && searchResults && (
-        <div className="lg:mb-4 flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-4 mt-20 lg:mt-0">
+        <div className="mt-20 flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-4 lg:mt-0 lg:mb-4">
           <div className="flex items-center gap-2">
             <div className="text-sm font-medium text-blue-900">
               Search Results for {searchQuery}
@@ -171,7 +174,7 @@ const Documentspage = () => {
       </div>
 
       {/* for mobile */}
-      <div className={`block ${ searchResults ? ("pt-4") : ("pt-14")} lg:hidden`}>
+      <div className={`block ${searchResults ? 'pt-4' : 'pt-14'} lg:hidden`}>
         <MobileDocumentViewer // recentlyAccessed={documentsData.recentlyAccessed}
           allFiles={documentsToShow}
           apiClient={apiClient}
