@@ -1,6 +1,6 @@
 'use client'
 import { Button } from '@/components/ui/button'
-import { Properties } from '@/types/property.types'
+import { Comment, Properties, SharedUser } from '@/types/property.types'
 import { formatCoordinates } from '@/utils/coordinateUtils'
 import {
   Bell,
@@ -10,7 +10,7 @@ import {
   Reply,
   Send,
   Trash2,
-  X,
+  X
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { FileIcon } from '../../documents/_components/file-icon'
@@ -19,32 +19,13 @@ import MiniMap from './minimap'
 import { CustomField } from './properties-edit-model'
 
 import { apiClient } from '@/utils/api'
-import { toast } from 'sonner'; // Adjust import path as needed
+import { toast } from 'sonner'
 
 export interface PropertiesDetailsModelProps {
   property: Properties | null
   isOpen: boolean
   onClose: () => void
   onEditClick?: (property: Properties) => void
-}
-
-interface Comment {
-  id: number
-  propertyId: number
-  parentId: number
-  deleted: boolean
-  mentions: Array<{
-    name: string
-    email: string
-    userId: number
-    userType: string
-    mentionText: string
-  }>
-  author: number
-  text: string
-  createdAt: string
-  updatedAt: string
-  children?: Comment[]
 }
 
 const PropertiesDetailsModel = ({
@@ -59,6 +40,7 @@ const PropertiesDetailsModel = ({
 
   // Comment states
   const [comments, setComments] = useState<Comment[]>([])
+  const [sharedUsers, setSharedUsers] = useState<SharedUser[]>([])
   const [newComment, setNewComment] = useState('')
   const [isSubmittingComment, setIsSubmittingComment] = useState(false)
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null)
@@ -111,6 +93,20 @@ const PropertiesDetailsModel = ({
 
     // Fallback to existing coordinates field
     return property.coordinates || ''
+  }
+
+  //load users
+  const loadUsers = async () => {
+    if (!property?.id) return
+
+    try {
+      const response = await apiClient.get(
+        `/dashboard/properties/getUsers/${property.id}`
+      )
+      setSharedUsers(response.data.users)
+    } catch (error: any) {
+      toast.error(error)
+    }
   }
 
   // Load comments
@@ -381,6 +377,7 @@ const PropertiesDetailsModel = ({
     // Load comments when modal opens
     if (isOpen && property?.id) {
       loadComments()
+      loadUsers()
     }
   }, [property, isOpen])
 
@@ -682,6 +679,22 @@ const PropertiesDetailsModel = ({
                   )}
                 </div>
               </div>
+
+              {sharedUsers.length > 0 && (
+                <div className="flex w-full flex-col space-y-4 rounded-md bg-[#F2F2F2] px-3 py-2">
+                  <h3 className="text-sm font-medium text-gray-500">
+                    Shared with
+                  </h3>
+
+                  <div className="max-h-96 space-y-3 overflow-y-auto">
+                    {sharedUsers.map((user) => (
+                      <div key={user.id} className="flex">
+                        {user.email}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="bg-[#F2F2F2] shadow-md">
