@@ -5,19 +5,23 @@ import { toast } from 'sonner'
 // Utility function to check if a file is an image
 export const isImageFile = (document: Document): boolean => {
   if (!document.fileType) return false
-  return document.fileType.includes('image') ||
-         document.icon === 'img' ||
-         ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff'].some(ext =>
-           document.name.toLowerCase().endsWith(`.${ext}`)
-         )
+  return (
+    document.fileType.includes('image') ||
+    document.icon === 'img' ||
+    ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff'].some((ext) =>
+      document.name.toLowerCase().endsWith(`.${ext}`)
+    )
+  )
 }
 
 // Utility function to check if a file is a PDF
 export const isPdfFile = (document: Document): boolean => {
   if (!document.fileType) return false
-  return document.fileType.includes('pdf') ||
-         document.icon === 'pdf' ||
-         document.name.toLowerCase().endsWith('.pdf')
+  return (
+    document.fileType.includes('pdf') ||
+    document.icon === 'pdf' ||
+    document.name.toLowerCase().endsWith('.pdf')
+  )
 }
 
 export const getAllFolders = (documents: Document[]) => {
@@ -215,4 +219,11 @@ export const handleBulkDownload = async (
     toast.error(errorMessage)
     console.log(error)
   }
+}
+
+export const getInitialScale = () => {
+  if (typeof window !== 'undefined') {
+    return window.innerWidth < 1024 ? 0.6 : 1.2
+  }
+  return 1.2
 }

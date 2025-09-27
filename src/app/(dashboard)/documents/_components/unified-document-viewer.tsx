@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { ChevronRight, Download, MessageSquare } from 'lucide-react'
 import Image from 'next/image'
 import { HiShare } from 'react-icons/hi2'
-import { isImageFile } from '../doc_utils'
+import { getInitialScale, isImageFile } from '../doc_utils'
 import { CommentService } from '../doc_utils/comment.services'
 import { Annotation } from './comment-components/annotation'
 import { CommentMarker } from './comment-components/comment-marker'
@@ -61,7 +61,7 @@ export function UnifiedDocumentViewer({
   const [documentUrl, setDocumentUrl] = useState<string | null>(null)
   const [documentType, setDocumentType] = useState<'pdf' | 'image' | null>(null)
   const [numPages, setNumPages] = useState<number | null>(null)
-  const [scale, setScale] = useState<number>(1.2)
+  const [scale, setScale] = useState<number>(getInitialScale())
   const [isLoading, setIsLoading] = useState<boolean>(false)
 
   // Comment and annotation state
@@ -134,6 +134,7 @@ export function UnifiedDocumentViewer({
 
       if (isImage) {
         setDocumentType('image')
+        setScale(getInitialScale())
         // For images, get the original file
         const response = await apiClient.get(
           `/dashboard/documents/view/${document.id}?original=true`,
@@ -563,7 +564,7 @@ export function UnifiedDocumentViewer({
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50">
-      <div className="bg-secondary flex h-full w-full min-w-7xl shadow-xl">
+      <div className="bg-secondary flex h-full w-full shadow-xl">
         {/* Header */}
         <div className="flex flex-1 flex-col">
           <PDFHeader
@@ -589,7 +590,7 @@ export function UnifiedDocumentViewer({
             >
               {/* Zoom Controls - only show zoom for documents */}
               {documentUrl && (
-                <div className="zoom-controls fixed right-[47%] bottom-6 z-30 flex items-center gap-1 rounded-lg bg-[#9B9B9D] p-1 text-white shadow-lg">
+                <div className="zoom-controls fixed right-[47%] bottom-6 z-30 hidden items-center gap-1 rounded-lg bg-[#9B9B9D] p-1 text-white shadow-lg lg:flex">
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
@@ -817,7 +818,7 @@ export function UnifiedDocumentViewer({
             <div
               className={`border-l border-gray-200 bg-white transition-all duration-300 ${
                 isSidebarOpen ? 'w-80' : 'w-0'
-              } overflow-hidden`}
+              } hidden overflow-hidden lg:block`}
             >
               {isSidebarOpen && (
                 <div className="flex h-full flex-col">
