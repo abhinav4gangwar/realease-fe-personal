@@ -1,10 +1,17 @@
-"use client"
-import { Button } from "@/components/ui/button"
-import type { Document } from "@/types/document.types"
-import { Download, FolderInput, Info, Loader2, Pencil, Trash2 } from "lucide-react"
-import { useState } from "react"
-import { HiShare } from "react-icons/hi2"
-import { FileIcon } from "./file-icon"
+'use client'
+import { Button } from '@/components/ui/button'
+import type { Document } from '@/types/document.types'
+import {
+  Download,
+  FolderInput,
+  Info,
+  Loader2,
+  Pencil,
+  Trash2,
+} from 'lucide-react'
+import { useState } from 'react'
+import { HiShare } from 'react-icons/hi2'
+import { FileIcon } from './file-icon'
 
 interface DocumentListViewProps {
   documents: Document[]
@@ -22,7 +29,7 @@ interface DocumentListViewProps {
   onDownloadClick?: (document: Document) => void
   loadingFolders?: Set<string>
   onSelectAll?: () => void
-  selectAllState?: "none" | "some" | "all"
+  selectAllState?: 'none' | 'some' | 'all'
 }
 
 export function DocumentListView({
@@ -41,7 +48,7 @@ export function DocumentListView({
   onDownloadClick,
   loadingFolders = new Set(),
   onSelectAll,
-  selectAllState = "none",
+  selectAllState = 'none',
 }: DocumentListViewProps) {
   const [hoveredRow, setHoveredRow] = useState<string | null>(null)
 
@@ -56,18 +63,31 @@ export function DocumentListView({
     }
   }
 
+  if (documents.length === 0) {
+    return (
+      <div className="flex items-center justify-center rounded-lg border border-gray-300 bg-white p-20">
+        <div>
+          <h1 className="text-secondary text-3xl">No Documents Added Yet</h1>
+          <p className="text-primary py-4 text-center text-lg">
+            Add a new document
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-1">
       {/* Header */}
       <div className="text-md text-secondary grid grid-cols-13 gap-4 px-4 py-2 font-semibold">
-        <div className="col-span-5 flex gap-3 items-center">
+        <div className="col-span-5 flex items-center gap-3">
           <input
             type="checkbox"
             className="h-4 w-4 accent-[#f16969]"
-            checked={selectAllState === "all"}
+            checked={selectAllState === 'all'}
             ref={(el) => {
               if (el) {
-                el.indeterminate = selectAllState === "some"
+                el.indeterminate = selectAllState === 'some'
               }
             }}
             onChange={onSelectAll}
@@ -83,7 +103,9 @@ export function DocumentListView({
         <div
           key={document.id}
           className={`grid cursor-pointer grid-cols-13 items-center px-4 py-3 hover:rounded-md hover:bg-[#A2CFE333] ${
-            selectedDocumentId === document.id ? "border-blue-200 bg-blue-50" : ""
+            selectedDocumentId === document.id
+              ? 'border-blue-200 bg-blue-50'
+              : ''
           }`}
           onMouseEnter={() => setHoveredRow(document.id)}
           onMouseLeave={() => setHoveredRow(null)}
@@ -99,12 +121,20 @@ export function DocumentListView({
             />
             <div className="flex items-center gap-2">
               <FileIcon type={document.icon} />
-              {loadingFolders.has(document.id) && document.isFolder && <Loader2 className="h-4 w-4 animate-spin" />}
+              {loadingFolders.has(document.id) && document.isFolder && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
             </div>
-            <span className="truncate text-sm font-medium">{document.name}</span>
+            <span className="truncate text-sm font-medium">
+              {document.name}
+            </span>
           </div>
-          <div className="col-span-3 truncate text-left text-sm text-[#9B9B9D] pl-2">{document.linkedProperty}</div>
-          <div className="col-span-2 text-left text-sm text-[#9B9B9D] pl-2">{document.dateAdded}</div>
+          <div className="col-span-3 truncate pl-2 text-left text-sm text-[#9B9B9D]">
+            {document.linkedProperty}
+          </div>
+          <div className="col-span-2 pl-2 text-left text-sm text-[#9B9B9D]">
+            {document.dateAdded}
+          </div>
           <div className="col-span-2 truncate text-left text-sm text-[#9B9B9D]">
             {hoveredRow === document.id && !isShareMode ? (
               <div className="flex gap-1">

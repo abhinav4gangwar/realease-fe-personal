@@ -33,7 +33,15 @@ const TrashListView = ({
       onFolderClick(document)
     }
   }
-  console.log(documents)
+  if (documents.length === 0) {
+    return (
+      <div className="flex items-center justify-center rounded-lg border border-gray-300 bg-white p-20">
+        <div>
+          <h1 className="text-secondary text-3xl">Trash is Empty</h1>
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="space-y-1">
       <div className="text-md text-secondary grid grid-cols-13 gap-4 px-4 py-2 font-semibold">
