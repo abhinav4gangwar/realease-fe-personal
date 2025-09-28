@@ -1,4 +1,5 @@
 import AnalyticsBasicCard from '../_components/analytics-components/analytics-basic-card'
+import { AnalyticsChartCard } from '../_components/analytics-components/analytics-chart-card'
 import AnalyticsSTateToggle from '../_components/analytics-state-toggle'
 
 const AnalyticsTab = () => {
@@ -17,7 +18,7 @@ const AnalyticsTab = () => {
       </div>
 
       <div className="py-4 flex flex-col space-y-4">
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-3 gap-4">
           <AnalyticsBasicCard
             heading={'Total Number of Assets'}
             color={'secondary'}
@@ -46,8 +47,9 @@ const AnalyticsTab = () => {
 
 
         {/* charts */}
-        <div className="grid grid-cols-3 gap-6">
-          
+        <div className="grid grid-cols-2 gap-4">
+          <AnalyticsChartCard />
+          <AnalyticsChartCard />
         </div>
       </div>
     </div>
