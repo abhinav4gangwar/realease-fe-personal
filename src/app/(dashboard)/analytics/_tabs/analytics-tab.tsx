@@ -47,9 +47,10 @@ const AnalyticsTab = () => {
 
 
         {/* charts */}
-        <div className="grid grid-cols-2 gap-4">
-          <AnalyticsChartCard />
-          <AnalyticsChartCard />
+        <div className="grid grid-cols-3 gap-4">
+          <AnalyticsChartCard defaultChart='donut'/>
+          <AnalyticsChartCard defaultChart='pie'/>
+          <AnalyticsChartCard defaultChart='bar'/>
         </div>
       </div>
     </div>

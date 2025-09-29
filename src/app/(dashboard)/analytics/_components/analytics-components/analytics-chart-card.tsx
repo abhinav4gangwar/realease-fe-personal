@@ -3,34 +3,34 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-    Tooltip as Toltip,
-    TooltipContent,
-    TooltipTrigger,
+  Tooltip as Toltip,
+  TooltipContent,
+  TooltipTrigger,
 } from '@/components/ui/tooltip'
 import {
-    ChartColumnIncreasing,
-    ChartPie,
-    Circle,
-    EllipsisVertical,
-    Info,
+  ChartColumnIncreasing,
+  ChartPie,
+  Circle,
+  EllipsisVertical,
+  Info,
 } from 'lucide-react'
 import { useState } from 'react'
 import {
-    Bar,
-    BarChart,
-    Cell,
-    Pie,
-    PieChart,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis,
+  Bar,
+  BarChart,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from 'recharts'
 
 const assetData = [
@@ -40,8 +40,8 @@ const assetData = [
   { city: 'Delhi', percentage: 13, value: 130, color: '#5C9FAD' },
 ]
 
-export const AnalyticsChartCard = () => {
-  const [chartType, setChartType] = useState<'donut' | 'pie' | 'bar'>('donut')
+export const AnalyticsChartCard = ({defaultChart}: {defaultChart : string}) => {
+  const [chartType, setChartType] = useState(defaultChart)
 
   return (
     <Card className="w-full border-none">
@@ -125,8 +125,8 @@ export const AnalyticsChartCard = () => {
                     data={assetData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={100}
-                    outerRadius={140}
+                    innerRadius={70}
+                    outerRadius={90}
                     dataKey="value"
                   >
                     {assetData.map((entry, index) => (
@@ -142,7 +142,7 @@ export const AnalyticsChartCard = () => {
                     data={assetData}
                     cx="50%"
                     cy="50%"
-                    outerRadius={140}
+                    outerRadius={90}
                     paddingAngle={2}
                     dataKey="value"
                   >
@@ -170,19 +170,19 @@ export const AnalyticsChartCard = () => {
 
           {/* Legend Section */}
           <div className="flex-1 space-y-4">
-            <h3 className="text-md text-secondary mb-6 font-semibold">
+            <h3 className="text-sm text-secondary mb-6 font-semibold">
               Assets by City
             </h3>
             <div className="space-y-4">
               {assetData.map((item, index) => (
-                <div key={index} className="flex items-center gap-3">
+                <div key={index} className="flex items-center gap-2">
                   <div
-                    className="h-4 w-4 flex-shrink-0 rounded-full"
+                    className="h-3 w-3 flex-shrink-0 rounded-full"
                     style={{ backgroundColor: item.color }}
                   />
                   <div className="flex gap-4">
-                    <span className="text-secondary">{item.city}</span>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-secondary text-xs">{item.city}</span>
+                    <span className="text-xs text-gray-600">
                       {item.percentage}%
                     </span>
                   </div>
