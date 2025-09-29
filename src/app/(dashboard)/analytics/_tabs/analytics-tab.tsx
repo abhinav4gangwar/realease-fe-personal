@@ -1,8 +1,14 @@
+'use client'
+import { Button } from '@/components/ui/button'
+import { Grid2x2Plus } from 'lucide-react'
+import { useState } from 'react'
 import AnalyticsBasicCard from '../_components/analytics-components/analytics-basic-card'
 import { AnalyticsChartCard } from '../_components/analytics-components/analytics-chart-card'
+import AnalyticsSidebar from '../_components/analytics-components/analytics-sidebar'
 import AnalyticsSTateToggle from '../_components/analytics-state-toggle'
 
 const AnalyticsTab = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   return (
     <div>
       <div className="flex justify-between pb-4">
@@ -14,10 +20,17 @@ const AnalyticsTab = () => {
 
         <div className="flex items-center gap-4">
           <AnalyticsSTateToggle />
+
+          <Button
+            className="text-primary hover:bg-primary h-12 w-12 cursor-pointer rounded-full border border-gray-400 bg-white font-bold hover:text-white"
+            onClick={() => setIsSidebarOpen(true)}
+          >
+            <Grid2x2Plus className="size-6" />
+          </Button>
         </div>
       </div>
 
-      <div className="py-4 flex flex-col space-y-4">
+      <div className="flex flex-col space-y-4 py-4">
         <div className="grid grid-cols-3 gap-4">
           <AnalyticsBasicCard
             heading={'Total Number of Assets'}
@@ -45,14 +58,18 @@ const AnalyticsTab = () => {
           />
         </div>
 
-
         {/* charts */}
         <div className="grid grid-cols-3 gap-4">
-          <AnalyticsChartCard defaultChart='donut'/>
-          <AnalyticsChartCard defaultChart='pie'/>
-          <AnalyticsChartCard defaultChart='bar'/>
+          <AnalyticsChartCard defaultChart="bar" />
+          <AnalyticsChartCard defaultChart="pie" />
+          <AnalyticsChartCard defaultChart="donut" />
         </div>
       </div>
+
+      <AnalyticsSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      />
     </div>
   )
 }
