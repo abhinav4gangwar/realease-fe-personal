@@ -5,6 +5,7 @@ import { useState } from 'react'
 import AnalyticsSTateToggle from '../_components/analytics-state-toggle'
 import ReportCreationModel from '../_components/reports-components/Report-creation-model'
 
+
 const ReportsTab = () => {
   const [isAddReportOpen, setIsAddReportOpen] = useState(false)
   return (
