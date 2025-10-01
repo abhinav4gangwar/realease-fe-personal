@@ -19,8 +19,6 @@ const AnalyticsSidebar = ({
   const [isStandAloneOpen, setIsStandAloneOpen] = useState(false)
   const [isComparativeOpen, setIsComparativeOpen] = useState(false)
 
-  console.log(isComparativeOpen)
-
   const handleDeleteClick = () => {
     console.log(`Delete ${currentAnalytic?.id}`)
     setIsDeleteOpen(false)
