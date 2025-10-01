@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { Plus, X } from 'lucide-react'
 import { useState } from 'react'
+import StandAloneForm from './stand-alone-form'
 
 export interface AnalyticsSidebarProps {
   isOpen: boolean
@@ -14,6 +15,7 @@ const AnalyticsSidebar = ({
 }: AnalyticsSidebarProps) => {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [currentAnalytic, setCurrentAnalytic] = useState()
+  const [isStandAloneOpen, setIsStandAloneOpen] = useState(false)
 
   const handleDeleteClick = () => {
     console.log(`Delete ${currentAnalytic?.id}`)
@@ -75,12 +77,15 @@ const AnalyticsSidebar = ({
             <div className="bg-[#F2F2F2] shadow-md">
               <div className="flex items-center justify-end p-5">
                 <div className="flex flex-shrink-0 items-center gap-4">
-                  <Button className="hover:bg-secondary text-secondary h-11 w-[200px] cursor-pointer border border-gray-400 bg-white px-6 font-semibold hover:text-white">
-                    Standalone Stat <Plus />
+                  <Button
+                    className="hover:bg-secondary text-secondary h-11 w-[200px] cursor-pointer border border-gray-400 bg-white px-6 font-semibold hover:text-white"
+                    onClick={() => setIsStandAloneOpen(true)}
+                  >
+                    Standalone Stat <Plus className="text-primary" />
                   </Button>
 
                   <Button className="hover:bg-secondary text-secondary h-11 w-[200px] cursor-pointer border border-gray-400 bg-white px-6 font-semibold hover:text-white">
-                    Comparative Stat <Plus />
+                    Comparative Stat <Plus className="text-primary" />
                   </Button>
                 </div>
               </div>
@@ -120,6 +125,11 @@ const AnalyticsSidebar = ({
           </div>
         </div>
       )}
+
+      <StandAloneForm
+        isOpen={isStandAloneOpen}
+        onClose={() => setIsStandAloneOpen(false)}
+      />
     </>
   )
 }
