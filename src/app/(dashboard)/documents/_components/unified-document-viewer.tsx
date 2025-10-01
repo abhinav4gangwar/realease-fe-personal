@@ -774,7 +774,7 @@ export function UnifiedDocumentViewer({
                 </div>
               ) : (
                 <div className="flex h-full items-center justify-center bg-black/75">
-                  <div className="bg-secondary flex h-[300px] w-[600px] flex-col items-center justify-center space-y-6 rounded-md">
+                  <div className="bg-secondary flex lg:h-[300px] lg:w-[600px] flex-col items-center justify-center space-y-6 rounded-md p-6 lg:p-0">
                     <Image
                       src={'/assets/no-preview.svg'}
                       alt="no preview"
@@ -798,7 +798,7 @@ export function UnifiedDocumentViewer({
                         <Download className="text-primary h-3 w-3" />
                       </Button>
                       <Button
-                        className="flex h-12 w-[200px] cursor-pointer items-center justify-center bg-white px-6 text-lg font-semibold text-black hover:bg-white"
+                        className="lg:flex hidden h-12 w-[200px] cursor-pointer items-center justify-center bg-white px-6 text-lg font-semibold text-black hover:bg-white"
                         onClick={(e) => {
                           e.stopPropagation()
                           if (onShareClick && document) {
