@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { Plus, X } from 'lucide-react'
 import { useState } from 'react'
+import ComparativeStatForm from './comparative-stat-form'
 import StandAloneForm from './stand-alone-form'
 
 export interface AnalyticsSidebarProps {
@@ -16,6 +17,9 @@ const AnalyticsSidebar = ({
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [currentAnalytic, setCurrentAnalytic] = useState()
   const [isStandAloneOpen, setIsStandAloneOpen] = useState(false)
+  const [isComparativeOpen, setIsComparativeOpen] = useState(false)
+
+  console.log(isComparativeOpen)
 
   const handleDeleteClick = () => {
     console.log(`Delete ${currentAnalytic?.id}`)
@@ -84,7 +88,10 @@ const AnalyticsSidebar = ({
                     Standalone Stat <Plus className="text-primary" />
                   </Button>
 
-                  <Button className="hover:bg-secondary text-secondary h-11 w-[200px] cursor-pointer border border-gray-400 bg-white px-6 font-semibold hover:text-white">
+                  <Button
+                    className="hover:bg-secondary text-secondary h-11 w-[200px] cursor-pointer border border-gray-400 bg-white px-6 font-semibold hover:text-white"
+                    onClick={() => setIsComparativeOpen(true)}
+                  >
                     Comparative Stat <Plus className="text-primary" />
                   </Button>
                 </div>
@@ -129,6 +136,11 @@ const AnalyticsSidebar = ({
       <StandAloneForm
         isOpen={isStandAloneOpen}
         onClose={() => setIsStandAloneOpen(false)}
+      />
+
+      <ComparativeStatForm
+        isOpen={isComparativeOpen}
+        onClose={() => setIsComparativeOpen(false)}
       />
     </>
   )
