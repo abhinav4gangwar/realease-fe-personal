@@ -1,5 +1,6 @@
 'use client'
 import { Button } from '@/components/ui/button'
+import { dummyAnalytics } from '@/lib/analytics.dummy'
 import { Grid2x2Plus } from 'lucide-react'
 import { useState } from 'react'
 import AnalyticsBasicCard from '../_components/analytics-components/analytics-basic-card'
@@ -7,6 +8,41 @@ import { AnalyticsChartCard } from '../_components/analytics-components/analytic
 import AnalyticsSidebar from '../_components/analytics-components/analytics-sidebar'
 import AnalyticsSTateToggle from '../_components/analytics-state-toggle'
 
+const AnalyticsRenderer = () => {
+  return (
+    <div className="flex flex-col space-y-6">
+      {/* Basic Cards */}
+      <div className="grid grid-cols-3 gap-4">
+        {dummyAnalytics.cards
+          .filter((card) => card.type === "basic")
+          .map((card) => (
+            <AnalyticsBasicCard
+              key={card.id}
+              heading={card.title}
+              color={card.color}
+              value={card.value}
+              insight={card.insight}
+            />
+          ))}
+      </div>
+
+      {/* Chart Cards */}
+      <div className="grid grid-cols-3 gap-4">
+        {dummyAnalytics.cards
+          .filter((card) => card.type === "chart")
+          .map((card) => (
+            <AnalyticsChartCard
+              key={card.id}
+              defaultChart={card.chartType}
+              data={card.data}
+              title={card.title}
+              insight={card.insight}
+            />
+          ))}
+      </div>
+    </div>
+  )
+}
 const AnalyticsTab = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   return (
@@ -31,44 +67,13 @@ const AnalyticsTab = () => {
       </div>
 
       <div className="flex flex-col space-y-4 py-4">
-        <div className="grid grid-cols-3 gap-4">
-          <AnalyticsBasicCard
-            heading={'Total Number of Assets'}
-            color={'secondary'}
-            value={'1,250'}
-            insight={
-              'This shows the total number of assets currently available.'
-            }
-          />
-          <AnalyticsBasicCard
-            heading={'Total Asset Value'}
-            color={'secondary'}
-            value={'₹ 382.92 Cr'}
-            insight={
-              'This shows the total number of assets currently available.'
-            }
-          />
-          <AnalyticsBasicCard
-            heading={'Assets in Litigation'}
-            color={'primary'}
-            value={'12.6%'}
-            insight={
-              'This shows the total number of assets currently available.'
-            }
-          />
-        </div>
-
-        {/* charts */}
-        <div className="grid grid-cols-3 gap-4">
-          <AnalyticsChartCard defaultChart="bar" />
-          <AnalyticsChartCard defaultChart="pie" />
-          <AnalyticsChartCard defaultChart="donut" />
-        </div>
+        <AnalyticsRenderer />
       </div>
 
       <AnalyticsSidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
+        analytics={dummyAnalytics}
       />
     </div>
   )

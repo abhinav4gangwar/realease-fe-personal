@@ -29,25 +29,27 @@ import {
   PieChart,
   ResponsiveContainer,
   Tooltip,
-  XAxis,
   YAxis,
 } from 'recharts'
 
-const assetData = [
-  { city: 'Mumbai', percentage: 38, value: 380, color: '#A2CFE3' },
-  { city: 'Bengaluru', percentage: 30, value: 300, color: '#F16F70' },
-  { city: 'Hyderabad', percentage: 19, value: 190, color: '#C1B5E4' },
-  { city: 'Delhi', percentage: 13, value: 130, color: '#5C9FAD' },
-]
-
-export const AnalyticsChartCard = ({defaultChart}: {defaultChart : string}) => {
+export const AnalyticsChartCard = ({
+  defaultChart,
+  data,
+  title,
+  insight,
+}: {
+  defaultChart: string | undefined
+  data: any | undefined
+  title: string | undefined
+  insight: string | undefined
+}) => {
   const [chartType, setChartType] = useState(defaultChart)
 
   return (
     <Card className="w-full border-none">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-6">
         <CardTitle className="text-secondary mb-4 h-2 pb-3 text-base font-normal">
-          Asset Location Distribution
+          {title}
         </CardTitle>
 
         <div>
@@ -67,8 +69,7 @@ export const AnalyticsChartCard = ({defaultChart}: {defaultChart : string}) => {
             >
               <p className="text-base font-bold">Insight</p>
               <p className="pt-1">
-                This chart displays the distribution of assets by Number,
-                highlighting the concentration across different Cities
+                {insight}
               </p>
             </TooltipContent>
           </Toltip>
@@ -122,14 +123,14 @@ export const AnalyticsChartCard = ({defaultChart}: {defaultChart : string}) => {
               {chartType === 'donut' && (
                 <PieChart>
                   <Pie
-                    data={assetData}
+                    data={data}
                     cx="50%"
                     cy="50%"
                     innerRadius={70}
                     outerRadius={90}
                     dataKey="value"
                   >
-                    {assetData.map((entry, index) => (
+                    {data.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -139,14 +140,14 @@ export const AnalyticsChartCard = ({defaultChart}: {defaultChart : string}) => {
               {chartType === 'pie' && (
                 <PieChart>
                   <Pie
-                    data={assetData}
+                    data={data}
                     cx="50%"
                     cy="50%"
                     outerRadius={90}
                     paddingAngle={2}
                     dataKey="value"
                   >
-                    {assetData.map((entry, index) => (
+                    {data.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -154,12 +155,11 @@ export const AnalyticsChartCard = ({defaultChart}: {defaultChart : string}) => {
               )}
 
               {chartType === 'bar' && (
-                <BarChart data={assetData}>
-                  <XAxis dataKey="city" />
+                <BarChart data={data}>
                   <YAxis />
                   <Tooltip />
                   <Bar dataKey="value">
-                    {assetData.map((entry, index) => (
+                    {data.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Bar>
@@ -170,18 +170,15 @@ export const AnalyticsChartCard = ({defaultChart}: {defaultChart : string}) => {
 
           {/* Legend Section */}
           <div className="flex-1 space-y-4">
-            <h3 className="text-sm text-secondary mb-6 font-semibold">
-              Assets by City
-            </h3>
             <div className="space-y-4">
-              {assetData.map((item, index) => (
+              {data.map((item, index) => (
                 <div key={index} className="flex items-center gap-2">
                   <div
                     className="h-3 w-3 flex-shrink-0 rounded-full"
                     style={{ backgroundColor: item.color }}
                   />
                   <div className="flex gap-4">
-                    <span className="text-secondary text-xs">{item.city}</span>
+                    <span className="text-secondary text-xs">{item.label}</span>
                     <span className="text-xs text-gray-600">
                       {item.percentage}%
                     </span>

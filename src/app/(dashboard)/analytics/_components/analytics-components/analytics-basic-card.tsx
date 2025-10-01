@@ -1,16 +1,16 @@
 import { Button } from '@/components/ui/button'
 import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { Info } from 'lucide-react'
 
 interface CardTypes {
-  heading: string
-  value: string
-  insight: string
-  color: string
+  heading: string | undefined
+  value: string | undefined
+  insight: string | undefined
+  color: string | undefined
 }
 
 const AnalyticsBasicCard = ({ heading, value, insight, color }: CardTypes) => {

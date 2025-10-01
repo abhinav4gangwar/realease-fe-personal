@@ -1,11 +1,25 @@
 import { Button } from '@/components/ui/button'
 import { Plus, X } from 'lucide-react'
+import { useState } from 'react'
 
 export interface AnalyticsSidebarProps {
   isOpen: boolean
   onClose: () => void
+  analytics: any
 }
-const AnalyticsSidebar = ({ isOpen, onClose }: AnalyticsSidebarProps) => {
+const AnalyticsSidebar = ({
+  isOpen,
+  onClose,
+  analytics,
+}: AnalyticsSidebarProps) => {
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [currentAnalytic, setCurrentAnalytic] = useState()
+
+  const handleDeleteClick = () => {
+    console.log(`Delete ${currentAnalytic?.id}`)
+    setIsDeleteOpen(false)
+  }
+
   return (
     <>
       {isOpen && (
@@ -34,97 +48,27 @@ const AnalyticsSidebar = ({ isOpen, onClose }: AnalyticsSidebarProps) => {
 
             {/* Content */}
             <div className="flex-1 space-y-4 overflow-y-auto p-5">
-
-              <div className="rounded-md bg-white p-4 shadow-md">
-                <div className="flex justify-between">
-                  <h1>Asset Location Distribution</h1>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 cursor-pointer rounded-full bg-[#CDCDCE] text-primary"
-                  >
-                    <X className="h-4 w-4 font-bold" />
-                  </Button>
+              {analytics.cards.map((card) => (
+                <div
+                  key={card.id}
+                  className="rounded-md bg-white p-4 shadow-md"
+                >
+                  <div className="flex justify-between">
+                    <h1>{card.title}</h1>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-primary h-6 w-6 cursor-pointer rounded-full bg-[#CDCDCE]"
+                      onClick={() => {
+                        setCurrentAnalytic(card)
+                        setIsDeleteOpen(true)
+                      }}
+                    >
+                      <X className="h-4 w-4 font-bold" />
+                    </Button>
+                  </div>
                 </div>
-
-
-              </div>
-
-               <div className="rounded-md bg-white p-4 shadow-md">
-                <div className="flex justify-between">
-                  <h1>Asset Location Distribution</h1>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 cursor-pointer rounded-full bg-[#CDCDCE] text-primary"
-                  >
-                    <X className="h-4 w-4 font-bold" />
-                  </Button>
-                </div>
-
-
-              </div>
-
-               <div className="rounded-md bg-white p-4 shadow-md">
-                <div className="flex justify-between">
-                  <h1>Asset Location Distribution</h1>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 cursor-pointer rounded-full bg-[#CDCDCE] text-primary"
-                  >
-                    <X className="h-4 w-4 font-bold" />
-                  </Button>
-                </div>
-
-
-              </div>
-
-               <div className="rounded-md bg-white p-4 shadow-md">
-                <div className="flex justify-between">
-                  <h1>Asset Location Distribution</h1>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 cursor-pointer rounded-full bg-[#CDCDCE] text-primary"
-                  >
-                    <X className="h-4 w-4 font-bold" />
-                  </Button>
-                </div>
-
-
-              </div>
-
-               <div className="rounded-md bg-white p-4 shadow-md">
-                <div className="flex justify-between">
-                  <h1>Asset Location Distribution</h1>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 cursor-pointer rounded-full bg-[#CDCDCE] text-primary"
-                  >
-                    <X className="h-4 w-4 font-bold" />
-                  </Button>
-                </div>
-
-
-              </div>
-
-               <div className="rounded-md bg-white p-4 shadow-md">
-                <div className="flex justify-between">
-                  <h1>Asset Location Distribution</h1>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 cursor-pointer rounded-full bg-[#CDCDCE] text-primary"
-                  >
-                    <X className="h-4 w-4 font-bold" />
-                  </Button>
-                </div>
-
-
-              </div>
-
+              ))}
             </div>
 
             {/* Footer */}
@@ -139,6 +83,38 @@ const AnalyticsSidebar = ({ isOpen, onClose }: AnalyticsSidebarProps) => {
                     Comparative Stat <Plus />
                   </Button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isDeleteOpen && currentAnalytic && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-lg border border-gray-500 bg-white shadow-lg">
+            <div className="p-6">
+              <h2 className="mb-2 text-xl font-semibold">Delete Analytic</h2>
+              <p className="mb-6 text-gray-600">
+                Are you sure you want to Delete this Analytic?
+              </p>
+
+              <div className="flex gap-3">
+                <Button
+                  className="bg-primary hover:bg-secondary h-11 w-28 cursor-pointer px-6"
+                  onClick={handleDeleteClick}
+                >
+                  Yes
+                </Button>
+                <Button
+                  variant="outline"
+                  className="hover:bg-secondary h-11 w-28 cursor-pointer bg-transparent px-6 hover:text-white"
+                  onClick={() => {
+                    setCurrentAnalytic(undefined)
+                    setIsDeleteOpen(false)
+                  }}
+                >
+                  No
+                </Button>
               </div>
             </div>
           </div>
