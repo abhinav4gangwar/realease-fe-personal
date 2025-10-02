@@ -69,3 +69,101 @@ export const dummyAnalytics = {
     }
   ]
 }
+
+export const dummyReports = [
+  {
+    id: "1",
+    data: {
+      name: "Q1 Performance Overview",
+      grid: { columns: 2, gap: 16 },
+      blocks: [
+        {
+          id: "b-001",
+          kind: "analytics",
+          analyticsId: "1",
+          title: "Total Number of Assets",
+          analyticsType: "basic",
+          position: { row: 1, col: 1, index: 0 },
+        },
+        {
+          id: "b-002",
+          kind: "analytics",
+          analyticsId: "4",
+          title: "Asset Location Distribution",
+          analyticsType: "chart",
+          chartType: "bar",
+          position: { row: 1, col: 2, index: 1 },
+        },
+        {
+          id: "b-003",
+          kind: "text",
+          text: "Notes: This section explains the selected analytics.",
+          position: { row: 2, col: 1, index: 2 },
+        },
+      ],
+    },
+  },
+  {
+    id: "2",
+    data: {
+      name: "Weekly Summary",
+      grid: { columns: 2, gap: 16 },
+      blocks: [
+        {
+          id: "b-004",
+          kind: "analytics",
+          analyticsId: "2",
+          title: "Total Asset Value",
+          analyticsType: "basic",
+          position: { row: 1, col: 1, index: 0 },
+        },
+        {
+          id: "b-005",
+          kind: "analytics",
+          analyticsId: "3",
+          title: "Assets in Litigation",
+          analyticsType: "basic",
+          position: { row: 1, col: 2, index: 1 },
+        },
+        {
+          id: "b-006",
+          kind: "text",
+          text: "Notes: Quick highlights and key changes from last week.",
+          position: { row: 2, col: 1, index: 2 },
+        },
+      ],
+    },
+  },
+
+  {
+    id: "3",
+    data: {
+      name: "Asset Owner Distribution Report",
+      grid: { columns: 2, gap: 16 },
+      blocks: [
+        {
+          id: "b-004",
+          kind: "analytics",
+          analyticsId: "2",
+          title: "Total Asset Value",
+          analyticsType: "basic",
+          position: { row: 1, col: 1, index: 0 },
+        },
+        {
+          id: "b-005",
+          kind: "analytics",
+          analyticsId: "3",
+          title: "Assets in Litigation",
+          analyticsType: "basic",
+          position: { row: 1, col: 2, index: 1 },
+        },
+        {
+          id: "b-006",
+          kind: "text",
+          text: "Notes: Quick highlights and key changes from last week.",
+          position: { row: 2, col: 1, index: 2 },
+        },
+      ],
+    },
+  },
+]
