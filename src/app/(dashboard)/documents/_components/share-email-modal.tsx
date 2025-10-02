@@ -116,7 +116,7 @@ export function ShareEmailModal({
             </Select>
           </div>
         </div>
-        <h2 className="text-secondary text-xl font-semibold pb-3">
+        <h2 className="text-secondary pb-3 text-xl font-semibold">
           Selected Docs ({folderCount} Folder & {fileCount} Files)
         </h2>
         <div className="max-h-45 overflow-y-auto rounded-md border border-gray-500">
@@ -163,9 +163,10 @@ export function ShareEmailModal({
           </Button>
           <Button
             onClick={handleSend}
-            className="bg-primary hover:bg-secondary h-11 cursor-pointer px-6"
+            disabled={!email.trim() || isLoading}
+            className="bg-primary hover:bg-secondary h-11 cursor-pointer px-6 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Send
+            {isLoading ? 'Sending...' : 'Send'}
           </Button>
         </div>
       </div>
