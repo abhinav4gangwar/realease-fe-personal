@@ -54,7 +54,7 @@ export default function ReportSidebar({
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    className="h-4 w-4"
+                    className="h-4 w-4 accent-[#f16969]"
                     checked={selectedIds.includes(card.id)}
                     onChange={() => onToggleAnalytic(card.id)}
                     aria-label={`Toggle ${card.title} in report`}
