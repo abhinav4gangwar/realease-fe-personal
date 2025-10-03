@@ -816,9 +816,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
           </div>
         </div>
         
-        <p className="text-xs text-gray-500">
-          Enter latitude and longitude as decimal numbers, or they will be auto-filled from location
-        </p>
+      
       </div>
 
       {/* legal status */}
