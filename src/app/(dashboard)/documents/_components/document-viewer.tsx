@@ -221,6 +221,7 @@ export function DocumentViewer({
       }
 
       setDocumentsState((prevDocs) => updateDocumentInArray(prevDocs))
+
       if (selectedDocument?.id === documentId) {
         setSelectedDocument((prev) =>
           prev
@@ -233,18 +234,31 @@ export function DocumentViewer({
             : null
         )
       }
-      if (currentFolder?.id === documentId) {
-        setCurrentFolder((prev) =>
-          prev
-            ? {
-                ...prev,
-                name: data.name,
-                linkedProperty: getPropertyName(data.propertyId),
-                tags: data.tags.join(', '),
+      if (currentFolder) {
+        setCurrentFolder((prev) => {
+          if (!prev) return null
+
+          const updateChildren = (children: Document[]): Document[] => {
+            return children.map((child) => {
+              if (child.id === documentId) {
+                return {
+                  ...child,
+                  name: data.name,
+                  linkedProperty: getPropertyName(data.propertyId),
+                  tags: data.tags.join(', '),
+                }
               }
-            : null
-        )
+              return child
+            })
+          }
+
+          return {
+            ...prev,
+            children: updateChildren(prev.children || []),
+          }
+        })
       }
+
       console.log('Document updated successfully')
     } catch (error: any) {
       console.error('Error updating document:', error)
@@ -676,6 +690,11 @@ export function DocumentViewer({
     }
   }
 
+  const handleBack = () => {
+    setIsSelectedDocsModalOpen(true)
+    setIsShareEmailModalOpen(false)
+  }
+
   const getSelectedDocumentObjects = () => {
     const allDocs = [...documentsState]
     const allDocsWithChildren: Document[] = []
@@ -833,6 +852,7 @@ export function DocumentViewer({
                         onMoveClick={handleMoveClick}
                         onShareClick={handleShareClick}
                         onDownloadClick={handleDownloadClick}
+                        isModelOpen={isModalOpen}
                       />
                     </div>
                   )}
@@ -909,6 +929,7 @@ export function DocumentViewer({
           onClose={handleModalClose}
           selectedDocuments={getSelectedDocumentObjects()}
           onCancel={handleCancelFromModal}
+          onBack={handleBack}
         />
         <CancelShareModal
           isOpen={isCancelShareModalOpen}

@@ -404,12 +404,16 @@ export function DocumentDetailModal({
             <h3 className="mb-1 text-sm font-medium text-gray-500">
               File Type
             </h3>
-            <FileTypeDisplay
-              mimeType={document.fileType}
-              fileName={document.name}
-              className="text-sm"
-              fallback="Unknown"
-            />
+            {document.isFolder ? (
+              <p className="text-sm capitalize">{document.icon}</p>
+            ) : (
+              <FileTypeDisplay
+                mimeType={document.fileType}
+                fileName={document.name}
+                className="text-sm"
+                fallback="Unknown"
+              />
+            )}
           </div>
 
           {!document.isFolder && (

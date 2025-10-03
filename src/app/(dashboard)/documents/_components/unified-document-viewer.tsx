@@ -534,8 +534,8 @@ export function UnifiedDocumentViewer({
     setNumPages(nextNumPages)
   }
 
-  const zoomIn = () => setScale((prev) => Math.min(prev + 0.2, 3.0))
-  const zoomOut = () => setScale((prev) => Math.max(prev - 0.2, 0.5))
+  const zoomIn = () => setScale((prev) => Math.min(prev + 0.1, 3.0))
+  const zoomOut = () => setScale((prev) => Math.max(prev - 0.1, 0.5))
 
   const handleCancelComment = () => {
     setActiveCommentId(null)
@@ -543,7 +543,7 @@ export function UnifiedDocumentViewer({
 
   const handleSidebarCommentClick = (commentId: number) => {
     setActiveCommentId(commentId)
-    setIsSidebarOpen(false) // Close sidebar on mobile after selecting comment
+    setIsSidebarOpen(false)
   }
 
   if (!isOpen) return null
@@ -564,9 +564,9 @@ export function UnifiedDocumentViewer({
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50">
-      <div className="bg-secondary flex h-full w-full shadow-xl">
-        {/* Header */}
-        <div className="flex flex-1 flex-col">
+      <div className="bg-secondary flex h-full w-full flex-col shadow-xl">
+        {/* Header - Fixed at top, outside scrollable area */}
+        <div className="flex-shrink-0">
           <PDFHeader
             document={document}
             isLoadingComments={isLoadingComments}
@@ -579,404 +579,395 @@ export function UnifiedDocumentViewer({
             onCommentClick={handleCommentIconClick}
             onSideClick={() => setIsSidebarOpen(!isSidebarOpen)}
           />
+        </div>
 
-          {/* Main Content with Sidebar Toggle */}
-          <div className="flex flex-1 overflow-hidden">
-            {/* Document Content */}
-            <div
-              className="relative flex-1 overflow-auto bg-gray-100"
-              onMouseUp={handleMouseUp}
-              onClick={handleClick}
-            >
-              {/* Zoom Controls - only show zoom for documents */}
-              {documentUrl && (
-                <div className="zoom-controls fixed right-[47%] bottom-6 z-30 hidden items-center gap-1 rounded-lg bg-[#9B9B9D] p-1 text-white shadow-lg lg:flex">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      zoomOut()
-                    }}
-                    disabled={scale <= 0.5}
-                    className="h-8 w-8 rounded p-0 hover:bg-white/20 disabled:opacity-50"
-                  >
-                    <span className="text-sm">-</span>
-                  </button>
-                  <span className="min-w-[50px] px-2 text-center text-sm font-medium">
-                    {Math.round(scale * 100)}%
-                  </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      zoomIn()
-                    }}
-                    disabled={scale >= 2}
-                    className="h-8 w-8 rounded p-0 hover:bg-white/20 disabled:opacity-50"
-                  >
-                    <span className="text-sm">+</span>
-                  </button>
+        {/* Main Content with Sidebar - Flex container below header */}
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          {/* Document Content - Scrollable area */}
+          <div
+            className="relative flex-1 overflow-auto bg-gray-100"
+            onMouseUp={handleMouseUp}
+            onClick={handleClick}
+          >
+            {/* Zoom Controls - Positioned relative to scrollable container */}
+            {documentUrl && (
+              <div className="zoom-controls sticky top-[92%] left-1/2 z-30 mx-auto hidden w-fit -translate-x-1/2 items-center gap-1 rounded-lg bg-[#9B9B9D] p-1 text-white shadow-lg lg:flex">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    zoomOut()
+                  }}
+                  disabled={scale <= 0.5}
+                  className="h-8 w-8 rounded p-0 hover:bg-white/20 disabled:opacity-50"
+                >
+                  <span className="text-sm">-</span>
+                </button>
+                <span className="min-w-[50px] px-2 text-center text-sm font-medium">
+                  {Math.round(scale * 100)}%
+                </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    zoomIn()
+                  }}
+                  disabled={scale >= 2}
+                  className="h-8 w-8 rounded p-0 hover:bg-white/20 disabled:opacity-50"
+                >
+                  <span className="text-sm">+</span>
+                </button>
+              </div>
+            )}
+
+            {isLoading ? (
+              <div className="flex h-full items-center justify-center">
+                <div className="text-center">
+                  <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+                  <p className="mt-4 text-gray-600">Loading document...</p>
                 </div>
-              )}
+              </div>
+            ) : documentUrl ? (
+              <div className="flex justify-center p-6">
+                {documentType === 'pdf' ? (
+                  <PDFDocument
+                    file={documentUrl}
+                    onLoadSuccess={onDocumentLoadSuccess}
+                    onLoadError={console.error}
+                    loading={
+                      <div className="p-8 text-center">Loading document...</div>
+                    }
+                  >
+                    <div ref={pageRef} className="space-y-4">
+                      {/* Render all pages for scroll functionality */}
+                      {Array.from({ length: numPages || 1 }, (_, index) => {
+                        const pageNumber = index + 1
+                        const pageComments = comments.filter(
+                          (comment) => comment.annotation.page === pageNumber
+                        )
+                        const pageAnnotations = allAnnotations.filter(
+                          (anno) => anno.page === pageNumber
+                        )
 
-              {isLoading ? (
-                <div className="flex h-full items-center justify-center">
-                  <div className="text-center">
-                    <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
-                    <p className="mt-4 text-gray-600">Loading document...</p>
+                        return (
+                          <div
+                            key={`page_${pageNumber}`}
+                            className="relative mb-4 bg-white shadow-lg"
+                          >
+                            <Page
+                              pageNumber={pageNumber}
+                              scale={scale}
+                              renderTextLayer={true}
+                            />
+
+                            {/* Annotations overlay */}
+                            <div className="pointer-events-none absolute top-0 left-0 h-full w-full">
+                              {pageAnnotations.map((anno) => (
+                                <Annotation
+                                  key={anno.id}
+                                  annotation={anno}
+                                  isHighlighted={comments.some(
+                                    (c) => c.annotation.id === anno.id
+                                  )}
+                                />
+                              ))}
+                            </div>
+
+                            {/* Comment markers */}
+                            <div className="absolute top-0 left-0 h-full w-full">
+                              {pageComments.map((comment) => (
+                                <div
+                                  key={comment.id}
+                                  className="comment-marker"
+                                >
+                                  <CommentMarker
+                                    comment={comment}
+                                    users={users}
+                                    onClick={() =>
+                                      setActiveCommentId(comment.id)
+                                    }
+                                    onEdit={() => handleCommentEdit(comment)}
+                                    onDelete={() =>
+                                      handleCommentDelete(comment.id)
+                                    }
+                                    onReply={handleReply}
+                                    onEditReply={handleEditReply}
+                                    onDeleteReply={handleDeleteReply}
+                                    isDeleting={
+                                      deletingCommentId === comment.id
+                                    }
+                                    isActive={activeCommentId === comment.id}
+                                    isReplying={
+                                      replyingToCommentId === comment.id
+                                    }
+                                    deletingReplyId={deletingReplyId}
+                                    onCancel={handleCancelComment}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </PDFDocument>
+                ) : (
+                  // Image viewer
+                  <div
+                    ref={imageContainerRef}
+                    className="flex h-full w-full items-center justify-center"
+                  >
+                    <div ref={imageRef} className="relative bg-white shadow-lg">
+                      <img
+                        src={documentUrl}
+                        alt={document?.name || 'Document'}
+                        style={{
+                          transform: `scale(${scale})`,
+                          transformOrigin: 'center',
+                          maxWidth: '100%',
+                          maxHeight: '100%',
+                          objectFit: 'contain',
+                        }}
+                        className="block"
+                      />
+
+                      {/* Annotations overlay for images */}
+                      <div className="pointer-events-none absolute top-0 left-0 h-full w-full">
+                        {allAnnotations.map((anno) => (
+                          <Annotation
+                            key={anno.id}
+                            annotation={anno}
+                            isHighlighted={comments.some(
+                              (c) => c.annotation.id === anno.id
+                            )}
+                          />
+                        ))}
+                      </div>
+
+                      {/* Comment markers for images */}
+                      <div className="absolute top-0 left-0 h-full w-full">
+                        {comments.map((comment) => (
+                          <div key={comment.id} className="comment-marker">
+                            <CommentMarker
+                              comment={comment}
+                              users={users}
+                              onClick={() => setActiveCommentId(comment.id)}
+                              onEdit={() => handleCommentEdit(comment)}
+                              onDelete={() => handleCommentDelete(comment.id)}
+                              onReply={handleReply}
+                              onEditReply={handleEditReply}
+                              onDeleteReply={handleDeleteReply}
+                              isDeleting={deletingCommentId === comment.id}
+                              isActive={activeCommentId === comment.id}
+                              isReplying={replyingToCommentId === comment.id}
+                              deletingReplyId={deletingReplyId}
+                              onCancel={handleCancelComment}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex h-full items-center justify-center bg-black/75">
+                <div className="bg-secondary flex flex-col items-center justify-center space-y-6 rounded-md p-6 lg:h-[300px] lg:w-[600px] lg:p-0">
+                  <Image
+                    src={'/assets/no-preview.svg'}
+                    alt="no preview"
+                    height={80}
+                    width={80}
+                  />
+                  <p className="font-semibold text-white lg:text-lg">
+                    Sorry, no preview available for this file format.
+                  </p>
+                  <div className="flex justify-center gap-4">
+                    <Button
+                      className="h-12 w-[200px] cursor-pointer bg-white px-6 text-lg font-semibold text-black hover:bg-white"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (onDownloadClick && document) {
+                          onDownloadClick(document)
+                        }
+                      }}
+                    >
+                      Download file{' '}
+                      <Download className="text-primary h-3 w-3" />
+                    </Button>
+                    <Button
+                      className="hidden h-12 w-[200px] cursor-pointer items-center justify-center bg-white px-6 text-lg font-semibold text-black hover:bg-white lg:flex"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (onShareClick && document) {
+                          onShareClick(document)
+                        }
+                      }}
+                    >
+                      Share file <HiShare className="text-primary" />
+                    </Button>
                   </div>
                 </div>
-              ) : documentUrl ? (
-                <div className="flex justify-center p-6">
-                  {documentType === 'pdf' ? (
-                    <PDFDocument
-                      file={documentUrl}
-                      onLoadSuccess={onDocumentLoadSuccess}
-                      onLoadError={console.error}
-                      loading={
-                        <div className="p-8 text-center">
-                          Loading document...
-                        </div>
-                      }
+              </div>
+            )}
+          </div>
+
+          {/* Comments Sidebar - Fixed width, independent of content */}
+          <div
+            className={`flex-shrink-0 border-l border-gray-200 bg-white transition-all duration-300 ${
+              isSidebarOpen ? 'w-80' : 'w-0'
+            } hidden overflow-hidden lg:block`}
+          >
+            {isSidebarOpen && (
+              <div className="flex h-full flex-col">
+                {/* Sidebar Header */}
+                <div className="border-b border-gray-200 p-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-900">
+                      Comments ({comments.length})
+                    </h3>
+                    <button
+                      onClick={() => setIsSidebarOpen(false)}
+                      className="rounded-lg p-1 hover:bg-gray-100"
                     >
-                      <div ref={pageRef} className="space-y-4">
-                        {/* Render all pages for scroll functionality */}
-                        {Array.from({ length: numPages || 1 }, (_, index) => {
-                          const pageNumber = index + 1
-                          const pageComments = comments.filter(
-                            (comment) => comment.annotation.page === pageNumber
-                          )
-                          const pageAnnotations = allAnnotations.filter(
-                            (anno) => anno.page === pageNumber
-                          )
+                      <ChevronRight size={16} className="text-gray-500" />
+                    </button>
+                  </div>
+                </div>
 
-                          return (
-                            <div
-                              key={`page_${pageNumber}`}
-                              className="relative mb-4 bg-white shadow-lg"
-                            >
-                              <Page
-                                pageNumber={pageNumber}
-                                scale={scale}
-                                renderTextLayer={true}
-                              />
-
-                              {/* Annotations overlay */}
-                              <div className="pointer-events-none absolute top-0 left-0 h-full w-full">
-                                {pageAnnotations.map((anno) => (
-                                  <Annotation
-                                    key={anno.id}
-                                    annotation={anno}
-                                    isHighlighted={comments.some(
-                                      (c) => c.annotation.id === anno.id
-                                    )}
-                                  />
-                                ))}
-                              </div>
-
-                              {/* Comment markers */}
-                              <div className="absolute top-0 left-0 h-full w-full">
-                                {pageComments.map((comment) => (
-                                  <div
-                                    key={comment.id}
-                                    className="comment-marker"
-                                  >
-                                    <CommentMarker
-                                      comment={comment}
-                                      users={users}
-                                      onClick={() =>
-                                        setActiveCommentId(comment.id)
-                                      }
-                                      onEdit={() => handleCommentEdit(comment)}
-                                      onDelete={() =>
-                                        handleCommentDelete(comment.id)
-                                      }
-                                      onReply={handleReply}
-                                      onEditReply={handleEditReply}
-                                      onDeleteReply={handleDeleteReply}
-                                      isDeleting={
-                                        deletingCommentId === comment.id
-                                      }
-                                      isActive={activeCommentId === comment.id}
-                                      isReplying={
-                                        replyingToCommentId === comment.id
-                                      }
-                                      deletingReplyId={deletingReplyId}
-                                      onCancel={handleCancelComment}
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </PDFDocument>
+                {/* Comments List */}
+                <div className="flex-1 overflow-y-auto p-4">
+                  {isLoadingComments ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+                    </div>
+                  ) : comments.length === 0 ? (
+                    <div className="py-8 text-center">
+                      <MessageSquare className="mx-auto h-12 w-12 text-gray-300" />
+                      <p className="mt-2 text-sm text-gray-500">
+                        No comments yet. Select text or click to add a comment.
+                      </p>
+                    </div>
                   ) : (
-                    // Image viewer
-                    <div
-                      ref={imageContainerRef}
-                      className="flex h-full w-full items-center justify-center"
-                    >
-                      <div
-                        ref={imageRef}
-                        className="relative bg-white shadow-lg"
-                      >
-                        <img
-                          src={documentUrl}
-                          alt={document?.name || 'Document'}
-                          style={{
-                            transform: `scale(${scale})`,
-                            transformOrigin: 'center',
-                            maxWidth: '100%',
-                            maxHeight: '100%',
-                            objectFit: 'contain',
-                          }}
-                          className="block"
-                        />
-
-                        {/* Annotations overlay for images */}
-                        <div className="pointer-events-none absolute top-0 left-0 h-full w-full">
-                          {allAnnotations.map((anno) => (
-                            <Annotation
-                              key={anno.id}
-                              annotation={anno}
-                              isHighlighted={comments.some(
-                                (c) => c.annotation.id === anno.id
-                              )}
-                            />
-                          ))}
-                        </div>
-
-                        {/* Comment markers for images */}
-                        <div className="absolute top-0 left-0 h-full w-full">
-                          {comments.map((comment) => (
-                            <div key={comment.id} className="comment-marker">
-                              <CommentMarker
-                                comment={comment}
-                                users={users}
-                                onClick={() => setActiveCommentId(comment.id)}
-                                onEdit={() => handleCommentEdit(comment)}
-                                onDelete={() => handleCommentDelete(comment.id)}
-                                onReply={handleReply}
-                                onEditReply={handleEditReply}
-                                onDeleteReply={handleDeleteReply}
-                                isDeleting={deletingCommentId === comment.id}
-                                isActive={activeCommentId === comment.id}
-                                isReplying={replyingToCommentId === comment.id}
-                                deletingReplyId={deletingReplyId}
-                                onCancel={handleCancelComment}
-                              />
+                    <div className="space-y-4">
+                      {comments.map((comment) => {
+                        const user = getUserById(comment.userId)
+                        return (
+                          <div
+                            key={comment.id}
+                            className={`cursor-pointer rounded-lg border p-3 transition-colors ${
+                              activeCommentId === comment.id
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-gray-200 hover:bg-gray-50'
+                            }`}
+                            onClick={() =>
+                              handleSidebarCommentClick(comment.id)
+                            }
+                          >
+                            {/* Comment Header */}
+                            <div className="mb-2 flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-600">
+                                  {user?.name?.[0]?.toUpperCase() || '?'}
+                                </div>
+                                <span className="text-sm font-medium text-gray-700">
+                                  {user?.name || 'Unknown User'}
+                                </span>
+                              </div>
+                              <span className="text-xs text-gray-500">
+                                Page {comment.annotation.page}
+                              </span>
                             </div>
-                          ))}
-                        </div>
-                      </div>
+
+                            {/* Comment Text */}
+                            <p className="line-clamp-3 text-sm text-gray-800">
+                              {comment.text}
+                            </p>
+
+                            {/* Comment Actions */}
+                            <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleCommentEdit(comment)
+                                }}
+                                className="hover:text-blue-600"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleCommentDelete(comment.id)
+                                }}
+                                className="hover:text-red-600"
+                                disabled={deletingCommentId === comment.id}
+                              >
+                                {deletingCommentId === comment.id
+                                  ? 'Deleting...'
+                                  : 'Delete'}
+                              </button>
+                            </div>
+
+                            {/* Replies */}
+                            {comment.children &&
+                              comment.children.length > 0 && (
+                                <div className="mt-3 space-y-2 border-l-2 border-gray-200 pl-3">
+                                  {comment.children.map((reply) => {
+                                    const replyUser = getUserById(reply.userId)
+                                    return (
+                                      <div
+                                        key={reply.id}
+                                        className="rounded bg-gray-50 p-2"
+                                      >
+                                        <div className="mb-1 flex items-center gap-2">
+                                          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold text-gray-600">
+                                            {replyUser?.name?.[0]?.toUpperCase() ||
+                                              '?'}
+                                          </div>
+                                          <span className="text-xs font-medium text-gray-600">
+                                            {replyUser?.name || 'Unknown User'}
+                                          </span>
+                                        </div>
+                                        <p className="text-xs text-gray-700">
+                                          {reply.text}
+                                        </p>
+                                        <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              handleEditReply(reply)
+                                            }}
+                                            className="hover:text-blue-600"
+                                          >
+                                            Edit
+                                          </button>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              handleDeleteReply(reply.id)
+                                            }}
+                                            className="hover:text-red-600"
+                                            disabled={
+                                              deletingReplyId === reply.id
+                                            }
+                                          >
+                                            {deletingReplyId === reply.id
+                                              ? 'Deleting...'
+                                              : 'Delete'}
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              )}
+                          </div>
+                        )
+                      })}
                     </div>
                   )}
                 </div>
-              ) : (
-                <div className="flex h-full items-center justify-center bg-black/75">
-                  <div className="bg-secondary flex lg:h-[300px] lg:w-[600px] flex-col items-center justify-center space-y-6 rounded-md p-6 lg:p-0">
-                    <Image
-                      src={'/assets/no-preview.svg'}
-                      alt="no preview"
-                      height={80}
-                      width={80}
-                    />
-                    <p className="font-semibold text-white lg:text-lg">
-                      Sorry, no preview available for this file format.
-                    </p>
-                    <div className="flex justify-center gap-4">
-                      <Button
-                        className="h-12 w-[200px] cursor-pointer bg-white px-6 text-lg font-semibold text-black hover:bg-white"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (onDownloadClick && document) {
-                            onDownloadClick(document)
-                          }
-                        }}
-                      >
-                        Download file{' '}
-                        <Download className="text-primary h-3 w-3" />
-                      </Button>
-                      <Button
-                        className="lg:flex hidden h-12 w-[200px] cursor-pointer items-center justify-center bg-white px-6 text-lg font-semibold text-black hover:bg-white"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (onShareClick && document) {
-                            onShareClick(document)
-                          }
-                        }}
-                      >
-                        Share file <HiShare className="text-primary" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Comments Sidebar */}
-            <div
-              className={`border-l border-gray-200 bg-white transition-all duration-300 ${
-                isSidebarOpen ? 'w-80' : 'w-0'
-              } hidden overflow-hidden lg:block`}
-            >
-              {isSidebarOpen && (
-                <div className="flex h-full flex-col">
-                  {/* Sidebar Header */}
-                  <div className="border-b border-gray-200 p-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900">
-                        Comments ({comments.length})
-                      </h3>
-                      <button
-                        onClick={() => setIsSidebarOpen(false)}
-                        className="rounded-lg p-1 hover:bg-gray-100"
-                      >
-                        <ChevronRight size={16} className="text-gray-500" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Comments List */}
-                  <div className="flex-1 overflow-y-auto p-4">
-                    {isLoadingComments ? (
-                      <div className="flex items-center justify-center py-8">
-                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
-                      </div>
-                    ) : comments.length === 0 ? (
-                      <div className="py-8 text-center">
-                        <MessageSquare className="mx-auto h-12 w-12 text-gray-300" />
-                        <p className="mt-2 text-sm text-gray-500">
-                          No comments yet. Select text or click to add a
-                          comment.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {comments.map((comment) => {
-                          const user = getUserById(comment.userId)
-                          return (
-                            <div
-                              key={comment.id}
-                              className={`cursor-pointer rounded-lg border p-3 transition-colors ${
-                                activeCommentId === comment.id
-                                  ? 'border-blue-500 bg-blue-50'
-                                  : 'border-gray-200 hover:bg-gray-50'
-                              }`}
-                              onClick={() =>
-                                handleSidebarCommentClick(comment.id)
-                              }
-                            >
-                              {/* Comment Header */}
-                              <div className="mb-2 flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-600">
-                                    {user?.name?.[0]?.toUpperCase() || '?'}
-                                  </div>
-                                  <span className="text-sm font-medium text-gray-700">
-                                    {user?.name || 'Unknown User'}
-                                  </span>
-                                </div>
-                                <span className="text-xs text-gray-500">
-                                  Page {comment.annotation.page}
-                                </span>
-                              </div>
-
-                              {/* Comment Text */}
-                              <p className="line-clamp-3 text-sm text-gray-800">
-                                {comment.text}
-                              </p>
-
-                              {/* Comment Actions */}
-                              <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleCommentEdit(comment)
-                                  }}
-                                  className="hover:text-blue-600"
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleCommentDelete(comment.id)
-                                  }}
-                                  className="hover:text-red-600"
-                                  disabled={deletingCommentId === comment.id}
-                                >
-                                  {deletingCommentId === comment.id
-                                    ? 'Deleting...'
-                                    : 'Delete'}
-                                </button>
-                              </div>
-
-                              {/* Replies */}
-                              {comment.children &&
-                                comment.children.length > 0 && (
-                                  <div className="mt-3 space-y-2 border-l-2 border-gray-200 pl-3">
-                                    {comment.children.map((reply) => {
-                                      const replyUser = getUserById(
-                                        reply.userId
-                                      )
-                                      return (
-                                        <div
-                                          key={reply.id}
-                                          className="rounded bg-gray-50 p-2"
-                                        >
-                                          <div className="mb-1 flex items-center gap-2">
-                                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold text-gray-600">
-                                              {replyUser?.name?.[0]?.toUpperCase() ||
-                                                '?'}
-                                            </div>
-                                            <span className="text-xs font-medium text-gray-600">
-                                              {replyUser?.name ||
-                                                'Unknown User'}
-                                            </span>
-                                          </div>
-                                          <p className="text-xs text-gray-700">
-                                            {reply.text}
-                                          </p>
-                                          <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation()
-                                                handleEditReply(reply)
-                                              }}
-                                              className="hover:text-blue-600"
-                                            >
-                                              Edit
-                                            </button>
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation()
-                                                handleDeleteReply(reply.id)
-                                              }}
-                                              className="hover:text-red-600"
-                                              disabled={
-                                                deletingReplyId === reply.id
-                                              }
-                                            >
-                                              {deletingReplyId === reply.id
-                                                ? 'Deleting...'
-                                                : 'Delete'}
-                                            </button>
-                                          </div>
-                                        </div>
-                                      )
-                                    })}
-                                  </div>
-                                )}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
 

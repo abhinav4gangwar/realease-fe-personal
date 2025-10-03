@@ -159,6 +159,31 @@ const PropertiesDetailsModel = ({
     return property.coordinates || ''
   }
 
+  const getSingularUnit = (unit: string) => {
+    const mappings: { [key: string]: string } = {
+      acres: 'acre',
+      hectares: 'hectare',
+      'square yards': 'square yard',
+      'square feet': 'square foot',
+      'square meters': 'square meter',
+      'sq.ft': 'square foot',
+      sqm: 'square meter',
+      sqyd: 'square yard',
+    }
+    const lower = unit.toLowerCase()
+    return mappings[lower] || unit
+  }
+
+  const getUnitFromExtent = () => {
+    if (!property?.extent) return 'unit'
+    const match = property.extent.match(/(\d+(?:\.\d+)?)\s*(.*)$/)
+    if (match) {
+      const unitStr = match[2].trim()
+      return getSingularUnit(unitStr)
+    }
+    return 'unit'
+  }
+
   //load users
   const loadUsers = async () => {
     if (!property?.id) return
@@ -386,7 +411,6 @@ const PropertiesDetailsModel = ({
                 />
 
                 {/* Reply mention dropdown */}
-              
               </div>
 
               <div className="flex gap-2">
@@ -480,9 +504,11 @@ const PropertiesDetailsModel = ({
                       Legal Status
                     </h3>
                     <h2 className="truncate text-lg font-semibold">
-                      {property?.legalStatus}
+                      {property?.isDisputed
+                        ? property?.legalStatus
+                        : 'Undisputed'}
                     </h2>
-                    {openItems && (
+                    {property?.isDisputed && openItems && (
                       <div className="flex flex-col space-y-3 pt-3">
                         <div>
                           <h3 className="mb-1 text-sm font-medium text-gray-500">
@@ -619,22 +645,19 @@ const PropertiesDetailsModel = ({
                     <h2 className="truncate text-lg font-semibold">
                       {property?.extent}
                     </h2>
-                    <h3 className="mb-1 text-sm font-medium text-gray-500">
-                      square yards
-                    </h3>
                   </div>
                 </div>
 
                 <div>
                   <h3 className="mb-1 text-sm font-medium text-gray-500">
-                    Value per square yard
+                    Value per {getUnitFromExtent()}
                   </h3>
                   <div className="flex justify-between">
                     <h2 className="truncate text-lg font-semibold">
                       ₹ {property?.valuePerSQ}
                     </h2>
                     <h3 className="mb-1 text-sm font-medium text-gray-500">
-                      /square yard
+                      /{getUnitFromExtent()}
                     </h3>
                   </div>
                 </div>
@@ -709,7 +732,7 @@ const PropertiesDetailsModel = ({
                           className="cursor-pointer px-3 py-2 hover:bg-gray-100"
                         >
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-secondary">
+                            <span className="text-secondary font-medium">
                               @{extractUsername(user.email)}
                             </span>
                             <span className="text-sm text-gray-500">

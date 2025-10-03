@@ -137,6 +137,7 @@ const Documentspage = () => {
   }
 
   const documentsToShow = getDocumentsToShow()
+  console.log(documentsToShow)
 
   const handleClearSearch = () => {
     clearSearchResults()

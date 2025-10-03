@@ -181,18 +181,18 @@ const MobileDocumentDetailsModel = ({
   return (
     <>
       {/* Backdrop */}
-      <div 
-        className="fixed inset-0 z-40 bg-black/60 bg-opacity-50"
+      <div
+        className="bg-opacity-50 fixed inset-0 z-40 bg-black/60"
         onClick={onClose}
       />
-      
+
       {/* Bottom Sheet Modal */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 flex h-[80vh] flex-col rounded-t-xl bg-white shadow-2xl">
+      <div className="fixed right-0 bottom-0 left-0 z-50 flex h-[80vh] flex-col rounded-t-xl bg-white shadow-2xl">
         {/* Drag Handle */}
         <div className="flex justify-center py-2">
           <div className="h-1 w-12 rounded-full bg-gray-300"></div>
         </div>
-        
+
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-200 p-4">
           <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -220,7 +220,9 @@ const MobileDocumentDetailsModel = ({
                   size="icon"
                   className="h-8 w-8"
                   onClick={handleSave}
-                  disabled={isSaving || editedName.trim() === '' || !hasChanges()}
+                  disabled={
+                    isSaving || editedName.trim() === '' || !hasChanges()
+                  }
                 >
                   <Check className="h-4 w-4" />
                 </Button>
@@ -285,7 +287,10 @@ const MobileDocumentDetailsModel = ({
           {/* Document Preview Area */}
           <div className="m-4 flex h-48 items-center justify-center rounded-lg bg-gray-100">
             <div className="text-center">
-              <FileIcon type={document.icon} className="mx-auto mb-2 h-16 w-14" />
+              <FileIcon
+                type={document.icon}
+                className="mx-auto mb-2 h-16 w-14"
+              />
               <p className="text-sm text-gray-500">Document Preview</p>
             </div>
           </div>
@@ -348,12 +353,16 @@ const MobileDocumentDetailsModel = ({
                 <h3 className="mb-2 text-sm font-medium text-gray-500">
                   File Type
                 </h3>
-                <FileTypeDisplay
-                  mimeType={document.fileType}
-                  fileName={document.name}
-                  className="text-sm"
-                  fallback="Unknown"
-                />
+                {document.isFolder ? (
+                  <p className="text-sm capitalize">{document.icon}</p>
+                ) : (
+                  <FileTypeDisplay
+                    mimeType={document.fileType}
+                    fileName={document.name}
+                    className="text-sm"
+                    fallback="Unknown"
+                  />
+                )}
               </div>
             </div>
 
