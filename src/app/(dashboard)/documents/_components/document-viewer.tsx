@@ -847,6 +847,7 @@ export function DocumentViewer({
                         onMoveClick={handleMoveClick}
                         onShareClick={handleShareClick}
                         onDownloadClick={handleDownloadClick}
+                        isModelOpen={isModalOpen}
                       />
                     </div>
                   )}

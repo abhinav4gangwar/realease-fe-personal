@@ -30,6 +30,7 @@ interface DocumentGridViewProps {
   onShareClick?: (document: Document) => void
   onDownloadClick?: (document: Document) => void
   loadingFolders?: Set<string>
+  isModelOpen: boolean
 }
 
 export function DocumentGridView({
@@ -46,6 +47,7 @@ export function DocumentGridView({
   onEditClick,
   onShareClick,
   onDownloadClick,
+  isModelOpen,
   loadingFolders = new Set(),
 }: DocumentGridViewProps) {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
@@ -63,7 +65,7 @@ export function DocumentGridView({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className={`grid grid-cols-1 gap-4 md:grid-cols-2 ${isModelOpen ? "lg:grid-cols-2" : "lg:grid-cols-3"} transition-all duration-300 `}>
       {documents.map((document) => (
         <Card
           key={document.id}
