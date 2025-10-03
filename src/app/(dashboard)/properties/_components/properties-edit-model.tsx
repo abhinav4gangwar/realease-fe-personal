@@ -1116,7 +1116,7 @@ useEffect(() => {
                   </div>
                   <div className="flex flex-col space-y-1">
                     <label className="text-md text-secondary block font-semibold">
-                      Value
+                      Description
                     </label>
                     <Input
                       type="text"

@@ -18,7 +18,7 @@ import { useLocationAutoFill } from '@/hooks/useLocationAutoFill'
 import { cn } from '@/lib/utils'
 import { CountryType, Properties } from '@/types/property.types'
 import { apiClient } from '@/utils/api'
-import { formatCoordinates, parseCoordinates } from '@/utils/coordinateUtils'
+import { formatCoordinates } from '@/utils/coordinateUtils'
 import { Country } from 'country-state-city'
 import {
   AlertCircle,
@@ -305,7 +305,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
   const addCustomField = () => {
     const newField: CustomField = {
       id: `custom-${Date.now()}`,
-      label: 'Custom Field',
+      label: '',
       value: '',
     }
     setCustomFields((prev) => [...prev, newField])
@@ -975,13 +975,13 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
             </div>
 
             <div className="flex flex-col space-y-1">
-              <label className="text-md text-secondary block font-semibold">Value</label>
+              <label className="text-md text-secondary block font-semibold">Description</label>
               <Input
                 type="text"
                 value={field.value}
                 onChange={(e) => updateCustomField(field.id, 'value', e.target.value)}
                 className="w-full rounded-md border border-gray-300 px-3 py-2"
-                placeholder="Enter value"
+                placeholder="Enter details"
               />
             </div>
           </div>
