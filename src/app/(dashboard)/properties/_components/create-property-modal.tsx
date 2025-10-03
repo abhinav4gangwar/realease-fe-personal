@@ -70,6 +70,8 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
   const [partyA, setPartyA] = useState('')
   const [partyB, setPartyB] = useState('')
 
+  const [selectedUnit, setSelectedUnit] = useState<string>('acres')
+
   const [formData, setFormData] = useState<Properties>({
     name: '',
     type: '',
@@ -120,6 +122,70 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
 
     return basicValidation
   }
+
+  const unitsForType = (type: string) => {
+    switch (type) {
+      case 'Land':
+        return [
+          { value: 'acres', label: 'Acres' },
+          { value: 'hectares', label: 'Hectares' },
+        ]
+      case 'Residential':
+      case 'Commercial':
+        return [
+          { value: 'sqft', label: 'Square Feet' },
+          { value: 'sqm', label: 'Square Meters' },
+        ]
+      case 'Plot':
+        return []
+      default:
+        return []
+    }
+  }
+
+  const unitLabels = {
+    acres: { plural: 'acres', singular: 'acre' },
+    hectares: { plural: 'hectares', singular: 'hectare' },
+    sqyd: { plural: 'square yards', singular: 'square yard' },
+    sqft: { plural: 'square feet', singular: 'square foot' },
+    sqm: { plural: 'square meters', singular: 'square meter' },
+  }
+
+  const getUnitLabel = (unit: string, isPlural: boolean = true) => {
+    const label = unitLabels[unit as keyof typeof unitLabels]
+    if (!label) return 'units'
+    return isPlural ? label.plural : label.singular
+  }
+
+  useEffect(() => {
+    // Set default unit based on property type
+    let defaultUnit = 'acres'
+    switch (formData.type) {
+      case 'Plot':
+        defaultUnit = 'sqyd'
+        break
+      case 'Land':
+        defaultUnit = 'acres'
+        break
+      case 'Residential':
+      case 'Commercial':
+        defaultUnit = 'sqft'
+        break
+    }
+    setSelectedUnit(defaultUnit)
+  }, [formData.type])
+
+  // Auto-calculate total value
+  useEffect(() => {
+    const extentNum = parseFloat(formData.extent)
+    const perNum = parseFloat(formData.valuePerSQ)
+    if (!isNaN(extentNum) && !isNaN(perNum) && extentNum > 0 && perNum > 0) {
+      const total = extentNum * perNum
+      updateFormData('value', total.toFixed(2))
+    } else if (formData.extent === '' || formData.valuePerSQ === '') {
+      updateFormData('value', '')
+    }
+  }, [formData.extent, formData.valuePerSQ])
 
   useEffect(() => {
     // Load all countries on component mount
@@ -357,6 +423,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     setIsDocumentUploading(false)
     setPartyA('')
     setPartyB('')
+    setSelectedUnit('acres')
   }
 
   const createProperty = async () => {
@@ -376,6 +443,9 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
           ? `${partyA.trim()} vs ${partyB.trim()}`
           : partyA.trim() || partyB.trim() || ''
       // Remove parsing since we now have separate latitude and longitude fields
+
+      const currentUnit = formData.type === 'Plot' ? 'sqyd' : selectedUnit;
+      const extentWithUnit = formData.extent ? `${formData.extent} ${getUnitLabel(currentUnit, true)}` : '';
 
       const requestBody = {
         name: formData.name,
@@ -400,7 +470,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
         caseNumber: formData.caseNumber,
         caseType: formData.caseType,
         nextHearing: formData.nextHearing,
-        extent: formData.extent,
+        extent: extentWithUnit,
         valuePerSQ: formData.valuePerSQ,
         additionalDetails:
           Object.keys(additionalDetails).length > 0
@@ -967,12 +1037,29 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
               <label className="text-md text-secondary block font-semibold">
                 Extent <span className="text-primary">*</span>
               </label>
+              {unitsForType(formData.type).length > 0 && (
+                <select
+                  value={selectedUnit}
+                  onChange={(e) => setSelectedUnit(e.target.value)}
+                  className="h-10 w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+                >
+                  {unitsForType(formData.type).map((u) => (
+                    <option key={u.value} value={u.value}>
+                      {u.label}
+                    </option>
+                  ))}
+                </select>
+              )}
               <Input
-                type="text"
+                type="number"
+                step="any"
                 value={formData.extent}
                 onChange={(e) => updateFormData('extent', e.target.value)}
                 className="w-full rounded-md border border-gray-300 px-3 py-2"
-                placeholder="Enter value (acres)"
+                placeholder={`Enter value in ${getUnitLabel(
+                  formData.type === 'Plot' ? 'sqyd' : selectedUnit,
+                  true
+                )}`}
                 required
               />
             </div>
@@ -981,28 +1068,39 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
             <div className="flex flex-col space-y-3">
               <div className="flex flex-col space-y-3">
                 <label className="text-md text-secondary block font-semibold">
-                  Land value per acre <span className="text-primary">*</span>
+                  Value per {getUnitLabel(
+                    formData.type === 'Plot' ? 'sqyd' : selectedUnit,
+                    false
+                  )}{' '}
+                  <span className="text-primary">*</span>
                 </label>
                 <Input
-                  type="text"
+                  type="number"
+                  step="any"
                   value={formData.valuePerSQ}
                   onChange={(e) => updateFormData('valuePerSQ', e.target.value)}
                   className="w-full rounded-md border border-gray-300 px-3 py-2"
-                  placeholder="00.00"
+                  placeholder="0.00"
                   required
                 />
               </div>
 
               <div className="flex flex-col space-y-3">
                 <label className="text-md text-secondary block font-semibold">
-                  Land value <span className="text-primary">*</span>
+                  {formData.type === 'Land'
+                    ? 'Land'
+                    : formData.type === 'Plot'
+                      ? 'Plot'
+                      : formData.type}{' '}
+                  Value <span className="text-primary">*</span>
                 </label>
                 <Input
-                  type="text"
+                  type="number"
+                  step="any"
                   value={formData.value}
                   onChange={(e) => updateFormData('value', e.target.value)}
                   className="w-full rounded-md border border-gray-300 px-3 py-2"
-                  placeholder="00.00"
+                  placeholder="0.00"
                   required
                 />
               </div>
