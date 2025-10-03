@@ -480,9 +480,9 @@ const PropertiesDetailsModel = ({
                       Legal Status
                     </h3>
                     <h2 className="truncate text-lg font-semibold">
-                      {property?.legalStatus}
+                     {property?.isDisputed ? (property?.legalStatus) : ("Undisputed")} 
                     </h2>
-                    {openItems && (
+                    {property?.isDisputed && openItems && (
                       <div className="flex flex-col space-y-3 pt-3">
                         <div>
                           <h3 className="mb-1 text-sm font-medium text-gray-500">
