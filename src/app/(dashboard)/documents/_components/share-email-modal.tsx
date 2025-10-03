@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { apiClient } from '@/utils/api'
-import { X } from 'lucide-react'
+import { ArrowLeft, X } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { FileIcon } from './file-icon'
@@ -20,6 +20,7 @@ interface ShareEmailModalProps {
   onClose: () => void
   selectedDocuments: any[]
   onCancel: () => void
+  onBack: () => void
 }
 
 export function ShareEmailModal({
@@ -27,6 +28,7 @@ export function ShareEmailModal({
   onClose,
   selectedDocuments,
   onCancel,
+  onBack
 }: ShareEmailModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [email, setEmail] = useState('')
@@ -79,9 +81,20 @@ export function ShareEmailModal({
       <div className="flex max-h-[80vh] w-full max-w-5xl flex-col rounded-lg border border-gray-400 bg-white px-6 shadow-lg">
         {/* Header */}
         <div className="flex items-center justify-between py-6">
-          <h2 className="text-secondary text-lg font-semibold">
+          <div className='flex items-center gap-1'>
+            <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={onBack}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+            <h2 className="text-secondary text-lg font-semibold">
             Share Docs via Email
           </h2>
+          </div>
+          
           <Button
             variant="ghost"
             size="icon"

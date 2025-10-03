@@ -690,6 +690,11 @@ export function DocumentViewer({
     }
   }
 
+  const handleBack = () => {
+    setIsSelectedDocsModalOpen(true)
+    setIsShareEmailModalOpen(false)
+  }
+
   const getSelectedDocumentObjects = () => {
     const allDocs = [...documentsState]
     const allDocsWithChildren: Document[] = []
@@ -924,6 +929,7 @@ export function DocumentViewer({
           onClose={handleModalClose}
           selectedDocuments={getSelectedDocumentObjects()}
           onCancel={handleCancelFromModal}
+          onBack={handleBack}
         />
         <CancelShareModal
           isOpen={isCancelShareModalOpen}
