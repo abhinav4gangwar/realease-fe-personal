@@ -94,9 +94,9 @@ export function DocumentListView({
           />
           <div>Name</div>
         </div>
-        <div className="col-span-3 text-left">Linked Property</div>
-        <div className="col-span-2 text-left">Date Added</div>
-        <div className="col-span-2 text-left">Tags</div>
+        <div className="col-span-3 text-center">Linked Property</div>
+        <div className="col-span-2 text-center">Date Added</div>
+        <div className="col-span-2 text-center">Tags</div>
       </div>
       {/* Document Rows */}
       {documents.map((document) => (
@@ -129,15 +129,15 @@ export function DocumentListView({
               {document.name}
             </span>
           </div>
-          <div className="col-span-3 truncate pl-2 text-left text-sm text-[#9B9B9D]">
+          <div className="col-span-3 truncate text-center text-sm text-[#9B9B9D]">
             {document.linkedProperty}
           </div>
-          <div className="col-span-2 pl-2 text-left text-sm text-[#9B9B9D]">
+          <div className="col-span-2 text-center text-sm text-[#9B9B9D]">
             {document.dateAdded}
           </div>
-          <div className="col-span-2 truncate text-left text-sm text-[#9B9B9D]">
+          <div className="col-span-2 truncate text-center text-sm text-[#9B9B9D]">
             {hoveredRow === document.id && !isShareMode ? (
-              <div className="flex gap-1">
+              <div className="flex gap-1 justify-center">
                 <Button
                   variant="ghost"
                   size="icon"

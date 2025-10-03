@@ -354,7 +354,7 @@ const MobileDocumentDetailsModel = ({
                   File Type
                 </h3>
                 {document.isFolder ? (
-                  <p className="text-sm">{document.icon}</p>
+                  <p className="text-sm capitalize">{document.icon}</p>
                 ) : (
                   <FileTypeDisplay
                     mimeType={document.fileType}

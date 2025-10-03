@@ -85,6 +85,7 @@ const [countries, setCountries] = useState<CountryType[]>([])
     latitude: '',
     longitude: '',
     isDisputed: false,
+    legalStatus: "",
     legalParties: '',
     caseNumber: '',
     caseType: '',
@@ -440,7 +441,7 @@ useEffect(() => {
         // Keep the original coordinates field for backward compatibility
         coordinates: formData.coordinates,
         isDisputed: isDisputed,
-        legalStatus: isDisputed ? 'Disputed - Ongoing' : 'Undisputed',
+        legalStatus: formData.legalStatus,
         legalParties: formData.legalParties,
         caseNumber: formData.caseNumber,
         caseType: formData.caseType,
@@ -556,7 +557,7 @@ useEffect(() => {
         // Keep the original coordinates field for backward compatibility
         coordinates: formData.coordinates,
         isDisputed: isDisputed,
-        legalStatus: isDisputed ? 'Disputed - Ongoing' : 'Undisputed',
+        legalStatus: formData.legalStatus,
         legalParties: formData.legalParties,
         caseNumber: formData.caseNumber,
         caseType: formData.caseType,
@@ -938,9 +939,7 @@ useEffect(() => {
                 </div>
               </div>
               
-              <p className="text-xs text-gray-500">
-                Enter latitude and longitude as decimal numbers, or they will be auto-filled from location
-              </p>
+              
             </div>
 
             {/* legal status */}
@@ -972,9 +971,28 @@ useEffect(() => {
                     Legal Details <span className="text-primary">*</span>
                   </label>
 
+
+
                   <div className="flex flex-col space-y-1 pb-3">
+
+                  <label className="text-md text-secondary block">
+                      Case Status <span className="text-primary">*</span>
+                    </label>
+                    <select
+                      value={formData.legalStatus}
+                      onChange={(e) =>
+                        updateFormData('legalStatus', e.target.value)
+                      }
+                      className="w-full rounded-md border border-gray-400 bg-white px-3 py-2 h-14"
+                    >
+                      <option value="-">Select Case Status</option>
+                      <option value="Disputed - Ongoing">Ongoing</option>
+                      <option value="Disputed - Disposed">Disposed</option>
+                    </select>
+
+
                     <label className="text-md text-secondary block">
-                      Parties <span className="text-primary">*</span>
+                      Parties
                     </label>
                     <Input
                       type="text"
@@ -1005,7 +1023,7 @@ useEffect(() => {
 
                     <div className="flex flex-col space-y-1">
                       <label className="text-md text-secondary block">
-                        Case Status <span className="text-primary">*</span>
+                        Next Hearing
                       </label>
                       <Input
                         type="text"
@@ -1014,7 +1032,7 @@ useEffect(() => {
                           updateFormData('nextHearing', e.target.value)
                         }
                         className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                        placeholder="Select Status"
+                        placeholder="Next Hearing (yyyy-mm-dd)"
                       />
                     </div>
                   </div>
@@ -1116,7 +1134,7 @@ useEffect(() => {
                   </div>
                   <div className="flex flex-col space-y-1">
                     <label className="text-md text-secondary block font-semibold">
-                      Value
+                      Description
                     </label>
                     <Input
                       type="text"
