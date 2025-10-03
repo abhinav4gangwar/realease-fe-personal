@@ -17,13 +17,13 @@ export function CancelShareModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm rounded-lg border bg-white shadow-lg border-gray-500">
+      <div className="w-full max-w-md rounded-lg border bg-white shadow-lg border-gray-500">
         {/* Content */}
         <div className="p-6">
-          <h2 className="mb-2 text-xl font-semibold">Cancel Share</h2>
-          <p className="mb-6 text-gray-600">Are you sure you want to Cancel?</p>
+          <h2 className="mb-2 text-xl font-semibold text-center">Cancel Share</h2>
+          <p className="mb-6 text-gray-600 text-center">Are you sure you want to Cancel?</p>
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 justify-center">
             <Button
               onClick={onConfirm}
              className="bg-primary hover:bg-secondary cursor-pointer h-11 px-6 w-28"

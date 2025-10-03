@@ -1,11 +1,15 @@
 'use client'
 
+import { Properties } from '@/types/property.types'
 import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
-
-import { Properties } from '@/types/property.types'
+import { useMap } from 'react-leaflet'
 import { toast } from 'sonner'
 import { propertiesApi } from '../properties/_property_utils/property.services'
+
+import { Button } from '@/components/ui/button'
+import { Menu } from 'lucide-react'
+import MapPropertiesSidebar from './_components/map-sidebar'
 
 const MapContainer = dynamic(
   () => import('react-leaflet').then((mod) => mod.MapContainer),
@@ -35,11 +39,36 @@ if (typeof window !== 'undefined') {
   })
 }
 
+// MapController component to handle map navigation
+function MapController({ 
+  center, 
+  zoom 
+}: { 
+  center: [number, number] | null
+  zoom: number 
+}) {
+  const map = useMap()
+  
+  useEffect(() => {
+    if (center) {
+      map.flyTo(center, zoom, {
+        duration: 1.5,
+        easeLinearity: 0.25
+      })
+    }
+  }, [center, zoom, map])
+  
+  return null
+}
+
 const MapPage = () => {
   const [isClient, setIsClient] = useState(false)
   const [properties, setProperties] = useState<Properties[]>([])
   const [loading, setLoading] = useState(true)
-  const [mapCenter, setMapCenter] = useState<[number, number]>([]) 
+  const [mapCenter, setMapCenter] = useState<[number, number]>([22.5726, 88.3639]) // Default to Kolkata
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [selectedProperty, setSelectedProperty] = useState<Properties | null>(null)
+  const [flyToCoordinates, setFlyToCoordinates] = useState<[number, number] | null>(null)
 
   useEffect(() => {
     setIsClient(true)
@@ -71,6 +100,20 @@ const MapPage = () => {
     }
   }
 
+  const handlePropertyClick = (property: Properties) => {
+    setSelectedProperty(property)
+    
+    // Navigate to property location on map
+    const lat = parseFloat(property.latitude)
+    const lng = parseFloat(property.longitude)
+    
+    if (!isNaN(lat) && !isNaN(lng)) {
+      setFlyToCoordinates([lat, lng])
+    } else {
+      toast.error('Invalid coordinates for this property')
+    }
+  }
+
   if (!isClient) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-gray-100">
@@ -98,54 +141,75 @@ const MapPage = () => {
   })
 
   return (
-    <div className="h-screen w-full">
-      <MapContainer
-        center={mapCenter}
-        zoom={12}
-        style={{ height: '100%', width: '100%' }}
-        zoomControl={true}
+    <div className="relative h-screen w-full">
+      {/* Toggle Sidebar Button */}
+      <Button
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        className={`absolute right-4 top-4 z-[999] bg-white text-primary shadow-lg transition-all hover:bg-primary hover:text-white`}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        
-        {validProperties.map((property) => {
-          const lat = parseFloat(property.latitude)
-          const lng = parseFloat(property.longitude)
+        <Menu className="h-5 w-5" />
+      </Button>
+
+      {/* Map Container */}
+      <div className="h-full w-full">
+        <MapContainer
+          center={mapCenter}
+          zoom={12}
+          style={{ height: '100%', width: '100%' }}
+          zoomControl={true}
+        >
+          {/* Map Controller for navigation */}
+          <MapController center={flyToCoordinates} zoom={16} />
           
-          return (
-            <Marker
-              key={property.id}
-              position={[lat, lng]}
-            >
-              <Popup>
-                <div className="min-w-[200px] p-2">
-                  <h3 className="font-bold text-lg mb-2">{property.name}</h3>
-                  <div className="space-y-1 text-sm">
-                    <p><strong>Type:</strong> {property.type}</p>
-                    <p><strong>Owner:</strong> {property.owner}</p>
-                    <p><strong>Location:</strong> {property.location}</p>
-                    <p><strong>Extent:</strong> {property.extent}</p>
-                    <p><strong>Value:</strong> ${parseInt(property.value).toLocaleString()}</p>
-                    {property.isDisputed && (
-                      <p className="text-primary font-semibold">
-                        ⚠️ Disputed - {property.legalStatus}
-                      </p>
-                    )}
-                    {property.address && (
-                      <p className="text-gray-600 mt-2 pt-2 border-t">
-                        {property.address}
-                      </p>
-                    )}
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          
+          {validProperties.map((property) => {
+            const lat = parseFloat(property.latitude)
+            const lng = parseFloat(property.longitude)
+            
+            return (
+              <Marker
+                key={property.id}
+                position={[lat, lng]}
+              >
+                <Popup>
+                  <div className="min-w-[200px] p-2">
+                    <h3 className="font-bold text-lg mb-2">{property.name}</h3>
+                    <div className="space-y-1 text-sm">
+                      <p><strong>Type:</strong> {property.type}</p>
+                      <p><strong>Owner:</strong> {property.owner}</p>
+                      <p><strong>Location:</strong> {property.location}</p>
+                      <p><strong>Extent:</strong> {property.extent}</p>
+                      <p><strong>Value:</strong> ₹ {parseInt(property.value).toLocaleString()}</p>
+                      {property.isDisputed && (
+                        <p className="text-primary font-semibold">
+                          ⚠️ Disputed - {property.legalStatus}
+                        </p>
+                      )}
+                      {property.address && (
+                        <p className="text-gray-600 mt-2 pt-2 border-t">
+                          {property.address}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </Popup>
-            </Marker>
-          )
-        })}
-      </MapContainer>
-      
+                </Popup>
+              </Marker>
+            )
+          })}
+        </MapContainer>
+      </div>
+
+      {/* Properties Sidebar */}
+      <MapPropertiesSidebar
+        properties={validProperties}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        onPropertyClick={handlePropertyClick}
+      />
     </div>
   )
 }

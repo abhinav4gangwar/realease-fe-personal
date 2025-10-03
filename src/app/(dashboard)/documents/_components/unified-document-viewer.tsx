@@ -534,8 +534,8 @@ export function UnifiedDocumentViewer({
     setNumPages(nextNumPages)
   }
 
-  const zoomIn = () => setScale((prev) => Math.min(prev + 0.2, 3.0))
-  const zoomOut = () => setScale((prev) => Math.max(prev - 0.2, 0.5))
+  const zoomIn = () => setScale((prev) => Math.min(prev + 0.1, 3.0))
+  const zoomOut = () => setScale((prev) => Math.max(prev - 0.1, 0.5))
 
   const handleCancelComment = () => {
     setActiveCommentId(null)

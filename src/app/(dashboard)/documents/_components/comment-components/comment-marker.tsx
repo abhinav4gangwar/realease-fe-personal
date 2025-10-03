@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { Comment, User } from '@/types/comment.types'
 import { Loader2, Pencil, Trash2 } from 'lucide-react'
 import {
+  useEffect,
   useRef,
   useState,
   type ChangeEvent,
@@ -15,6 +16,7 @@ import {
   type KeyboardEvent,
   type MouseEvent,
 } from 'react'
+import { createPortal } from 'react-dom'
 
 interface CommentMarkerProps {
   comment: Comment
@@ -52,7 +54,20 @@ export const CommentMarker: FC<CommentMarkerProps> = ({
   const [replyText, setReplyText] = useState('')
   const [mentionSuggestions, setMentionSuggestions] = useState<User[]>([])
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0)
+  const [cardPosition, setCardPosition] = useState({ top: 0, left: 0 })
+  const markerRef = useRef<HTMLDivElement>(null)
   const replyInputRef = useRef<HTMLInputElement>(null)
+
+  // Update card position when marker is hovered or active
+  useEffect(() => {
+    if ((isHovered || isActive) && markerRef.current) {
+      const rect = markerRef.current.getBoundingClientRect()
+      setCardPosition({
+        top: rect.top,
+        left: rect.right + 8, // 8px offset (left-8 in tailwind)
+      })
+    }
+  }, [isHovered, isActive])
 
   const getEmailUsername = (email: string): string => {
     return email.split('@')[0]
@@ -142,239 +157,249 @@ export const CommentMarker: FC<CommentMarkerProps> = ({
     }
   }
 
-  return (
-    <div
-      className="absolute z-10 cursor-pointer"
+  const commentCard = (isHovered || isActive) && (
+    <Card
+      className="fixed z-[9999] max-w-5xl border-0 bg-white shadow-xl"
       style={{
-        left: `${comment.annotation.rect.x + comment.annotation.rect.width}%`,
-        top: `${comment.annotation.rect.y}%`,
-        transform: 'translate(-50%, -50%)',
-      }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onClick={(e) => {
-        e.stopPropagation()
-        onClick()
+        top: `${cardPosition.top}px`,
+        left: `${cardPosition.left}px`,
       }}
     >
-      <Avatar
-        className={cn(
-          'h-7 w-7 border-2 border-white shadow-md',
-          isActive && 'ring-secondary ring-2'
-        )}
-      >
-        <AvatarFallback className="bg-secondary text-xs text-white">
-          {comment.authorName?.charAt(0).toUpperCase() ||
-            comment.author.toString().charAt(0)}
-        </AvatarFallback>
-      </Avatar>
-      {(isHovered || isActive) && (
-        <Card className="absolute top-0 left-8 z-20 max-w-5xl border-0 bg-white shadow-xl">
-          <CardContent className="max-w-5xl p-3">
-            <div className="flex items-start gap-2">
-              <Avatar className="h-9 w-9">
-                <AvatarFallback className="bg-secondary text-xs text-white">
-                  {comment.authorName?.charAt(0).toUpperCase() ||
-                    comment.author.toString().charAt(0)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <div
-                  className="group mb-1 flex justify-between"
-                  onMouseEnter={() => setIsHovered(true)}
-                  onMouseLeave={() => setIsHovered(false)}
+      <CardContent className="max-w-5xl p-3">
+        <div className="flex items-start gap-2">
+          <Avatar className="h-9 w-9">
+            <AvatarFallback className="bg-secondary text-xs text-white">
+              {comment.authorName?.charAt(0).toUpperCase() ||
+                comment.author.toString().charAt(0)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <div
+              className="group mb-1 flex justify-between"
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+            >
+              <div className="text-md font-semibold">
+                {comment.authorName || `User ${comment.author}`}
+                <p className="text-xs font-medium text-gray-500">
+                  {comment.timestamp}
+                </p>
+              </div>
+              <div
+                className={cn(
+                  'flex opacity-0 transition-opacity group-hover:opacity-100',
+                  {
+                    'opacity-100': isHovered,
+                  }
+                )}
+              >
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="hover:text-primary h-4 cursor-pointer px-2 text-xs text-gray-500"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onEdit()
+                  }}
                 >
-                  <div className="text-md font-semibold">
-                    {comment.authorName || `User ${comment.author}`}
-                    <p className="text-xs font-medium text-gray-500">
-                      {comment.timestamp}
-                    </p>
+                  <Pencil className="mr-1 h-2 w-2" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="hover:text-primary h-4 cursor-pointer px-2 text-xs text-gray-500"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onDelete()
+                  }}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                  ) : (
+                    <Trash2 className="mr-1 h-3 w-3" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="m-2 w-[300px]">
+          <p className="text-secondary text-sm">{comment.text}</p>
+          {comment.children && comment.children.length > 0 && (
+            <div className="mt-3 space-y-2 border-l-2 border-gray-200 pl-3">
+              {comment.children.map((reply) => (
+                <div
+                  key={reply.id}
+                  className="group flex items-start gap-2"
+                  onMouseEnter={() => setHoveredReplyId(reply.id)}
+                  onMouseLeave={() => setHoveredReplyId(null)}
+                >
+                  <Avatar className="h-6 w-6">
+                    <AvatarFallback className="bg-gray-400 text-xs text-white">
+                      {reply.authorName?.charAt(0).toUpperCase() ||
+                        reply.author.toString().charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-col items-center gap-2">
+                        <p className="text-xs font-medium">
+                          {reply.authorName || `User ${reply.author}`}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {reply.timestamp}
+                        </p>
+                      </div>
+                      <div
+                        className={cn(
+                          'flex opacity-0 transition-opacity group-hover:opacity-100',
+                          {
+                            'opacity-100': hoveredReplyId === reply.id,
+                          }
+                        )}
+                      >
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="hover:text-primary h-4 cursor-pointer px-1 text-xs text-gray-500"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onEditReply(reply)
+                          }}
+                          disabled={deletingReplyId === reply.id}
+                        >
+                          <Pencil className="h-2 w-2" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="hover:text-primary h-4 cursor-pointer px-1 text-xs text-gray-500"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onDeleteReply(reply.id)
+                          }}
+                          disabled={deletingReplyId === reply.id}
+                        >
+                          {deletingReplyId === reply.id ? (
+                            <Loader2 className="h-2 w-2 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-2 w-2" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-700">{reply.text}</p>
                   </div>
-                  <div
-                    className={cn(
-                      'flex opacity-0 transition-opacity group-hover:opacity-100',
-                      {
-                        'opacity-100': isHovered,
-                      }
-                    )}
-                  >
+                </div>
+              ))}
+            </div>
+          )}
+          {isActive && (
+            <div className="pt-4">
+              <div className="relative">
+                {mentionSuggestions.length > 0 && (
+                  <div className="absolute bottom-full z-30 mb-2 w-full overflow-hidden rounded-lg border border-gray-300 bg-white shadow-xl">
+                    <ul className="max-h-32 overflow-y-auto">
+                      {mentionSuggestions.map((user, index) => (
+                        <li
+                          key={user.id}
+                          className={cn(
+                            'cursor-pointer px-3 py-1 text-xs hover:bg-gray-100',
+                            {
+                              'bg-gray-200':
+                                index === activeSuggestionIndex,
+                            }
+                          )}
+                          onMouseDown={(e: MouseEvent) => {
+                            e.preventDefault()
+                            handleSelectMention(user)
+                          }}
+                        >
+                          {getEmailUsername(user.email)}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <div className="flex-col">
+                  <Input
+                    ref={replyInputRef}
+                    className="h-8 text-xs"
+                    placeholder="Mention user with @"
+                    value={replyText}
+                    onChange={handleReplyTextChange}
+                    onKeyDown={handleReplyKeyDown}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                    }}
+                    disabled={isReplying}
+                  />
+                  <div className="mt-3 flex gap-3">
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      className="hover:text-primary h-4 cursor-pointer px-2 text-xs text-gray-500"
+                      type="button"
+                      variant="outline"
                       onClick={(e) => {
                         e.stopPropagation()
-                        onEdit()
+                        handleCancelReply()
                       }}
                     >
-                      <Pencil className="mr-1 h-2 w-2" />
+                      Cancel
                     </Button>
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      className="hover:text-primary h-4 cursor-pointer px-2 text-xs text-gray-500"
+                      className="cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation()
-                        onDelete()
+                        handleReplySubmit()
                       }}
-                      disabled={isDeleting}
+                      disabled={!replyText.trim() || isReplying}
                     >
-                      {isDeleting ? (
-                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                      {isReplying ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
                       ) : (
-                        <Trash2 className="mr-1 h-3 w-3" />
+                        <span>Reply</span>
                       )}
                     </Button>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="m-2 w-[300px]">
-              <p className="text-secondary text-sm">{comment.text}</p>
-              {/* Display replies */}
-              {comment.children && comment.children.length > 0 && (
-                <div className="mt-3 space-y-2 border-l-2 border-gray-200 pl-3">
-                  {comment.children.map((reply) => (
-                    <div
-                      key={reply.id}
-                      className="group flex items-start gap-2"
-                      onMouseEnter={() => setHoveredReplyId(reply.id)}
-                      onMouseLeave={() => setHoveredReplyId(null)}
-                    >
-                      <Avatar className="h-6 w-6">
-                        <AvatarFallback className="bg-gray-400 text-xs text-white">
-                          {reply.authorName?.charAt(0).toUpperCase() ||
-                            reply.author.toString().charAt(0)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-col items-center gap-2">
-                            <p className="text-xs font-medium">
-                              {reply.authorName || `User ${reply.author}`}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {reply.timestamp}
-                            </p>
-                          </div>
-                          <div
-                            className={cn(
-                              'flex opacity-0 transition-opacity group-hover:opacity-100',
-                              {
-                                'opacity-100': hoveredReplyId === reply.id,
-                              }
-                            )}
-                          >
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="hover:text-primary h-4 cursor-pointer px-1 text-xs text-gray-500"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                onEditReply(reply)
-                              }}
-                              disabled={deletingReplyId === reply.id}
-                            >
-                              <Pencil className="h-2 w-2" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="hover:text-primary h-4 cursor-pointer px-1 text-xs text-gray-500"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                onDeleteReply(reply.id)
-                              }}
-                              disabled={deletingReplyId === reply.id}
-                            >
-                              {deletingReplyId === reply.id ? (
-                                <Loader2 className="h-2 w-2 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-2 w-2" />
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                        <p className="text-sm text-gray-700">{reply.text}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {isActive && (
-                <div className="pt-4">
-                  <div className="relative">
-                    {mentionSuggestions.length > 0 && (
-                      <div className="absolute bottom-full z-30 mb-2 w-full overflow-hidden rounded-lg border border-gray-300 bg-white shadow-xl">
-                        <ul className="max-h-32 overflow-y-auto">
-                          {mentionSuggestions.map((user, index) => (
-                            <li
-                              key={user.id}
-                              className={cn(
-                                'cursor-pointer px-3 py-1 text-xs hover:bg-gray-100',
-                                {
-                                  'bg-gray-200':
-                                    index === activeSuggestionIndex,
-                                }
-                              )}
-                              onMouseDown={(e: MouseEvent) => {
-                                e.preventDefault()
-                                handleSelectMention(user)
-                              }}
-                            >
-                              {getEmailUsername(user.email)}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    <div className="flex-col">
-                      <Input
-                        ref={replyInputRef}
-                        className="h-8 text-xs"
-                        placeholder="Mention user with @"
-                        value={replyText}
-                        onChange={handleReplyTextChange}
-                        onKeyDown={handleReplyKeyDown}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                        }}
-                        disabled={isReplying}
-                      />
-                      <div className="mt-3 flex gap-3">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleCancelReply()
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          className="cursor-pointer"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleReplySubmit()
-                          }}
-                          disabled={!replyText.trim() || isReplying}
-                        >
-                          {isReplying ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <span>Reply</span>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+
+  return (
+    <>
+      <div
+        ref={markerRef}
+        className="absolute z-10 cursor-pointer"
+        style={{
+          left: `${comment.annotation.rect.x + comment.annotation.rect.width}%`,
+          top: `${comment.annotation.rect.y}%`,
+          transform: 'translate(-50%, -50%)',
+        }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        onClick={(e) => {
+          e.stopPropagation()
+          onClick()
+        }}
+      >
+        <Avatar
+          className={cn(
+            'h-7 w-7 border-2 border-white shadow-md',
+            isActive && 'ring-secondary ring-2'
+          )}
+        >
+          <AvatarFallback className="bg-secondary text-xs text-white">
+            {comment.authorName?.charAt(0).toUpperCase() ||
+              comment.author.toString().charAt(0)}
+          </AvatarFallback>
+        </Avatar>
+      </div>
+      {typeof document !== 'undefined' && createPortal(commentCard, document.body)}
+    </>
   )
 }
