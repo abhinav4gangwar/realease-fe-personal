@@ -67,6 +67,9 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
   )
   const [countries, setCountries] = useState<CountryType[]>([])
 
+  const [partyA, setPartyA] = useState('')
+  const [partyB, setPartyB] = useState('')
+
   const [formData, setFormData] = useState<Properties>({
     name: '',
     type: '',
@@ -352,6 +355,8 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     setCreatedPropertyId(null)
     setDocumentFiles([])
     setIsDocumentUploading(false)
+    setPartyA('')
+    setPartyB('')
   }
 
   const createProperty = async () => {
@@ -366,6 +371,10 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
         {}
       )
 
+      const legalPartiesValue =
+        partyA.trim() && partyB.trim()
+          ? `${partyA.trim()} vs ${partyB.trim()}`
+          : partyA.trim() || partyB.trim() || ''
       // Remove parsing since we now have separate latitude and longitude fields
 
       const requestBody = {
@@ -387,7 +396,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
         coordinates: formData.coordinates,
         isDisputed: isDisputed,
         legalStatus: formData.legalStatus,
-        legalParties: formData.legalParties,
+        legalParties: legalPartiesValue,
         caseNumber: formData.caseNumber,
         caseType: formData.caseType,
         nextHearing: formData.nextHearing,
@@ -873,7 +882,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                       onChange={(e) =>
                         updateFormData('legalStatus', e.target.value)
                       }
-                      className="w-full rounded-md border border-gray-400 bg-white px-3 py-2 h-14"
+                      className="h-14 w-full rounded-md border border-gray-400 bg-white px-3 py-2"
                     >
                       <option value="-">Select Case Status</option>
                       <option value="Disputed - Ongoing">Ongoing</option>
@@ -883,15 +892,24 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                     <label className="text-md text-secondary block">
                       Parties
                     </label>
-                    <Input
-                      type="text"
-                      value={formData.legalParties}
-                      onChange={(e) =>
-                        updateFormData('legalParties', e.target.value)
-                      }
-                      className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                      placeholder="Parties"
-                    />
+
+                    <div className="flex gap-3">
+                      <Input
+                        type="text"
+                        value={partyA}
+                        onChange={(e) => setPartyA(e.target.value)}
+                        className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+                        placeholder="Party A"
+                      />
+
+                      <Input
+                        type="text"
+                        value={partyB}
+                        onChange={(e) => setPartyB(e.target.value)}
+                        className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+                        placeholder="Party B"
+                      />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
