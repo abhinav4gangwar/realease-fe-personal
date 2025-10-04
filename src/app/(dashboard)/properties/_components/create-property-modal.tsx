@@ -204,7 +204,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
   const [isAutoFilling, setIsAutoFilling] = useState(false)
   const [lastAutoFilledZipcode, setLastAutoFilledZipcode] = useState('')
 
-  // Location auto-fill functionality
+  // Location auto-fill functionality (city and state only, no coordinates)
   const {
     isLoading: isLocationLoading,
     error: locationError,
@@ -250,34 +250,12 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
         }
       }
 
-      // Use the currently selected country for state/city lookup
-      const countryForLookup =
-        selectedCountry ||
-        countries.find(
-          (c) =>
-            c.name.toLowerCase().includes(location.country.toLowerCase()) ||
-            c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
-        )
-
-      // Auto-fill state and city from location data
-
+      // Auto-fill state and city from location data (NO COORDINATES)
+      console.log('🏛️ Auto-filling state:', location.state)
       updateFormData('state', location.state)
 
+      console.log('🏙️ Auto-filling city:', location.city)
       updateFormData('city', location.city)
-
-      // Auto-fill coordinates if available
-      if (location.latitude && location.longitude) {
-        updateFormData('latitude', location.latitude.toString())
-
-        updateFormData('longitude', location.longitude.toString())
-
-        // Keep coordinates field for backward compatibility (combining lat,lng)
-        const coordinateString = formatCoordinates(
-          location.latitude.toString(),
-          location.longitude.toString()
-        )
-        updateFormData('coordinates', coordinateString)
-      }
 
       // Reset auto-filling flag after a short delay
       setTimeout(() => {
@@ -717,7 +695,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
               </label>
 
               <div className="rounded-lg border border-gray-400 p-4">
-                {/* Country + State */}
+                {/* Row 1: Country and Zipcode */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col space-y-1">
                     <label className="text-md text-secondary block">
@@ -728,35 +706,61 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
 
                   <div className="flex flex-col space-y-1">
                     <label className="text-md text-secondary block">
-                      State
+                      Zip-code <span className="text-primary">*</span>
                     </label>
-                    <Input
-                      type="text"
-                      value={formData.state}
-                      onChange={(e) => updateFormData('state', e.target.value)}
-                      className="w-full rounded-md border border-gray-300 px-3 py-2"
-                      placeholder="Enter state"
-                    />
+                    <div className="relative">
+                      <Input
+                        type="text"
+                        value={formData.zipcode}
+                        onChange={(e) =>
+                          updateFormData('zipcode', e.target.value)
+                        }
+                        className={`w-full rounded-md border px-3 py-2 pr-10 ${
+                          locationError || (!isValidZipcode && formData.zipcode)
+                            ? 'border-red-300 focus:border-red-500'
+                            : isLocationLoading
+                            ? 'border-blue-300 focus:border-blue-500'
+                            : 'border-gray-300'
+                        }`}
+                        placeholder="Enter zip-code"
+                        required
+                      />
+
+                      {/* Status Icon */}
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        {isLocationLoading && (
+                          <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                        )}
+                        {!isLocationLoading && formData.zipcode && isValidZipcode && !locationError && (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        )}
+                        {(locationError || (!isValidZipcode && formData.zipcode)) && (
+                          <AlertCircle className="h-4 w-4 text-red-500" />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Status Messages */}
+                    {!isValidZipcode && formData.zipcode && (
+                      <p className="text-xs text-red-500">
+                        Invalid zipcode format for {selectedCountry?.name || 'selected country'}
+                      </p>
+                    )}
+                    {locationError && (
+                      <p className="text-xs text-red-500">
+                        {locationError}
+                      </p>
+                    )}
+                    {isLocationLoading && (
+                      <p className="text-xs text-blue-600">
+                        🔍 Looking up location...
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                {/* District + City + Zip */}
-                <div className="grid grid-cols-3 gap-3 py-3">
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-md text-secondary block">
-                      District
-                    </label>
-                    <Input
-                      type="text"
-                      value={formData.district}
-                      onChange={(e) =>
-                        updateFormData('district', e.target.value)
-                      }
-                      className="w-full rounded-md border border-gray-300 px-3 py-2"
-                      placeholder="-"
-                    />
-                  </div>
-
+                {/* Row 2: City and State */}
+                <div className="mt-3 grid grid-cols-2 gap-3">
                   <div className="flex flex-col space-y-1">
                     <label className="text-md text-secondary block">City</label>
                     <Input
@@ -769,75 +773,31 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                   </div>
 
                   <div className="flex flex-col space-y-1">
-                    <label className="text-md text-secondary block">
-                      Zip-code <span className="text-primary">*</span>
-                    </label>
-
-                    <div className="relative">
-                      <Input
-                        type="text"
-                        value={formData.zipcode}
-                        onChange={(e) =>
-                          updateFormData('zipcode', e.target.value)
-                        }
-                        className={`w-full rounded-md border px-3 py-2 pr-10 ${
-                          locationError || (!isValidZipcode && formData.zipcode)
-                            ? 'border-red-300 focus:border-red-500'
-                            : isLocationLoading
-                              ? 'border-blue-300 focus:border-blue-500'
-                              : 'border-gray-300'
-                        }`}
-                        placeholder="Enter zip-code"
-                        required
-                      />
-                      <div className="absolute top-1/2 right-3 -translate-y-1/2">
-                        {isLocationLoading && (
-                          <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                        )}
-                        {!isLocationLoading &&
-                          formData.zipcode &&
-                          isValidZipcode &&
-                          !locationError && (
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                          )}
-                        {(locationError ||
-                          (!isValidZipcode && formData.zipcode)) && (
-                          <AlertCircle className="h-4 w-4 text-red-500" />
-                        )}
-                      </div>
-                    </div>
-
-                    {!isValidZipcode && formData.zipcode && (
-                      <p className="text-xs text-red-500">
-                        Invalid zipcode format for{' '}
-                        {selectedCountry?.name || 'selected country'}
-                      </p>
-                    )}
-                    {locationError && (
-                      <p className="text-xs text-red-500">{locationError}</p>
-                    )}
-                    {isLocationLoading && (
-                      <p className="text-xs text-blue-600">
-                        🔍 Looking up location...
-                      </p>
-                    )}
+                    <label className="text-md text-secondary block">State</label>
+                    <Input
+                      type="text"
+                      value={formData.state}
+                      onChange={(e) => updateFormData('state', e.target.value)}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2"
+                      placeholder="Enter state"
+                    />
                   </div>
                 </div>
 
-                {/* Address line + Locality */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* Row 3: District and Locality */}
+                <div className="mt-3 grid grid-cols-2 gap-3">
                   <div className="flex flex-col space-y-1">
                     <label className="text-md text-secondary block">
-                      Address line 1
+                      District <span className="text-primary">*</span>
                     </label>
                     <Input
                       type="text"
-                      value={formData.address}
+                      value={formData.district}
                       onChange={(e) =>
-                        updateFormData('address', e.target.value)
+                        updateFormData('district', e.target.value)
                       }
                       className="w-full rounded-md border border-gray-300 px-3 py-2"
-                      placeholder="Enter details"
+                      placeholder="Enter district"
                     />
                   </div>
 
@@ -853,6 +813,24 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                       }
                       className="w-full rounded-md border border-gray-300 px-3 py-2"
                       placeholder="Enter locality name"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 4: Address Line 1 (Full Width) */}
+                <div className="mt-3">
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-md text-secondary block">
+                      Address Line 1
+                    </label>
+                    <Input
+                      type="text"
+                      value={formData.address}
+                      onChange={(e) =>
+                        updateFormData('address', e.target.value)
+                      }
+                      className="w-full rounded-md border border-gray-300 px-3 py-2"
+                      placeholder="Enter address details"
                     />
                   </div>
                 </div>

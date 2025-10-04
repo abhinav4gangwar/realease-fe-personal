@@ -162,97 +162,74 @@ useEffect(() => {
   }
 }, [selectedCountry])
 
-// Track if we're currently auto-filling to prevent infinite loops
-const [isAutoFilling, setIsAutoFilling] = useState(false)
-const [lastAutoFilledZipcode, setLastAutoFilledZipcode] = useState('')
+  // Track if we're currently auto-filling to prevent infinite loops
+  const [isAutoFilling, setIsAutoFilling] = useState(false)
+  const [lastAutoFilledZipcode, setLastAutoFilledZipcode] = useState('')
 
-// Location auto-fill functionality
-const {
-  isLoading: isLocationLoading,
-  error: locationError,
-  isValidZipcode,
-} = useLocationAutoFill({
-  country: selectedCountry?.name || '',
-  zipcode: formData.zipcode || '',
-  onLocationFound: (location) => {
-    // Prevent infinite loops by checking if we're already auto-filling
-    if (isAutoFilling || lastAutoFilledZipcode === formData.zipcode) {
-      return
-    }
-
-    setIsAutoFilling(true)
-    setLastAutoFilledZipcode(formData.zipcode || '')
-
-    console.log('🎯 Location found:', location)
-    console.log('🏁 Current selected country:', selectedCountry?.name)
-
-    // Only auto-select country if none is selected or if it matches the current selection
-    if (!selectedCountry) {
-      const foundCountry = countries.find(c =>
-        c.name.toLowerCase().includes(location.country.toLowerCase()) ||
-        c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
-      )
-
-      if (foundCountry) {
-        console.log('🌍 Auto-selecting country:', foundCountry.name)
-        setSelectedCountry(foundCountry)
+  // Location auto-fill functionality (city and state only, no coordinates)
+  const {
+    isLoading: isLocationLoading,
+    error: locationError,
+    isValidZipcode,
+  } = useLocationAutoFill({
+    country: selectedCountry?.name || '',
+    zipcode: formData.zipcode || '',
+    onLocationFound: (location) => {
+      // Prevent infinite loops by checking if we're already auto-filling
+      if (isAutoFilling || lastAutoFilledZipcode === formData.zipcode) {
+        return
       }
-    } else {
-      // Verify the current country matches the location result
-      const currentCountryMatches =
-        selectedCountry.name.toLowerCase().includes(location.country.toLowerCase()) ||
-        selectedCountry.isoCode.toLowerCase() === location.countryCode.toLowerCase()
 
-      if (!currentCountryMatches) {
-        console.log('⚠️ Country mismatch - keeping user selection:', selectedCountry.name)
+      setIsAutoFilling(true)
+      setLastAutoFilledZipcode(formData.zipcode || '')
+
+      console.log('🎯 Location found:', location)
+      console.log('🏁 Current selected country:', selectedCountry?.name)
+
+      // Only auto-select country if none is selected or if it matches the current selection
+      if (!selectedCountry) {
+        const foundCountry = countries.find(c =>
+          c.name.toLowerCase().includes(location.country.toLowerCase()) ||
+          c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
+        )
+
+        if (foundCountry) {
+          console.log('🌍 Auto-selecting country:', foundCountry.name)
+          setSelectedCountry(foundCountry)
+        }
+      } else {
+        // Verify the current country matches the location result
+        const currentCountryMatches =
+          selectedCountry.name.toLowerCase().includes(location.country.toLowerCase()) ||
+          selectedCountry.isoCode.toLowerCase() === location.countryCode.toLowerCase()
+
+        if (!currentCountryMatches) {
+          console.log('⚠️ Country mismatch - keeping user selection:', selectedCountry.name)
+        }
       }
+
+      // Auto-fill state and city from location data (NO COORDINATES)
+      console.log('🏛️ Auto-filling state:', location.state)
+      updateFormData('state', location.state)
+
+      console.log('🏙️ Auto-filling city:', location.city)
+      updateFormData('city', location.city)
+
+      // Reset auto-filling flag after a short delay
+      setTimeout(() => {
+        setIsAutoFilling(false)
+      }, 100)
+    },
+    autoTrigger: !isAutoFilling, // Only auto-trigger when not already auto-filling
+    debounceMs: 1000,
+  })
+
+  // Reset auto-fill tracking when zipcode changes manually
+  useEffect(() => {
+    if (formData.zipcode !== lastAutoFilledZipcode) {
+      setLastAutoFilledZipcode('')
     }
-
-    // Use the currently selected country for state/city lookup
-    const countryForLookup = selectedCountry || countries.find(c =>
-      c.name.toLowerCase().includes(location.country.toLowerCase()) ||
-      c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
-    )
-
-    // Auto-fill state and city from location data
-    console.log('🏛️ Auto-filling state:', location.state)
-    updateFormData('state', location.state)
-
-    console.log('🏙️ Auto-filling city:', location.city)
-    updateFormData('city', location.city)
-
-    // Auto-fill coordinates if available
-    if (location.latitude && location.longitude) {
-      console.log('📍 Auto-filling latitude:', location.latitude)
-      updateFormData('latitude', location.latitude.toString())
-      
-      console.log('📍 Auto-filling longitude:', location.longitude)
-      updateFormData('longitude', location.longitude.toString())
-      
-      // Keep coordinates field for backward compatibility (combining lat,lng)
-      const coordinateString = formatCoordinates(
-        location.latitude.toString(),
-        location.longitude.toString()
-      )
-      updateFormData('coordinates', coordinateString)
-    }
-
-    // Reset auto-filling flag after a short delay
-    setTimeout(() => {
-      setIsAutoFilling(false)
-    }, 100)
-  },
-  autoTrigger: !isAutoFilling, // Only auto-trigger when not already auto-filling
-  debounceMs: 1000,
-})
-
-// Reset auto-fill tracking when zipcode changes manually
-useEffect(() => {
-  if (formData.zipcode !== lastAutoFilledZipcode) {
-    setLastAutoFilledZipcode('')
-  }
-}, [formData.zipcode, lastAutoFilledZipcode])
-
+  }, [formData.zipcode, lastAutoFilledZipcode])
 
   const updateFormData = (field: keyof Properties, value: string) => {
     setFormData((prev) => ({
@@ -753,6 +730,7 @@ useEffect(() => {
                 Address <span className="text-primary">*</span>
               </label>
               <div className="rounded-lg border border-gray-400 p-4">
+                {/* Row 1: Country and Zipcode */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col space-y-1">
                     <label className="text-md text-secondary block">
@@ -814,19 +792,47 @@ useEffect(() => {
                       </p>
                     )}
                   </div>
+                </div>
+
+                {/* Row 2: City and State */}
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-md text-secondary block">City</label>
+                    <Input
+                      type="text"
+                      placeholder="Enter city"
+                      value={formData.city || ''}
+                      onChange={(e) => updateFormData('city', e.target.value)}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2"
+                    />
+                  </div>
 
                   <div className="flex flex-col space-y-1">
+                    <label className="text-md text-secondary block">State</label>
+                    <Input
+                      type="text"
+                      placeholder="Enter state"
+                      value={formData.state || ''}
+                      onChange={(e) => updateFormData('state', e.target.value)}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 3: District and Locality */}
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <div className="flex flex-col space-y-1">
                     <label className="text-md text-secondary block">
-                      Address line 1
+                      District <span className="text-primary">*</span>
                     </label>
                     <Input
                       type="text"
-                      value={formData.address}
+                      value={formData.district}
                       onChange={(e) =>
-                        updateFormData('address', e.target.value)
+                        updateFormData('district', e.target.value)
                       }
                       className="w-full rounded-md border border-gray-300 px-3 py-2"
-                      placeholder="Enter details"
+                      placeholder="Enter district"
                     />
                   </div>
 
@@ -846,45 +852,20 @@ useEffect(() => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3 py-3">
+                {/* Row 4: Address Line 1 (Full Width) */}
+                <div className="mt-3">
                   <div className="flex flex-col space-y-1">
                     <label className="text-md text-secondary block">
-                      District
+                      Address Line 1
                     </label>
                     <Input
                       type="text"
-                      value={formData.district}
+                      value={formData.address}
                       onChange={(e) =>
-                        updateFormData('district', e.target.value)
+                        updateFormData('address', e.target.value)
                       }
                       className="w-full rounded-md border border-gray-300 px-3 py-2"
-                      placeholder="-"
-                    />
-                  </div>
-
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-md text-secondary block">City</label>
-                    <Input
-                      type="text"
-                      placeholder="Enter city"
-                      value={formData.city || ''}
-                      onChange={(e) => updateFormData('city', e.target.value)}
-                      className="h-14"
-                    />
-                  </div>
-
-                  
-
-                  <div className="flex flex-col space-y-1">
-                    <label className="text-md text-secondary block">
-                      State
-                    </label>
-                    <Input
-                      type="text"
-                      placeholder="Enter state"
-                      value={formData.state || ''}
-                      onChange={(e) => updateFormData('state', e.target.value)}
-                      className="h-14"
+                      placeholder="Enter address details"
                     />
                   </div>
                 </div>
