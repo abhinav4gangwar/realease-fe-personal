@@ -1,12 +1,11 @@
 'use client'
 import {
-  checkPopupBlocker,
   handleGoogleAuth,
-  renderGoogleButton,
+  renderGoogleButton
 } from '@/lib/googleAuth'
 import { apiClient } from '@/utils/api'
-import { registerSchema } from '@/utils/validations'
 import { getCaptchaToken } from '@/utils/recaptcha'
+import { registerSchema } from '@/utils/validations'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -42,13 +41,7 @@ const RegisterForm = () => {
     },
   })
 
-  useEffect(() => {
-    const hasPopupBlocker = checkPopupBlocker()
-    if (hasPopupBlocker) {
-      console.log('Popup blocker detected, using button approach')
-      setUseGoogleButton(true)
-    }
-  }, [])
+ 
 
   // Handle Google signup success
   const handleGoogleSignupSuccess = (response: any) => {
@@ -87,6 +80,7 @@ const RegisterForm = () => {
     }
   }
 
+  // FIXED: Only render when useGoogleButton is true, removed router dependency
   useEffect(() => {
     if (useGoogleButton && googleButtonRef.current && !isGoogleLoading) {
       renderGoogleButton(
@@ -96,7 +90,13 @@ const RegisterForm = () => {
         handleGoogleSignupError
       )
     }
-  }, [useGoogleButton, isGoogleLoading, router])
+    
+    return () => {
+      if (googleButtonRef.current) {
+        googleButtonRef.current.innerHTML = ''
+      }
+    }
+  }, [useGoogleButton, isGoogleLoading]) 
 
   const onSubmit = async (values: RegisterFormValues) => {
     setIsLoading(true)
