@@ -148,6 +148,15 @@ h6 {
   opacity: 0.7;
 }
 
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
