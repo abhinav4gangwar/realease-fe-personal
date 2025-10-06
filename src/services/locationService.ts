@@ -19,6 +19,104 @@ export interface LocationServiceResponse {
 }
 
 /**
+ * Google Geocoding API - Primary service with high accuracy
+ * Requires API key from environment variables
+ */
+class GoogleGeocodingService {
+  private apiKey: string
+
+  constructor() {
+    this.apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
+    if (!this.apiKey) {
+      console.warn('Google Maps API key not found in environment variables')
+    }
+  }
+
+  async lookup(countryCode: string, zipcode: string): Promise<LocationServiceResponse> {
+    if (!this.apiKey) {
+      return {
+        success: false,
+        error: 'Google Maps API key not configured'
+      }
+    }
+
+    try {
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?components=postal_code:${zipcode}|country:${countryCode.toUpperCase()}&key=${this.apiKey}`
+      const response = await fetch(url)
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data.status === 'OK' && data.results && data.results.length > 0) {
+        const result = data.results[0]
+        const addressComponents = result.address_components || []
+        const geometry = result.geometry || {}
+        const location = geometry.location || {}
+
+        // Extract city, state, and country from address components
+        let city = ''
+        let state = ''
+        let country = ''
+        let extractedCountryCode = ''
+
+        for (const component of addressComponents) {
+          const types = component.types || []
+
+          // City - look for locality first, then administrative_area_level_2
+          if (types.includes('locality')) {
+            city = component.long_name
+          } else if (!city && types.includes('administrative_area_level_2')) {
+            city = component.long_name
+          }
+
+          // State - administrative_area_level_1
+          if (types.includes('administrative_area_level_1')) {
+            state = component.long_name
+          }
+
+          // Country
+          if (types.includes('country')) {
+            country = component.long_name
+            extractedCountryCode = component.short_name
+          }
+        }
+
+        // If no city found in locality, try postcode_localities
+        if (!city && result.postcode_localities && result.postcode_localities.length > 0) {
+          city = result.postcode_localities[0]
+        }
+
+        return {
+          success: true,
+          data: {
+            city: city || 'Unknown',
+            state: state || 'Unknown',
+            country: country || 'Unknown',
+            countryCode: extractedCountryCode || countryCode,
+            latitude: location.lat ? location.lat.toString() : undefined,
+            longitude: location.lng ? location.lng.toString() : undefined,
+          }
+        }
+      } else {
+        return {
+          success: false,
+          error: data.status === 'ZERO_RESULTS' ? 'No results found for this postal code' : `Google API error: ${data.status}`
+        }
+      }
+    } catch (error) {
+      console.error('Google Geocoding API error:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      }
+    }
+  }
+}
+
+/**
  * Nominatim OpenStreetMap API - Free, no API key required
  * Uses geocodejson format for consistent admin level handling
  */
@@ -221,7 +319,8 @@ class PostalPincodeService {
  * Main Location Service with fallback mechanism
  */
 export class LocationService {
-  private services: Array<{ name: string; service: NominatimService | ZippopotamService | PostalPincodeService }> = [
+  private services: Array<{ name: string; service: GoogleGeocodingService | NominatimService | ZippopotamService | PostalPincodeService }> = [
+    { name: 'Google Geocoding', service: new GoogleGeocodingService() },
     { name: 'Nominatim', service: new NominatimService() },
     { name: 'Zippopotam', service: new ZippopotamService() },
     { name: 'PostalPincode', service: new PostalPincodeService() },

@@ -101,7 +101,7 @@ export const handleGoogleAuth = async (
           }
         },
         auto_select: false,
-        cancel_on_tap_outside: true,
+        cancel_on_tap_outside: false,
       }
 
       window.google.accounts.id.initialize(config)

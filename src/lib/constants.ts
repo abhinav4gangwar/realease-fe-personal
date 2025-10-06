@@ -3,11 +3,18 @@ import {
   BarChart3,
   Building2,
   FileText,
+  History,
   LayoutGrid,
   MapPin,
+  MessageSquareDot,
+  ReceiptText,
+  RectangleEllipsis,
   Search,
   Settings,
-  Trash
+  ShieldAlert,
+  ShieldBan,
+  Trash,
+  UserPen,
 } from 'lucide-react'
 
 export const APP_CONFIG = {
@@ -81,6 +88,45 @@ export const PROPERTY_STATUS = [
   'rented',
   'off-market',
 ] as const
+
+export const SettingsnavigationItems = [
+  { icon: Settings, label: 'General', href: '/settings' },
+  {
+    icon: UserPen,
+    label: 'Account Details',
+    href: '/settings/account-details',
+  },
+  {
+    icon: ShieldBan,
+    label: 'Access Control',
+    href: '/settings/access-control',
+  },
+  {
+    icon: MessageSquareDot,
+    label: 'Notification Controls',
+    href: '/settings/notification-controls',
+  },
+  {
+    icon: History,
+    label: 'Version History',
+    href: '/settings/version-history',
+  },
+  {
+    icon: RectangleEllipsis,
+    label: 'Password',
+    href: '/settings/password-settings',
+  },
+  {
+    icon: ShieldAlert,
+    label: 'Privacy Policy',
+    href: '/settings/privacy-policy',
+  },
+  {
+    icon: ReceiptText,
+    label: 'Terms of Services',
+    href: '/settings/terms-of-services',
+  },
+]
 
 export const navigationItems = [
   { icon: LayoutGrid, label: 'Dashboard', href: '/' },
