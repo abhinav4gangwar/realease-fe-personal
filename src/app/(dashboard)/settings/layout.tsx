@@ -9,7 +9,7 @@ const SettingsLayout = ({
     <div className="flex h-screen overflow-hidden">
       <SettingsSidebar />
 
-      <div className="flex-1 p-6 overflow-y-auto no-scrollbar">{children}</div>
+      <div className="flex-1 p-7 overflow-y-auto no-scrollbar">{children}</div>
     </div>
   )
 }
