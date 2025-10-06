@@ -4,6 +4,7 @@ import { ArrowRight, SquareUser } from 'lucide-react'
 import { useState } from 'react'
 import AddressModel from '../_components/account-details-components/address-model'
 import NameModel from '../_components/account-details-components/name-model'
+import PhoneNumberModel from '../_components/account-details-components/phone-number-model'
 
 const AccountDetailsPage = () => {
   const [isNameModelOpen, setIsNameModelOpen] = useState(false)
@@ -81,6 +82,10 @@ const AccountDetailsPage = () => {
       <AddressModel
         isOpen={isAddressModelOpen}
         onClose={() => setIsAddressModelOpen(false)}
+      />
+      <PhoneNumberModel
+        isOpen={isPhoneModelOpen}
+        onClose={() => setIsPhoneModelOpen(false)}
       />
     </div>
   )
