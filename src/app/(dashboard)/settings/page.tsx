@@ -24,7 +24,7 @@ const SettingsPage = () => {
       </div>
 
       {/* initial content */}
-      <div className="flex flex-col space-y-6 bg-white px-4 py-10">
+      <div className="flex flex-col space-y-6 bg-white px-6 py-10">
         {/* Timezone */}
         <div className="flex items-center justify-between">
           <h1 className="w-xs">Time-zone</h1>
@@ -64,7 +64,7 @@ const SettingsPage = () => {
       </div>
 
       {/* Area content */}
-      <div className="flex flex-col space-y-6 bg-white px-4 py-10">
+      <div className="flex flex-col space-y-6 bg-white px-6 py-10">
         <div className="flex items-center justify-between">
           <h1>Land</h1>
           <div>
