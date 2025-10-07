@@ -1,4 +1,5 @@
 import { QuickAction } from '@/types'
+import { PermissionGroup } from '@/types/permission.types'
 import {
   BarChart3,
   Building2,
@@ -164,3 +165,56 @@ export const QUICK_ACTIONS_DOCS: QuickAction[] = [
 
 export type PropertyType = (typeof PROPERTY_TYPES)[number]
 export type PropertyStatus = (typeof PROPERTY_STATUS)[number]
+
+export const permissionGroups: PermissionGroup[] = [
+  {
+    id: 'asset',
+    label: 'Asset Document Access',
+    items: [
+      { id: 'asset.upload', label: 'Upload' },
+      { id: 'asset.view', label: 'View' },
+      { id: 'asset.edit', label: 'Edit' },
+      { id: 'asset.download', label: 'Download' },
+    ],
+  },
+  {
+    id: 'location',
+    label: 'Location and Map Access',
+    items: [
+      { id: 'location.view', label: 'View' },
+      { id: 'location.edit', label: 'Edit' },
+    ],
+  },
+  {
+    id: 'analytics',
+    label: 'Analytics Access',
+    items: [
+      { id: 'analytics.create', label: 'Create' },
+      { id: 'analytics.view', label: 'View' },
+      { id: 'analytics.edit', label: 'Edit' },
+      { id: 'analytics.download', label: 'Download' },
+    ],
+  },
+  {
+    id: 'users',
+    label: 'User and Role Management',
+    items: [
+      { id: 'users.view', label: 'View Current Roles/Users' },
+      { id: 'users.edit', label: 'Edit/Create Roles' },
+      { id: 'users.add', label: 'Add/Remove Team Members' },
+    ],
+  },
+  {
+    id: 'audit',
+    label: 'Audit Logs',
+    items: [{ id: 'audit.view', label: 'View Activity Logs' }],
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    items: [
+      { id: 'settings.edit', label: 'Edit/Change Password' },
+      { id: 'settings.delete', label: 'Delete Account' },
+    ],
+  },
+]
