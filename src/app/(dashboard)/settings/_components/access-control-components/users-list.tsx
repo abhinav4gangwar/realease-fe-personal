@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { EllipsisVertical, UserPlus } from 'lucide-react'
 import { useState } from 'react'
+import AccessControlStateToggle from './access-control-state-toggle'
 
 // Dummy user data
 const usersData = [
@@ -19,9 +20,7 @@ const usersData = [
   { id: 12, name: 'Leo Jackson', email: 'leo.jackson@email.com', role: 'Admin' }
 ]
 
-const AccessControlStateToggle = () => (
-  <div className="h-12 w-12 rounded-full border border-gray-400 bg-white"></div>
-)
+
 
 const UsersList = () => {
   const [selectedRole, setSelectedRole] = useState('All')
