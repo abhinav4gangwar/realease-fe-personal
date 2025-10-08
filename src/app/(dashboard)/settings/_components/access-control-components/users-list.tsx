@@ -1,41 +1,34 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { EllipsisVertical, UserPlus } from 'lucide-react'
+import { usersData } from '@/lib/access-control.dummy'
+import { EllipsisVertical, Pencil, Trash2, UserPlus } from 'lucide-react'
 import { useState } from 'react'
 import AccessControlStateToggle from './access-control-state-toggle'
-
-// Dummy user data
-const usersData = [
-  { id: 1, name: 'Alice Johnson', email: 'alice.johnson@email.com', role: 'Super Admin' },
-  { id: 2, name: 'Bob Smith', email: 'bob.smith@email.com', role: 'Admin' },
-  { id: 3, name: 'Carol Williams', email: 'carol.williams@email.com', role: 'Manager' },
-  { id: 4, name: 'David Brown', email: 'david.brown@email.com', role: 'Team Member' },
-  { id: 5, name: 'Emma Davis', email: 'emma.davis@email.com', role: 'Intern' },
-  { id: 6, name: 'Frank Miller', email: 'frank.miller@email.com', role: 'Admin' },
-  { id: 7, name: 'Grace Wilson', email: 'grace.wilson@email.com', role: 'Manager' },
-  { id: 8, name: 'Henry Moore', email: 'henry.moore@email.com', role: 'Team Member' },
-  { id: 9, name: 'Ivy Taylor', email: 'ivy.taylor@email.com', role: 'Team Member' },
-  { id: 10, name: 'Jack Anderson', email: 'jack.anderson@email.com', role: 'Intern' },
-  { id: 11, name: 'Karen Thomas', email: 'karen.thomas@email.com', role: 'Manager' },
-  { id: 12, name: 'Leo Jackson', email: 'leo.jackson@email.com', role: 'Admin' }
-]
-
-
+import ChangeSuperAdminModel from './change-superadmin-model'
 
 const UsersList = () => {
+  const [selectedUser, setSelectedUser] = useState()
   const [selectedRole, setSelectedRole] = useState('All')
   const [searchQuery, setSearchQuery] = useState('')
+  const [isChangeSuperAdminModelOpen, setIsChangeSUperAdminModelOpen] =
+    useState(false)
 
-  const roles = ['All', 'Super Admin', 'Admin', 'Manager', 'Team Member', 'Intern']
+  const roles = [
+    'All',
+    'Super Admin',
+    'Admin',
+    'Manager',
+    'Team Member',
+    'Intern',
+  ]
 
-  // Filter users based on selected role and search query
-  const filteredUsers = usersData.filter(user => {
+  const filteredUsers = usersData.filter((user) => {
     const matchesRole = selectedRole === 'All' || user.role === selectedRole
-    const matchesSearch = 
+    const matchesSearch =
       user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.role.toLowerCase().includes(searchQuery.toLowerCase())
-    
+
     return matchesRole && matchesSearch
   })
 
@@ -63,14 +56,14 @@ const UsersList = () => {
             User Roles
           </div>
           <div className="flex flex-col gap-10 p-5">
-            {roles.map(role => (
+            {roles.map((role) => (
               <p
                 key={role}
                 onClick={() => setSelectedRole(role)}
                 className={`cursor-pointer transition-colors ${
-                  selectedRole === role 
-                    ? 'font-semibold text-blue-600' 
-                    : 'hover:text-gray-700'
+                  selectedRole === role
+                    ? 'rounded-lg bg-[#F2F2F2] p-2 font-semibold'
+                    : 'hover:text-primary'
                 }`}
               >
                 {role}
@@ -98,8 +91,8 @@ const UsersList = () => {
 
           <div className="h-screen">
             {filteredUsers.length > 0 ? (
-              filteredUsers.map(user => (
-                <div 
+              filteredUsers.map((user) => (
+                <div
                   key={user.id}
                   className="text-md text-secondary grid grid-cols-16 gap-4 p-4 hover:bg-gray-50"
                 >
@@ -112,9 +105,35 @@ const UsersList = () => {
                   <div className="col-span-4 text-left font-semibold">
                     {user.role}
                   </div>
-                  <div className="col-span-2 flex pl-5 text-gray-400">
-                    <EllipsisVertical className="cursor-pointer hover:text-gray-600" />
-                  </div>
+                  {user.role === 'Super Admin' ? (
+                    <div className="col-span-2 flex pl-5 text-gray-400">
+                      <EllipsisVertical
+                        className="hover:text-primary cursor-pointer"
+                        onClick={() => {
+                          setIsChangeSUperAdminModelOpen(true)
+                          setSelectedUser(user)
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="col-span-2 flex gap-2 text-gray-400">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="hover:text-primary h-6 w-6 cursor-pointer"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="hover:text-primary h-6 w-6 cursor-pointer"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))
             ) : (
@@ -125,6 +144,15 @@ const UsersList = () => {
           </div>
         </div>
       </div>
+
+      <ChangeSuperAdminModel
+        isOpen={isChangeSuperAdminModelOpen}
+        onClose={() => {
+          setIsChangeSUperAdminModelOpen(false)
+          setSelectedUser(undefined)
+        }}
+        user={selectedUser}
+      />
     </div>
   )
 }

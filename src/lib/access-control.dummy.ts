@@ -149,3 +149,20 @@ export const defaultRoles: Role[] = [
     },
   },
 ];
+
+
+
+export const usersData = [
+  { id: 1, name: 'Alice Johnson', email: 'alice.johnson@email.com', role: 'Super Admin' },
+  { id: 2, name: 'Bob Smith', email: 'bob.smith@email.com', role: 'Admin' },
+  { id: 3, name: 'Carol Williams', email: 'carol.williams@email.com', role: 'Manager' },
+  { id: 4, name: 'David Brown', email: 'david.brown@email.com', role: 'Team Member' },
+  { id: 5, name: 'Emma Davis', email: 'emma.davis@email.com', role: 'Intern' },
+  { id: 6, name: 'Frank Miller', email: 'frank.miller@email.com', role: 'Admin' },
+  { id: 7, name: 'Grace Wilson', email: 'grace.wilson@email.com', role: 'Manager' },
+  { id: 8, name: 'Henry Moore', email: 'henry.moore@email.com', role: 'Team Member' },
+  { id: 9, name: 'Ivy Taylor', email: 'ivy.taylor@email.com', role: 'Team Member' },
+  { id: 10, name: 'Jack Anderson', email: 'jack.anderson@email.com', role: 'Intern' },
+  { id: 11, name: 'Karen Thomas', email: 'karen.thomas@email.com', role: 'Manager' },
+  { id: 12, name: 'Leo Jackson', email: 'leo.jackson@email.com', role: 'Admin' }
+]
