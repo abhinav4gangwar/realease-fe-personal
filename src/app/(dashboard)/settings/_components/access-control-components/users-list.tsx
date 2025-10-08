@@ -5,6 +5,9 @@ import { EllipsisVertical, Pencil, Trash2, UserPlus } from 'lucide-react'
 import { useState } from 'react'
 import AccessControlStateToggle from './access-control-state-toggle'
 import ChangeSuperAdminModel from './change-superadmin-model'
+import CreateUserModal from './create-user-model'
+import DeleteUserModal from './delete-user-model'
+import EditUserModal from './update-user-model'
 
 const UsersList = () => {
   const [selectedUser, setSelectedUser] = useState()
@@ -12,6 +15,9 @@ const UsersList = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [isChangeSuperAdminModelOpen, setIsChangeSUperAdminModelOpen] =
     useState(false)
+  const [isCreateUserModelOpen, setIsCreateUserModelOpen] = useState(false)
+  const [isUpdateUserModelOpen, setIsUpdateUserModelOpen] = useState(false)
+  const [isDeleteUserModelOpen, setIsDeleteUserModelOpen] = useState(false)
 
   const roles = [
     'All',
@@ -44,7 +50,10 @@ const UsersList = () => {
         <div className="flex items-center gap-4">
           <AccessControlStateToggle />
 
-          <Button className="text-primary hover:bg-primary h-12 w-12 cursor-pointer rounded-full border border-gray-400 bg-white font-bold hover:text-white">
+          <Button
+            className="text-primary hover:bg-primary h-12 w-12 cursor-pointer rounded-full border border-gray-400 bg-white font-bold hover:text-white"
+            onClick={() => setIsCreateUserModelOpen(true)}
+          >
             <UserPlus className="size-6" />
           </Button>
         </div>
@@ -121,6 +130,10 @@ const UsersList = () => {
                         variant="ghost"
                         size="icon"
                         className="hover:text-primary h-6 w-6 cursor-pointer"
+                        onClick={() => {
+                          setSelectedUser(user)
+                          setIsUpdateUserModelOpen(true)
+                        }}
                       >
                         <Pencil className="h-3 w-3" />
                       </Button>
@@ -129,6 +142,10 @@ const UsersList = () => {
                         variant="ghost"
                         size="icon"
                         className="hover:text-primary h-6 w-6 cursor-pointer"
+                        onClick={() => {
+                          setSelectedUser(user)
+                          setIsDeleteUserModelOpen(true)
+                        }}
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>
@@ -152,6 +169,29 @@ const UsersList = () => {
           setSelectedUser(undefined)
         }}
         user={selectedUser}
+      />
+
+      <CreateUserModal
+        isOpen={isCreateUserModelOpen}
+        onClose={() => setIsCreateUserModelOpen(false)}
+      />
+
+      <EditUserModal
+        isOpen={isUpdateUserModelOpen}
+        onClose={() => {
+          setIsUpdateUserModelOpen(false)
+          setSelectedUser(undefined)
+        }}
+        user={selectedUser}
+      />
+
+      <DeleteUserModal
+        user={selectedUser}
+        isOpen={isDeleteUserModelOpen}
+        onClose={() => {
+          setIsDeleteUserModelOpen(false)
+          setSelectedUser(undefined)
+        }}
       />
     </div>
   )
