@@ -109,8 +109,8 @@ export const SettingsnavigationItems = [
   },
   {
     icon: History,
-    label: 'Version History',
-    href: '/settings/version-history',
+    label: 'Activity Log',
+    href: '/settings/activity-log',
   },
   {
     icon: RectangleEllipsis,
