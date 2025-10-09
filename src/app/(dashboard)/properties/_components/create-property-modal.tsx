@@ -110,8 +110,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     const basicValidation =
       formData.country?.trim() !== '' &&
       formData.zipcode?.trim() !== '' &&
-      formData.latitude?.trim() !== '' &&
-      formData.longitude?.trim() !== '' &&
+      formData.district?.trim() !== '' &&
       formData.extent?.trim() !== '' &&
       formData.valuePerSQ?.trim() !== '' &&
       formData.value?.trim() !== ''
@@ -156,6 +155,36 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     if (!label) return 'units'
     return isPlural ? label.plural : label.singular
   }
+
+  const handleNumericChange = (field: keyof Properties) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\./g, '$1');
+    updateFormData(field, value);
+  };
+
+  const handleCoordinateChange = (field: 'latitude' | 'longitude') => (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value;
+    // Allow only one sign at the beginning
+    if (val.startsWith('+') || val.startsWith('-')) {
+      val = val[0] + val.slice(1).replace(/[^0-9.]/g, '');
+    } else {
+      val = val.replace(/[^0-9.]/g, '');
+    }
+    // Ensure only one decimal point
+    val = val.replace(/(\..*?)\./g, '$1');
+    updateFormData(field, val);
+    // Update coordinates field for backward compatibility
+    if (field === 'latitude' && val && formData.longitude) {
+      const coordinateString = formatCoordinates(val, formData.longitude);
+      updateFormData('coordinates', coordinateString);
+    } else if (field === 'longitude' && formData.latitude && val) {
+      const coordinateString = formatCoordinates(formData.latitude, val);
+      updateFormData('coordinates', coordinateString);
+    }
+  };
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    updateFormData('nextHearing', e.target.value);
+  };
 
   useEffect(() => {
     // Set default unit based on property type
@@ -420,11 +449,21 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
         partyA.trim() && partyB.trim()
           ? `${partyA.trim()} vs ${partyB.trim()}`
           : partyA.trim() || partyB.trim() || ''
-      // Remove parsing since we now have separate latitude and longitude fields
 
       const currentUnit = formData.type === 'Plot' ? 'sqyd' : selectedUnit;
       const extentWithUnit = formData.extent ? `${formData.extent} ${getUnitLabel(currentUnit, true)}` : '';
 
+      let nextHearingFormatted = '';
+      if (formData.nextHearing) {
+        const clean = formData.nextHearing.replace(/\D/g, '');
+        if (clean.length === 8) {
+          const dd = clean.substring(0, 2);
+          const mm = clean.substring(2, 4);
+          const yyyy = clean.substring(4, 8);
+          nextHearingFormatted = `${yyyy}-${mm}-${dd}`;
+        }
+      }
+      
       const requestBody = {
         name: formData.name,
         type: formData.type,
@@ -437,9 +476,9 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
         district: formData.district,
         city: formData.city,
         state: formData.state,
-        // Send coordinates as decimal numbers expected by backend
-        latitude: formData.latitude ? parseFloat(formData.latitude) : null,
-        longitude: formData.longitude ? parseFloat(formData.longitude) : null,
+        // Send coordinates as decimal numbers expected by backend, 0 if empty
+        latitude: formData.latitude ? (parseFloat(formData.latitude) || 0) : 0,
+        longitude: formData.longitude ? (parseFloat(formData.longitude) || 0) : 0,
         // Keep the original coordinates field for backward compatibility
         coordinates: formData.coordinates,
         isDisputed: isDisputed,
@@ -447,7 +486,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
         legalParties: legalPartiesValue,
         caseNumber: formData.caseNumber,
         caseType: formData.caseType,
-        nextHearing: formData.nextHearing,
+        nextHearing: nextHearingFormatted,
         extent: extentWithUnit,
         valuePerSQ: formData.valuePerSQ,
         additionalDetails:
@@ -840,7 +879,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
             {/* coordinates */}
             <div className="flex flex-col space-y-3">
               <label className="text-md text-secondary block font-semibold">
-                Co-ordinates <span className="text-primary">*</span>
+                Co-ordinates
               </label>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -848,20 +887,9 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                 <div className="flex flex-col space-y-1">
                   <label className="text-sm text-gray-600">Latitude</label>
                   <Input
-                    type="number"
-                    step="any"
+                    type="text"
                     value={formData.latitude}
-                    onChange={(e) => {
-                      updateFormData('latitude', e.target.value)
-                      // Update coordinates field for backward compatibility
-                      if (e.target.value && formData.longitude) {
-                        const coordinateString = formatCoordinates(
-                          e.target.value,
-                          formData.longitude
-                        )
-                        updateFormData('coordinates', coordinateString)
-                      }
-                    }}
+                    onChange={handleCoordinateChange('latitude')}
                     className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
                     placeholder="e.g., 32.7767"
                   />
@@ -871,20 +899,9 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                 <div className="flex flex-col space-y-1">
                   <label className="text-sm text-gray-600">Longitude</label>
                   <Input
-                    type="number"
-                    step="any"
+                    type="text"
                     value={formData.longitude}
-                    onChange={(e) => {
-                      updateFormData('longitude', e.target.value)
-                      // Update coordinates field for backward compatibility
-                      if (formData.latitude && e.target.value) {
-                        const coordinateString = formatCoordinates(
-                          formData.latitude,
-                          e.target.value
-                        )
-                        updateFormData('coordinates', coordinateString)
-                      }
-                    }}
+                    onChange={handleCoordinateChange('longitude')}
                     className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
                     placeholder="e.g., -96.797"
                   />
@@ -983,11 +1000,9 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                       <Input
                         type="text"
                         value={formData.nextHearing}
-                        onChange={(e) =>
-                          updateFormData('nextHearing', e.target.value)
-                        }
+                        onChange={handleDateChange}
                         className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                        placeholder="Next Hearing (yyyy-mm-dd)"
+                        placeholder="e.g., 25-10-2025"
                       />
                     </div>
                   </div>
@@ -1029,10 +1044,9 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                 </select>
               )}
               <Input
-                type="number"
-                step="any"
+                type="text"
                 value={formData.extent}
-                onChange={(e) => updateFormData('extent', e.target.value)}
+                onChange={handleNumericChange('extent')}
                 className="w-full rounded-md border border-gray-300 px-3 py-2"
                 placeholder={`Enter value in ${getUnitLabel(
                   formData.type === 'Plot' ? 'sqyd' : selectedUnit,
@@ -1053,10 +1067,9 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                   <span className="text-primary">*</span>
                 </label>
                 <Input
-                  type="number"
-                  step="any"
+                  type="text"
                   value={formData.valuePerSQ}
-                  onChange={(e) => updateFormData('valuePerSQ', e.target.value)}
+                  onChange={handleNumericChange('valuePerSQ')}
                   className="w-full rounded-md border border-gray-300 px-3 py-2"
                   placeholder="0.00"
                   required
@@ -1073,10 +1086,9 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                   Value <span className="text-primary">*</span>
                 </label>
                 <Input
-                  type="number"
-                  step="any"
+                  type="text"
                   value={formData.value}
-                  onChange={(e) => updateFormData('value', e.target.value)}
+                  onChange={handleNumericChange('value')}
                   className="w-full rounded-md border border-gray-300 px-3 py-2"
                   placeholder="0.00"
                   required
