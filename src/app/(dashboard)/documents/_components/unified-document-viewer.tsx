@@ -541,9 +541,23 @@ export function UnifiedDocumentViewer({
     setActiveCommentId(null)
   }
 
+  const scrollToCommentMarker = (commentId: number) => {
+    const markerId = `marker-${commentId}`
+    const markerElement = window.document.getElementById(
+      markerId
+    ) as HTMLElement
+    if (markerElement) {
+      markerElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest',
+      })
+    }
+  }
+
   const handleSidebarCommentClick = (commentId: number) => {
     setActiveCommentId(commentId)
-    setIsSidebarOpen(false)
+    scrollToCommentMarker(commentId)
   }
 
   if (!isOpen) return null
@@ -650,6 +664,7 @@ export function UnifiedDocumentViewer({
                         return (
                           <div
                             key={`page_${pageNumber}`}
+                            id={`page-${pageNumber}`}
                             className="relative mb-4 bg-white shadow-lg"
                           >
                             <Page
@@ -676,6 +691,7 @@ export function UnifiedDocumentViewer({
                               {pageComments.map((comment) => (
                                 <div
                                   key={comment.id}
+                                  id={`marker-${comment.id}`}
                                   className="comment-marker"
                                 >
                                   <CommentMarker
@@ -715,7 +731,11 @@ export function UnifiedDocumentViewer({
                     ref={imageContainerRef}
                     className="flex h-full w-full items-center justify-center"
                   >
-                    <div ref={imageRef} className="relative bg-white shadow-lg">
+                    <div
+                      id="page-1"
+                      ref={imageRef}
+                      className="relative bg-white shadow-lg"
+                    >
                       <img
                         src={documentUrl}
                         alt={document?.name || 'Document'}
@@ -745,7 +765,11 @@ export function UnifiedDocumentViewer({
                       {/* Comment markers for images */}
                       <div className="absolute top-0 left-0 h-full w-full">
                         {comments.map((comment) => (
-                          <div key={comment.id} className="comment-marker">
+                          <div
+                            key={comment.id}
+                            id={`marker-${comment.id}`}
+                            className="comment-marker"
+                          >
                             <CommentMarker
                               comment={comment}
                               users={users}
@@ -810,7 +834,7 @@ export function UnifiedDocumentViewer({
             )}
           </div>
 
-          {/* Comments Sidebar - Fixed width, independent of content */}
+          {/* Comments Sidebar */}
           <div
             className={`flex-shrink-0 border-l border-gray-200 bg-white transition-all duration-300 ${
               isSidebarOpen ? 'w-80' : 'w-0'

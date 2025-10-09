@@ -73,10 +73,10 @@ export function SelectedDocsModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between py-6">
-          <Button variant="outline" onClick={onSelectMore} className="px-6 bg-transparent h-11">
+        <div className="flex items-center justify-end py-6">
+          {/* <Button variant="outline" onClick={onSelectMore} className="px-6 bg-transparent h-11">
             Select More
-          </Button>
+          </Button> */}
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={onCancel} className="px-6 bg-transparent h-11 hover:bg-secondary hover:text-white cursor-pointer">
               Cancel
