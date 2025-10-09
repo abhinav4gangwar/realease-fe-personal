@@ -156,35 +156,40 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     return isPlural ? label.plural : label.singular
   }
 
-  const handleNumericChange = (field: keyof Properties) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\./g, '$1');
-    updateFormData(field, value);
-  };
+  const handleNumericChange =
+    (field: keyof Properties) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value
+        .replace(/[^0-9.]/g, '')
+        .replace(/(\..*?)\./g, '$1')
+      updateFormData(field, value)
+    }
 
-  const handleCoordinateChange = (field: 'latitude' | 'longitude') => (e: React.ChangeEvent<HTMLInputElement>) => {
-    let val = e.target.value;
-    // Allow only one sign at the beginning
-    if (val.startsWith('+') || val.startsWith('-')) {
-      val = val[0] + val.slice(1).replace(/[^0-9.]/g, '');
-    } else {
-      val = val.replace(/[^0-9.]/g, '');
+  const handleCoordinateChange =
+    (field: 'latitude' | 'longitude') =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      let val = e.target.value
+      // Allow only one sign at the beginning
+      if (val.startsWith('+') || val.startsWith('-')) {
+        val = val[0] + val.slice(1).replace(/[^0-9.]/g, '')
+      } else {
+        val = val.replace(/[^0-9.]/g, '')
+      }
+      // Ensure only one decimal point
+      val = val.replace(/(\..*?)\./g, '$1')
+      updateFormData(field, val)
+      // Update coordinates field for backward compatibility
+      if (field === 'latitude' && val && formData.longitude) {
+        const coordinateString = formatCoordinates(val, formData.longitude)
+        updateFormData('coordinates', coordinateString)
+      } else if (field === 'longitude' && formData.latitude && val) {
+        const coordinateString = formatCoordinates(formData.latitude, val)
+        updateFormData('coordinates', coordinateString)
+      }
     }
-    // Ensure only one decimal point
-    val = val.replace(/(\..*?)\./g, '$1');
-    updateFormData(field, val);
-    // Update coordinates field for backward compatibility
-    if (field === 'latitude' && val && formData.longitude) {
-      const coordinateString = formatCoordinates(val, formData.longitude);
-      updateFormData('coordinates', coordinateString);
-    } else if (field === 'longitude' && formData.latitude && val) {
-      const coordinateString = formatCoordinates(formData.latitude, val);
-      updateFormData('coordinates', coordinateString);
-    }
-  };
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateFormData('nextHearing', e.target.value);
-  };
+    updateFormData('nextHearing', e.target.value)
+  }
 
   useEffect(() => {
     // Set default unit based on property type
@@ -431,6 +436,8 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     setPartyA('')
     setPartyB('')
     setSelectedUnit('acres')
+    setSelectedCountry(null)
+    setLastAutoFilledZipcode('')
   }
 
   const createProperty = async () => {
@@ -450,20 +457,22 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
           ? `${partyA.trim()} vs ${partyB.trim()}`
           : partyA.trim() || partyB.trim() || ''
 
-      const currentUnit = formData.type === 'Plot' ? 'sqyd' : selectedUnit;
-      const extentWithUnit = formData.extent ? `${formData.extent} ${getUnitLabel(currentUnit, true)}` : '';
+      const currentUnit = formData.type === 'Plot' ? 'sqyd' : selectedUnit
+      const extentWithUnit = formData.extent
+        ? `${formData.extent} ${getUnitLabel(currentUnit, true)}`
+        : ''
 
-      let nextHearingFormatted = '';
+      let nextHearingFormatted = ''
       if (formData.nextHearing) {
-        const clean = formData.nextHearing.replace(/\D/g, '');
+        const clean = formData.nextHearing.replace(/\D/g, '')
         if (clean.length === 8) {
-          const dd = clean.substring(0, 2);
-          const mm = clean.substring(2, 4);
-          const yyyy = clean.substring(4, 8);
-          nextHearingFormatted = `${yyyy}-${mm}-${dd}`;
+          const dd = clean.substring(0, 2)
+          const mm = clean.substring(2, 4)
+          const yyyy = clean.substring(4, 8)
+          nextHearingFormatted = `${yyyy}-${mm}-${dd}`
         }
       }
-      
+
       const requestBody = {
         name: formData.name,
         type: formData.type,
@@ -477,8 +486,8 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
         city: formData.city,
         state: formData.state,
         // Send coordinates as decimal numbers expected by backend, 0 if empty
-        latitude: formData.latitude ? (parseFloat(formData.latitude) || 0) : 0,
-        longitude: formData.longitude ? (parseFloat(formData.longitude) || 0) : 0,
+        latitude: formData.latitude ? parseFloat(formData.latitude) || 0 : 0,
+        longitude: formData.longitude ? parseFloat(formData.longitude) || 0 : 0,
         // Keep the original coordinates field for backward compatibility
         coordinates: formData.coordinates,
         isDisputed: isDisputed,
@@ -758,22 +767,26 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                           locationError || (!isValidZipcode && formData.zipcode)
                             ? 'border-red-300 focus:border-red-500'
                             : isLocationLoading
-                            ? 'border-blue-300 focus:border-blue-500'
-                            : 'border-gray-300'
+                              ? 'border-blue-300 focus:border-blue-500'
+                              : 'border-gray-300'
                         }`}
                         placeholder="Enter zip-code"
                         required
                       />
 
                       {/* Status Icon */}
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div className="absolute top-1/2 right-3 -translate-y-1/2">
                         {isLocationLoading && (
                           <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
                         )}
-                        {!isLocationLoading && formData.zipcode && isValidZipcode && !locationError && (
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                        )}
-                        {(locationError || (!isValidZipcode && formData.zipcode)) && (
+                        {!isLocationLoading &&
+                          formData.zipcode &&
+                          isValidZipcode &&
+                          !locationError && (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          )}
+                        {(locationError ||
+                          (!isValidZipcode && formData.zipcode)) && (
                           <AlertCircle className="h-4 w-4 text-red-500" />
                         )}
                       </div>
@@ -782,13 +795,12 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                     {/* Status Messages */}
                     {!isValidZipcode && formData.zipcode && (
                       <p className="text-xs text-red-500">
-                        Invalid zipcode format for {selectedCountry?.name || 'selected country'}
+                        Invalid zipcode format for{' '}
+                        {selectedCountry?.name || 'selected country'}
                       </p>
                     )}
                     {locationError && (
-                      <p className="text-xs text-red-500">
-                        {locationError}
-                      </p>
+                      <p className="text-xs text-red-500">{locationError}</p>
                     )}
                     {isLocationLoading && (
                       <p className="text-xs text-blue-600">
@@ -812,7 +824,9 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                   </div>
 
                   <div className="flex flex-col space-y-1">
-                    <label className="text-md text-secondary block">State</label>
+                    <label className="text-md text-secondary block">
+                      State
+                    </label>
                     <Input
                       type="text"
                       value={formData.state}
@@ -1060,7 +1074,8 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
             <div className="flex flex-col space-y-3">
               <div className="flex flex-col space-y-3">
                 <label className="text-md text-secondary block font-semibold">
-                  Value per {getUnitLabel(
+                  Value per{' '}
+                  {getUnitLabel(
                     formData.type === 'Plot' ? 'sqyd' : selectedUnit,
                     false
                   )}{' '}
@@ -1192,7 +1207,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                 <ArrowLeft className="size-5" />
               </Button>
               <h2 className="text-secondary text-lg font-semibold">
-               {currentStep === 1 ? "Add a New Property" : formData.name }
+                {currentStep === 1 ? 'Add a New Property' : formData.name}
               </h2>
             </div>
 
