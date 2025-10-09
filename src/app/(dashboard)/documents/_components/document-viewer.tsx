@@ -155,6 +155,7 @@ export function DocumentViewer({
         itemId: Number.parseInt(documentId),
         newName: newName,
       })
+      setOpenModalInEditMode(false)
       const updateDocumentInArray = (docs: Document[]): Document[] => {
         return docs.map((doc) => {
           if (doc.id === documentId) {
@@ -195,12 +196,13 @@ export function DocumentViewer({
         propertyId: Number.parseInt(data.propertyId),
         tags: data.tags,
       })
+      setOpenModalInEditMode(false)
 
       // Get the property name from the properties list
       const getPropertyName = (propertyId: string) => {
         if (propertyId === '0') return 'No Property'
         const property = properties.find((p) => p.id === propertyId)
-        return property ? property.name : 'Unknown Property'
+        return property ? property.name : 'No Property'
       }
 
       const updateDocumentInArray = (docs: Document[]): Document[] => {
