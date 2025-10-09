@@ -390,7 +390,7 @@ export const CommentMarker: FC<CommentMarkerProps> = ({
         <Avatar
           className={cn(
             'h-7 w-7 border-2 border-white shadow-md',
-            isActive && 'ring-secondary ring-2'
+            isActive && 'ring-primary ring-3'
           )}
         >
           <AvatarFallback className="bg-secondary text-xs text-white">
