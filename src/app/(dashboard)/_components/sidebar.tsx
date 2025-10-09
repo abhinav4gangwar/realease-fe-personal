@@ -15,9 +15,12 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
   const logout = useLogout()
+
   return (
     <div
-      className={`bg-secondary text-white transition-all duration-300 ${collapsed ? 'w-18' : 'w-56'} lg:flex flex-col hidden`}
+      className={`bg-secondary text-white transition-all duration-300 ${
+        collapsed ? 'w-18' : 'w-56'
+      } hidden flex-col lg:flex`}
     >
       {/* Logo and Toggle */}
       <div className="flex flex-col items-center gap-5 p-3">
@@ -33,6 +36,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <ChevronLeft className="h-4 w-4" />
           )}
         </Button>
+
         {!collapsed && (
           <div className="flex items-center space-x-2">
             <Image
@@ -58,7 +62,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       {/* Navigation */}
       <nav className="flex-1 space-y-4 px-2 py-4">
         {navigationItems.map((item, index) => {
-          const isActive = pathname === item.href
+          // ✅ Active for /path and /path/subpath
+          const isActive =
+            pathname === item.href || pathname.startsWith(`${item.href}/`)
 
           return (
             <Link
@@ -70,7 +76,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   : 'text-gray-300 hover:bg-gray-700 hover:text-white'
               }`}
             >
-              <item.icon className="h-6 w-6 flex-shrink-0 text-center ml-0.5" />
+              <item.icon className="ml-0.5 h-6 w-6 flex-shrink-0 text-center" />
               {!collapsed && <span className="ml-3">{item.label}</span>}
             </Link>
           )
@@ -81,7 +87,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         </div>
 
         {navigationItemSection.map((item, index) => {
-          const isActive = pathname === item.href
+          const isActive =
+            pathname === item.href || pathname.startsWith(`${item.href}/`)
 
           return (
             <Link
@@ -98,11 +105,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             </Link>
           )
         })}
+
         <div
           className="flex cursor-pointer items-center rounded-md px-3 py-2 text-sm font-medium text-gray-300 transition-colors hover:bg-gray-700 hover:text-white"
           onClick={logout}
         >
-          <LogOut className="h-6 w-6 flex-shrink-0 text-center" />{' '}
+          <LogOut className="h-6 w-6 flex-shrink-0 text-center" />
           {!collapsed && <span className="ml-3">Log Out</span>}
         </div>
       </nav>

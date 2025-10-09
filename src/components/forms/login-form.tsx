@@ -1,8 +1,8 @@
 'use client'
-import { checkPopupBlocker, handleGoogleAuth, renderGoogleButton } from '@/lib/googleAuth'
+import { handleGoogleAuth, renderGoogleButton } from '@/lib/googleAuth'
 import { apiClient } from '@/utils/api'
-import { loginSchema } from '@/utils/validations'
 import { getCaptchaToken } from '@/utils/recaptcha'
+import { loginSchema } from '@/utils/validations'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
@@ -41,18 +41,27 @@ const LoginForm = () => {
   })
 
   useEffect(() => {
-    const hasPopupBlocker = checkPopupBlocker()
-    if (hasPopupBlocker) {
-      console.log('Popup blocker detected, using button approach')
-      setUseGoogleButton(true)
+    // Only render Google button when useGoogleButton is true and not loading
+    if (useGoogleButton && googleButtonRef.current && !isGoogleLoading) {
+      renderGoogleButton(
+        googleButtonRef.current,
+        'login',
+        handleGoogleLoginSuccess,
+        handleGoogleLoginError
+      )
     }
-  }, [])
+    return () => {
+      if (googleButtonRef.current) {
+        googleButtonRef.current.innerHTML = ''
+      }
+    }
+  }, [useGoogleButton, isGoogleLoading])
 
   // Handle Google login success
   const handleGoogleLoginSuccess = (response: any) => {
     if (response.success) {
       toast.success(response.message || 'Google login successful!')
-      
+
       // Handle redirect based on backend response
       if (response.redirectTo) {
         if (response.redirectTo.includes('/password')) {
@@ -72,25 +81,17 @@ const LoginForm = () => {
   // Handle Google login error
   const handleGoogleLoginError = (error: Error) => {
     console.error('Google login error:', error)
-    
-    if (error.message.includes('blocked') || error.message.includes('not displayed')) {
+
+    if (
+      error.message.includes('blocked') ||
+      error.message.includes('not displayed')
+    ) {
       toast.error('Popup blocked. Please use the Google button below.')
       setUseGoogleButton(true)
     } else {
       toast.error(error.message || 'Google login failed. Please try again.')
     }
   }
-
-  useEffect(() => {
-    if (useGoogleButton && googleButtonRef.current && !isGoogleLoading) {
-      renderGoogleButton(
-        googleButtonRef.current,
-        'login', 
-        handleGoogleLoginSuccess,
-        handleGoogleLoginError
-      )
-    }
-  }, [useGoogleButton, isGoogleLoading, router])
 
   const onSubmit = async (values: LoginFormValues) => {
     setIsLoading(true)
@@ -199,7 +200,7 @@ const LoginForm = () => {
               </FormItem>
             )}
           />
-          
+
           <div className="text-secondary text-center text-sm font-light">
             By continuing, you agree to the{' '}
             <span className="cursor-pointer underline">Terms of Use</span> and{' '}
@@ -224,24 +225,24 @@ const LoginForm = () => {
 
       {/* Google Sign-In Button */}
       {useGoogleButton ? (
-        <div className="w-full mt-4">
-          <div ref={googleButtonRef} className="w-full py-3 h-13 mt-4"></div>
+        <div className="mt-4 w-full">
+          <div ref={googleButtonRef} className="mt-4 h-13 w-full py-3"></div>
         </div>
       ) : (
-        <Button 
-          variant="outline" 
-          className="w-full py-3 h-13 mt-4" 
+        <Button
+          variant="outline"
+          className="mt-4 h-13 w-full py-3"
           onClick={handleGoogleLogin}
           disabled={isLoading || isGoogleLoading}
         >
           {isGoogleLoading ? (
             <div className="flex items-center">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+              <div className="border-primary mr-2 h-4 w-4 animate-spin rounded-full border-b-2"></div>
               Logging in with Google...
             </div>
           ) : (
             <>
-              <svg className="w-6 h-6 mr-2" viewBox="0 0 24 24">
+              <svg className="mr-2 h-6 w-6" viewBox="0 0 24 24">
                 <path
                   fill="#4285F4"
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
