@@ -1192,7 +1192,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                 <ArrowLeft className="size-5" />
               </Button>
               <h2 className="text-secondary text-lg font-semibold">
-                Add a New Property
+               {currentStep === 1 ? "Add a New Property" : formData.name }
               </h2>
             </div>
 
