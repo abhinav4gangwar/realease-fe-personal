@@ -117,7 +117,7 @@ export function DocumentDetailModal({
 
   // Load users when document changes
   useEffect(() => {
-    if (isOpen && document && !document.isFolder) {
+    if (isOpen && document) {
       loadUsers()
     }
   }, [isOpen, document, apiClient])
