@@ -62,13 +62,18 @@ const PropertiesEditModel = ({
   const [documentFiles, setDocumentFiles] = useState<FileItem[]>([])
   const [isDocumentUploading, setIsDocumentUploading] = useState(false)
   const [isDuplicateEnabled, setIsDuplicateEnabled] = useState(false)
-  const [duplicateCount, setDuplicateCount] = useState(1)
+  const [duplicateCount, setDuplicateCount] = useState('')
   const [duplicateNames, setDuplicateNames] = useState<string[]>([])
   const [createdDuplicates, setCreatedDuplicates] = useState<any[]>([])
   const [showDuplicatesModal, setShowDuplicatesModal] = useState(false)
 
   const [selectedCountry, setSelectedCountry] = useState<CountryType | null>(null)
-const [countries, setCountries] = useState<CountryType[]>([])
+  const [countries, setCountries] = useState<CountryType[]>([])
+
+  const [partyA, setPartyA] = useState('')
+  const [partyB, setPartyB] = useState('')
+
+  const [selectedUnit, setSelectedUnit] = useState<string>('acres')
 
   const [formData, setFormData] = useState<Properties>({
     name: '',
@@ -95,11 +100,110 @@ const [countries, setCountries] = useState<CountryType[]>([])
     value: '',
   })
 
+  const unitsForType = (type: string) => {
+    switch (type) {
+      case 'Land':
+        return [
+          { value: 'acres', label: 'Acres' },
+          { value: 'hectares', label: 'Hectares' },
+        ]
+      case 'Residential':
+      case 'Commercial':
+        return [
+          { value: 'sqft', label: 'Square Feet' },
+          { value: 'sqm', label: 'Square Meters' },
+        ]
+      case 'Plot':
+        return []
+      default:
+        return []
+    }
+  }
+
+  const unitLabels = {
+    acres: { plural: 'acres', singular: 'acre' },
+    hectares: { plural: 'hectares', singular: 'hectare' },
+    sqyd: { plural: 'square yards', singular: 'square yard' },
+    sqft: { plural: 'square feet', singular: 'square foot' },
+    sqm: { plural: 'square meters', singular: 'square meter' },
+  }
+
+  const getUnitLabel = (unit: string, isPlural: boolean = true) => {
+    const label = unitLabels[unit as keyof typeof unitLabels]
+    if (!label) return 'units'
+    return isPlural ? label.plural : label.singular
+  }
+
+  const handleNumericChange = (field: keyof Properties) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\./g, '$1');
+    updateFormData(field, value);
+  };
+
+  const handleCoordinateChange = (field: 'latitude' | 'longitude') => (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value;
+    // Allow only one sign at the beginning
+    if (val.startsWith('+') || val.startsWith('-')) {
+      val = val[0] + val.slice(1).replace(/[^0-9.]/g, '');
+    } else {
+      val = val.replace(/[^0-9.]/g, '');
+    }
+    // Ensure only one decimal point
+    val = val.replace(/(\..*?)\./g, '$1');
+    updateFormData(field, val);
+    // Update coordinates field for backward compatibility
+    if (field === 'latitude' && val && formData.longitude) {
+      const coordinateString = formatCoordinates(val, formData.longitude);
+      updateFormData('coordinates', coordinateString);
+    } else if (field === 'longitude' && formData.latitude && val) {
+      const coordinateString = formatCoordinates(formData.latitude, val);
+      updateFormData('coordinates', coordinateString);
+    }
+  };
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    updateFormData('nextHearing', e.target.value);
+  };
+
   useEffect(() => {
-  // Load all countries on component mount
-  const allCountries = Country.getAllCountries()
-  setCountries(allCountries)
-}, [])
+    // Set default unit based on property type
+    let defaultUnit = 'acres'
+    switch (formData.type) {
+      case 'Plot':
+        defaultUnit = 'sqyd'
+        break
+      case 'Land':
+        defaultUnit = 'acres'
+        break
+      case 'Residential':
+      case 'Commercial':
+        defaultUnit = 'sqft'
+        break
+    }
+    setSelectedUnit(defaultUnit)
+  }, [formData.type])
+
+  // Auto-calculate total value
+  useEffect(() => {
+    // Extract numeric value from extent (remove unit text)
+    const extentString = formData.extent || ''
+    const extentMatch = extentString.match(/^[\d.]+/)
+    const extentNum = extentMatch ? parseFloat(extentMatch[0]) : NaN
+    
+    const perNum = parseFloat(formData.valuePerSQ)
+    
+    if (!isNaN(extentNum) && !isNaN(perNum) && extentNum > 0 && perNum > 0) {
+      const total = extentNum * perNum
+      updateFormData('value', total.toFixed(2))
+    } else if (formData.extent === '' || formData.valuePerSQ === '') {
+      updateFormData('value', '')
+    }
+  }, [formData.extent, formData.valuePerSQ])
+
+  useEffect(() => {
+    // Load all countries on component mount
+    const allCountries = Country.getAllCountries()
+    setCountries(allCountries)
+  }, [])
 
   useEffect(() => {
     if (property && isOpen) {
@@ -123,8 +227,30 @@ const [countries, setCountries] = useState<CountryType[]>([])
         }
       }
 
+      // Parse legal parties if they exist
+      if (property.legalParties) {
+        const parties = property.legalParties.split(' vs ')
+        if (parties.length === 2) {
+          setPartyA(parties[0].trim())
+          setPartyB(parties[1].trim())
+        } else {
+          setPartyA(property.legalParties)
+          setPartyB('')
+        }
+      }
+
+      // Parse extent to extract numeric value and unit
+      let extentValue = property.extent || ''
+      if (extentValue) {
+        const match = extentValue.match(/^([\d.]+)\s*(.*)$/)
+        if (match) {
+          extentValue = match[1] // Just the numeric part
+        }
+      }
+
       setFormData({
         ...property,
+        extent: extentValue,
         coordinates, // Use the formatted coordinates for backward compatibility
         latitude,    // Set separate latitude
         longitude,   // Set separate longitude
@@ -146,21 +272,21 @@ const [countries, setCountries] = useState<CountryType[]>([])
   }, [property, isOpen])
 
   useEffect(() => {
-  if (property && isOpen) {
-    if (formData.country) {
-      const country = countries.find(c => c.name === formData.country)
-      if (country) {
-        setSelectedCountry(country)
+    if (property && isOpen) {
+      if (formData.country) {
+        const country = countries.find(c => c.name === formData.country)
+        if (country) {
+          setSelectedCountry(country)
+        }
       }
     }
-  }
-}, [property, isOpen, countries, formData.country])
+  }, [property, isOpen, countries, formData.country])
 
-useEffect(() => {
-  if (selectedCountry) {
-    updateFormData('country', selectedCountry.name)
-  }
-}, [selectedCountry])
+  useEffect(() => {
+    if (selectedCountry) {
+      updateFormData('country', selectedCountry.name)
+    }
+  }, [selectedCountry])
 
   // Track if we're currently auto-filling to prevent infinite loops
   const [isAutoFilling, setIsAutoFilling] = useState(false)
@@ -182,9 +308,6 @@ useEffect(() => {
 
       setIsAutoFilling(true)
       setLastAutoFilledZipcode(formData.zipcode || '')
-
-      console.log('🎯 Location found:', location)
-      console.log('🏁 Current selected country:', selectedCountry?.name)
 
       // Only auto-select country if none is selected or if it matches the current selection
       if (!selectedCountry) {
@@ -266,64 +389,62 @@ useEffect(() => {
   }
 
   const CountrySelect = () => {
-  const [open, setOpen] = useState(false)
-  const [searchValue, setSearchValue] = useState('')
+    const [open, setOpen] = useState(false)
+    const [searchValue, setSearchValue] = useState('')
 
-  const filteredCountries = countries.filter(country =>
-    country.name.toLowerCase().includes(searchValue.toLowerCase())
-  )
+    const filteredCountries = countries.filter(country =>
+      country.name.toLowerCase().includes(searchValue.toLowerCase())
+    )
 
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between h-14 truncate"
-        >
-          {selectedCountry?.name || "Select Country"}
-          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-full p-0 border-gray-400" align="start">
-        <Command>
-          <CommandInput 
-            placeholder="Search country..." 
-            value={searchValue}
-            onValueChange={setSearchValue}
-          />
-          <CommandList>
-            <CommandEmpty>No country found.</CommandEmpty>
-            <CommandGroup>
-              {filteredCountries.map((country) => (
-                <CommandItem
-                  key={country.isoCode}
-                  value={country.name}
-                  onSelect={() => {
-                    setSelectedCountry(country)
-                    setOpen(false)
-                    setSearchValue('')
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      selectedCountry?.isoCode === country.isoCode ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {country.name}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  )
-}
-
-
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between h-14 truncate"
+          >
+            {selectedCountry?.name || "Select Country"}
+            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-full p-0 border-gray-400" align="start">
+          <Command>
+            <CommandInput 
+              placeholder="Search country..." 
+              value={searchValue}
+              onValueChange={setSearchValue}
+            />
+            <CommandList>
+              <CommandEmpty>No country found.</CommandEmpty>
+              <CommandGroup>
+                {filteredCountries.map((country) => (
+                  <CommandItem
+                    key={country.isoCode}
+                    value={country.name}
+                    onSelect={() => {
+                      setSelectedCountry(country)
+                      setOpen(false)
+                      setSearchValue('')
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        selectedCountry?.isoCode === country.isoCode ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    {country.name}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    )
+  }
 
   const resetForm = () => {
     if (property) {
@@ -347,8 +468,18 @@ useEffect(() => {
         }
       }
 
+      // Parse extent to extract numeric value
+      let extentValue = property.extent || ''
+      if (extentValue) {
+        const match = extentValue.match(/^([\d.]+)\s*(.*)$/)
+        if (match) {
+          extentValue = match[1]
+        }
+      }
+
       setFormData({
         ...property,
+        extent: extentValue,
         coordinates, // Use the formatted coordinates for backward compatibility
         latitude,    // Set separate latitude
         longitude,   // Set separate longitude
@@ -373,11 +504,12 @@ useEffect(() => {
     setDocumentFiles([])
     setIsDocumentUploading(false)
     setIsDuplicateEnabled(false)
-    setDuplicateCount(1)
+    setDuplicateCount('')
     setDuplicateNames([])
     setCreatedDuplicates([])
     setShowDuplicatesModal(false)
-
+    setPartyA('')
+    setPartyB('')
     setSelectedCountry(null)
   }
 
@@ -398,8 +530,25 @@ useEffect(() => {
         {}
       )
 
-      // Remove parsing since we now have separate latitude and longitude fields
-      
+      const legalPartiesValue =
+        partyA.trim() && partyB.trim()
+          ? `${partyA.trim()} vs ${partyB.trim()}`
+          : partyA.trim() || partyB.trim() || ''
+
+      const currentUnit = formData.type === 'Plot' ? 'sqyd' : selectedUnit;
+      const extentWithUnit = formData.extent ? `${formData.extent} ${getUnitLabel(currentUnit, true)}` : '';
+
+      let nextHearingFormatted = '';
+      if (formData.nextHearing) {
+        const clean = formData.nextHearing.replace(/\D/g, '');
+        if (clean.length === 8) {
+          const dd = clean.substring(0, 2);
+          const mm = clean.substring(2, 4);
+          const yyyy = clean.substring(4, 8);
+          nextHearingFormatted = `${yyyy}-${mm}-${dd}`;
+        }
+      }
+
       const requestBody = {
         name: formData.name,
         type: formData.type,
@@ -419,13 +568,12 @@ useEffect(() => {
         coordinates: formData.coordinates,
         isDisputed: isDisputed,
         legalStatus: formData.legalStatus,
-        legalParties: formData.legalParties,
+        legalParties: legalPartiesValue,
         caseNumber: formData.caseNumber,
         caseType: formData.caseType,
-        nextHearing: formData.nextHearing,
-        extent: formData.extent,
+        nextHearing: nextHearingFormatted,
+        extent: extentWithUnit,
         valuePerSQ: formData.valuePerSQ,
-        value: formData.value,
         additionalDetails:
           Object.keys(additionalDetails).length > 0
             ? additionalDetails
@@ -505,6 +653,12 @@ useEffect(() => {
       return false
     }
 
+    const count = parseInt(duplicateCount)
+    if (isNaN(count) || count < 1) {
+      toast.error('Please enter a valid number of duplicates')
+      return false
+    }
+
     try {
       setIsLoading(true)
 
@@ -515,6 +669,25 @@ useEffect(() => {
         }),
         {}
       )
+
+      const legalPartiesValue =
+        partyA.trim() && partyB.trim()
+          ? `${partyA.trim()} vs ${partyB.trim()}`
+          : partyA.trim() || partyB.trim() || ''
+
+      const currentUnit = formData.type === 'Plot' ? 'sqyd' : selectedUnit;
+      const extentWithUnit = formData.extent ? `${formData.extent} ${getUnitLabel(currentUnit, true)}` : '';
+
+      let nextHearingFormatted = '';
+      if (formData.nextHearing) {
+        const clean = formData.nextHearing.replace(/\D/g, '');
+        if (clean.length === 8) {
+          const dd = clean.substring(0, 2);
+          const mm = clean.substring(2, 4);
+          const yyyy = clean.substring(4, 8);
+          nextHearingFormatted = `${yyyy}-${mm}-${dd}`;
+        }
+      }
 
       const requestBody = {
         name: formData.name,
@@ -535,13 +708,13 @@ useEffect(() => {
         coordinates: formData.coordinates,
         isDisputed: isDisputed,
         legalStatus: formData.legalStatus,
-        legalParties: formData.legalParties,
+        legalParties: legalPartiesValue,
         caseNumber: formData.caseNumber,
         caseType: formData.caseType,
-        nextHearing: formData.nextHearing,
-        extent: formData.extent,
+        nextHearing: nextHearingFormatted,
+        extent: extentWithUnit,
         valuePerSQ: formData.valuePerSQ,
-        numberOfDuplicatePlots: duplicateCount,
+        numberOfDuplicatePlots: count,
         duplicateNames: duplicateNames.length > 0 ? duplicateNames : undefined,
         additionalDetails:
           Object.keys(additionalDetails).length > 0
@@ -875,7 +1048,7 @@ useEffect(() => {
             {/* coordinates */}
             <div className="flex flex-col space-y-3">
               <label className="text-md text-secondary block font-semibold">
-                Co-ordinates <span className="text-primary">*</span>
+                Co-ordinates
               </label>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -883,17 +1056,9 @@ useEffect(() => {
                 <div className="flex flex-col space-y-1">
                   <label className="text-sm text-gray-600">Latitude</label>
                   <Input
-                    type="number"
-                    step="any"
+                    type="text"
                     value={formData.latitude}
-                    onChange={(e) => {
-                      updateFormData('latitude', e.target.value)
-                      // Update coordinates field for backward compatibility
-                      if (e.target.value && formData.longitude) {
-                        const coordinateString = formatCoordinates(e.target.value, formData.longitude)
-                        updateFormData('coordinates', coordinateString)
-                      }
-                    }}
+                    onChange={handleCoordinateChange('latitude')}
                     className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
                     placeholder="e.g., 32.7767"
                   />
@@ -903,24 +1068,14 @@ useEffect(() => {
                 <div className="flex flex-col space-y-1">
                   <label className="text-sm text-gray-600">Longitude</label>
                   <Input
-                    type="number"
-                    step="any"
+                    type="text"
                     value={formData.longitude}
-                    onChange={(e) => {
-                      updateFormData('longitude', e.target.value)
-                      // Update coordinates field for backward compatibility
-                      if (formData.latitude && e.target.value) {
-                        const coordinateString = formatCoordinates(formData.latitude, e.target.value)
-                        updateFormData('coordinates', coordinateString)
-                      }
-                    }}
+                    onChange={handleCoordinateChange('longitude')}
                     className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
                     placeholder="e.g., -96.797"
                   />
                 </div>
               </div>
-              
-              
             </div>
 
             {/* legal status */}
@@ -952,11 +1107,8 @@ useEffect(() => {
                     Legal Details <span className="text-primary">*</span>
                   </label>
 
-
-
                   <div className="flex flex-col space-y-1 pb-3">
-
-                  <label className="text-md text-secondary block">
+                    <label className="text-md text-secondary block">
                       Case Status <span className="text-primary">*</span>
                     </label>
                     <select
@@ -971,19 +1123,27 @@ useEffect(() => {
                       <option value="Disputed - Disposed">Disposed</option>
                     </select>
 
-
                     <label className="text-md text-secondary block">
                       Parties
                     </label>
-                    <Input
-                      type="text"
-                      value={formData.legalParties}
-                      onChange={(e) =>
-                        updateFormData('legalParties', e.target.value)
-                      }
-                      className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                      placeholder="Parties"
-                    />
+
+                    <div className="flex gap-3">
+                      <Input
+                        type="text"
+                        value={partyA}
+                        onChange={(e) => setPartyA(e.target.value)}
+                        className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+                        placeholder="Party A"
+                      />
+
+                      <Input
+                        type="text"
+                        value={partyB}
+                        onChange={(e) => setPartyB(e.target.value)}
+                        className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+                        placeholder="Party B"
+                      />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -1009,14 +1169,13 @@ useEffect(() => {
                       <Input
                         type="text"
                         value={formData.nextHearing}
-                        onChange={(e) =>
-                          updateFormData('nextHearing', e.target.value)
-                        }
+                        onChange={handleDateChange}
                         className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                        placeholder="Next Hearing (yyyy-mm-dd)"
+                        placeholder="e.g., 25-10-2025"
                       />
                     </div>
                   </div>
+
                   <div className="flex flex-col space-y-1 py-3">
                     <label className="text-md text-secondary block">
                       Case Type
@@ -1040,42 +1199,67 @@ useEffect(() => {
               <label className="text-md text-secondary block font-semibold">
                 Extent <span className="text-primary">*</span>
               </label>
+              {unitsForType(formData.type).length > 0 && (
+                <select
+                  value={selectedUnit}
+                  onChange={(e) => setSelectedUnit(e.target.value)}
+                  className="h-10 w-full rounded-md border border-gray-400 bg-white px-3 py-2"
+                >
+                  {unitsForType(formData.type).map((u) => (
+                    <option key={u.value} value={u.value}>
+                      {u.label}
+                    </option>
+                  ))}
+                </select>
+              )}
               <Input
                 type="text"
                 value={formData.extent}
-                onChange={(e) => updateFormData('extent', e.target.value)}
+                onChange={handleNumericChange('extent')}
                 className="w-full rounded-md border border-gray-300 px-3 py-2"
-                placeholder="Enter value (acres)"
+                placeholder={`Enter value in ${getUnitLabel(
+                  formData.type === 'Plot' ? 'sqyd' : selectedUnit,
+                  true
+                )}`}
                 required
               />
             </div>
 
-            {/* value */}
+            {/* values */}
             <div className="flex flex-col space-y-3">
               <div className="flex flex-col space-y-3">
                 <label className="text-md text-secondary block font-semibold">
-                  Land value per acre <span className="text-primary">*</span>
+                  Value per {getUnitLabel(
+                    formData.type === 'Plot' ? 'sqyd' : selectedUnit,
+                    false
+                  )}{' '}
+                  <span className="text-primary">*</span>
                 </label>
                 <Input
                   type="text"
                   value={formData.valuePerSQ}
-                  onChange={(e) => updateFormData('valuePerSQ', e.target.value)}
+                  onChange={handleNumericChange('valuePerSQ')}
                   className="w-full rounded-md border border-gray-300 px-3 py-2"
-                  placeholder="00.00"
+                  placeholder="0.00"
                   required
                 />
               </div>
 
               <div className="flex flex-col space-y-3">
                 <label className="text-md text-secondary block font-semibold">
-                  Land value <span className="text-primary">*</span>
+                  {formData.type === 'Land'
+                    ? 'Land'
+                    : formData.type === 'Plot'
+                      ? 'Plot'
+                      : formData.type}{' '}
+                  Value <span className="text-primary">*</span>
                 </label>
                 <Input
                   type="text"
                   value={formData.value}
-                  onChange={(e) => updateFormData('value', e.target.value)}
+                  onChange={handleNumericChange('value')}
                   className="w-full rounded-md border border-gray-300 px-3 py-2"
-                  placeholder="00.00"
+                  placeholder="0.00"
                   required
                 />
               </div>
@@ -1176,15 +1360,25 @@ useEffect(() => {
                       </label>
                       <div className="flex justify-between gap-2">
                         <Input
+                          type="text"
                           value={duplicateCount}
                           onChange={(e) => {
-                            const count = parseInt(e.target.value) | 1
-                            setDuplicateCount(count)
-                            const names = Array.from(
-                              { length: count },
-                              (_, i) => `${formData.name} - ${i + 1}`
-                            )
-                            setDuplicateNames(names)
+                            const value = e.target.value.replace(/[^0-9]/g, '')
+                            setDuplicateCount(value)
+                            if (value) {
+                              const count = parseInt(value)
+                              if (!isNaN(count) && count > 0) {
+                                const names = Array.from(
+                                  { length: count },
+                                  (_, i) => `${formData.name} - ${i + 1}`
+                                )
+                                setDuplicateNames(names)
+                              } else {
+                                setDuplicateNames([])
+                              }
+                            } else {
+                              setDuplicateNames([])
+                            }
                           }}
                           className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
                           placeholder="Enter number of duplicates"
@@ -1193,14 +1387,14 @@ useEffect(() => {
                         <Button
                           className="bg-secondary h-14 w-14 cursor-pointer font-semibold hover:bg-white hover:text-black"
                           onClick={createDuplicateProperties}
-                          disabled={isLoading}
+                          disabled={isLoading || !duplicateCount || parseInt(duplicateCount) < 1}
                         >
                           <Check className="size-5" />
                         </Button>
                       </div>
                     </div>
 
-                    {duplicateCount > 0 && (
+                    {duplicateNames.length > 0 && (
                       <div className="flex flex-col space-y-2">
                         <label className="text-md text-secondary block font-semibold">
                           Duplicate Names (Optional)
@@ -1401,7 +1595,7 @@ useEffect(() => {
                         setCurrentStep(1)
                         setIsSubmitted(false)
                         setIsDuplicateEnabled(false)
-                        setDuplicateCount(1)
+                        setDuplicateCount('')
                         setDuplicateNames([])
                       }}
                     >

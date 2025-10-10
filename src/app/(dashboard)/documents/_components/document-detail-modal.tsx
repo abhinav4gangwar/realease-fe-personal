@@ -22,7 +22,7 @@ import { Properties } from '@/types/property.types'
 import { propertiesApi } from '../../properties/_property_utils/property.services'
 import { PropertyInput } from './properties-input'
 
-// API function to get users (same as in PDFPreviewModal)
+// API function to get users
 export const getUsers = async (documentId: number) => {
   try {
     const response = await apiClient.get(
@@ -117,7 +117,7 @@ export function DocumentDetailModal({
 
   // Load users when document changes
   useEffect(() => {
-    if (isOpen && document && !document.isFolder) {
+    if (isOpen && document) {
       loadUsers()
     }
   }, [isOpen, document, apiClient])

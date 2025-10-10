@@ -6,6 +6,8 @@ import { ChevronLeft, ChevronRight, LogOut } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState } from 'react'
+import LogoutModel from './logout-modal'
 
 interface SidebarProps {
   collapsed: boolean
@@ -13,9 +15,9 @@ interface SidebarProps {
 }
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+  const [isLogoutModelOpen, setIsLogoutModelOpen] = useState(false)
   const pathname = usePathname()
   const logout = useLogout()
-
   return (
     <div
       className={`bg-secondary text-white transition-all duration-300 ${
@@ -62,7 +64,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       {/* Navigation */}
       <nav className="flex-1 space-y-4 px-2 py-4">
         {navigationItems.map((item, index) => {
-          // ✅ Active for /path and /path/subpath
           const isActive =
             pathname === item.href || pathname.startsWith(`${item.href}/`)
 
@@ -108,12 +109,17 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
         <div
           className="flex cursor-pointer items-center rounded-md px-3 py-2 text-sm font-medium text-gray-300 transition-colors hover:bg-gray-700 hover:text-white"
-          onClick={logout}
+          onClick={() => setIsLogoutModelOpen(true)}
         >
           <LogOut className="h-6 w-6 flex-shrink-0 text-center" />
           {!collapsed && <span className="ml-3">Log Out</span>}
         </div>
       </nav>
+      <LogoutModel
+        isOpen={isLogoutModelOpen}
+        onClose={() => setIsLogoutModelOpen(false)}
+        logout={logout}
+      />
     </div>
   )
 }

@@ -15,7 +15,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { propertiesApi } from '../../properties/_property_utils/property.services'
 import {
-  findFolderById,
   getAllFolders,
   getFileCounts,
   getFolderCounts,
@@ -155,6 +154,7 @@ export function DocumentViewer({
         itemId: Number.parseInt(documentId),
         newName: newName,
       })
+      setOpenModalInEditMode(false)
       const updateDocumentInArray = (docs: Document[]): Document[] => {
         return docs.map((doc) => {
           if (doc.id === documentId) {
@@ -195,12 +195,13 @@ export function DocumentViewer({
         propertyId: Number.parseInt(data.propertyId),
         tags: data.tags,
       })
+      setOpenModalInEditMode(false)
 
       // Get the property name from the properties list
       const getPropertyName = (propertyId: string) => {
         if (propertyId === '0') return 'No Property'
         const property = properties.find((p) => p.id === propertyId)
-        return property ? property.name : 'Unknown Property'
+        return property ? property.name : 'No Property'
       }
 
       const updateDocumentInArray = (docs: Document[]): Document[] => {
@@ -294,31 +295,66 @@ export function DocumentViewer({
   }
 
   const handleFolderClick = async (folder: Document) => {
+    let folderToUse = folder
+
     if (!folder.children || folder.children.length === 0) {
       const folderContents = await fetchFolderContents(folder.id)
-      const updatedFolder = { ...folder, children: folderContents }
-      setCurrentFolder(updatedFolder)
+      folderToUse = { ...folder, children: folderContents }
+      setCurrentFolder(folderToUse)
     } else {
       setCurrentFolder(folder)
     }
+
     setBreadcrumbs((prev) => [
       ...prev,
-      { name: `${folder.name} (${getFolderCounts(folder)})`, id: folder.id },
+      {
+        name: `${folderToUse.name} (${getFolderCounts(folderToUse)})`,
+        id: folderToUse.id,
+      },
     ])
   }
 
   const handleBreadcrumbNavigate = (index: number) => {
+    if (index === breadcrumbs.length - 1) {
+      return
+    }
+
     if (index === 0) {
       setCurrentFolder(null)
       setBreadcrumbs([{ name: 'Documents' }])
     } else {
-      setBreadcrumbs((prev) => prev.slice(0, index + 1))
       const targetBreadcrumb = breadcrumbs[index]
+
+      setBreadcrumbs((prev) => prev.slice(0, index + 1))
+
       if (targetBreadcrumb.id) {
-        const targetFolder = findFolderById(targetBreadcrumb.id, documentsState)
-        if (targetFolder) {
-          setCurrentFolder(targetFolder)
+        const findFolder = (
+          docs: Document[],
+          folderId: string
+        ): Document | null => {
+          for (const doc of docs) {
+            if (doc.id === folderId) return doc
+            if (doc.children) {
+              const found = findFolder(doc.children, folderId)
+              if (found) return found
+            }
+          }
+          return null
         }
+
+        setDocumentsState((currentDocs) => {
+          const targetFolder = findFolder(currentDocs, targetBreadcrumb.id!)
+          if (targetFolder) {
+            if (!targetFolder.children || targetFolder.children.length === 0) {
+              fetchFolderContents(targetBreadcrumb.id!).then((contents) => {
+                setCurrentFolder({ ...targetFolder, children: contents })
+              })
+            } else {
+              setCurrentFolder(targetFolder)
+            }
+          }
+          return currentDocs
+        })
       }
     }
   }
@@ -696,16 +732,30 @@ export function DocumentViewer({
   }
 
   const getSelectedDocumentObjects = () => {
-    const allDocs = [...documentsState]
-    const allDocsWithChildren: Document[] = []
-    allDocs.forEach((doc) => {
-      allDocsWithChildren.push(doc)
-      if (doc.children) {
-        allDocsWithChildren.push(...doc.children)
-      }
-    })
+    const flattenDocuments = (docs: Document[]): Document[] => {
+      const result: Document[] = []
+      docs.forEach((doc) => {
+        result.push(doc)
+        if (doc.children && doc.children.length > 0) {
+          result.push(...flattenDocuments(doc.children))
+        }
+      })
+      return result
+    }
+
+    const allDocsFlattened = flattenDocuments(documentsState)
+
+    if (currentFolder && currentFolder.children) {
+      const currentFolderDocs = flattenDocuments(currentFolder.children)
+      currentFolderDocs.forEach((doc) => {
+        if (!allDocsFlattened.find((d) => d.id === doc.id)) {
+          allDocsFlattened.push(doc)
+        }
+      })
+    }
+
     return selectedDocuments
-      .map((id) => allDocsWithChildren.find((doc) => doc.id === id))
+      .map((id) => allDocsFlattened.find((doc) => doc.id === id))
       .filter(Boolean) as Document[]
   }
 

@@ -7,9 +7,11 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
+import LogoutModel from './logout-modal'
 
 const MobileHeader = () => {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [isLogoutModelOpen, setIsLogoutModelOpen] = useState(false)
   const pathname = usePathname()
   const logout = useLogout()
 
@@ -75,12 +77,17 @@ const MobileHeader = () => {
           })}
           <div
             className="test-secondary flex items-center gap-3 rounded-md px-4 py-3 text-lg font-medium transition-colors"
-            onClick={logout}
+            onClick={() => setIsLogoutModelOpen(true)}
           >
             <LogOut className="h-6 w-6 flex-shrink-0 text-center" /> Log Out
           </div>
         </nav>
       </div>
+      <LogoutModel
+        isOpen={isLogoutModelOpen}
+        onClose={() => setIsLogoutModelOpen(false)}
+        logout={logout}
+      />
     </header>
   )
 }
