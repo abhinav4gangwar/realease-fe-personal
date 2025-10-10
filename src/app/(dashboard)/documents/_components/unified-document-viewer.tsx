@@ -2,7 +2,7 @@
 
 import type { Comment, CommentAnnotation, User } from '@/types/comment.types'
 import type { Document } from '@/types/document.types'
-import { useEffect, useRef, useState, useMemo, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, useMemo, type MouseEvent, useCallback } from 'react'
 import { Document as PDFDocument, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
