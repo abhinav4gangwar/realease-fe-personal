@@ -2,25 +2,51 @@
 
 import type { Comment, CommentAnnotation, User } from '@/types/comment.types'
 import type { Document } from '@/types/document.types'
-import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, useMemo, type MouseEvent, useCallback } from 'react'
 import { Document as PDFDocument, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 import { toast } from 'sonner'
+import dynamic from 'next/dynamic'
 
 import { Button } from '@/components/ui/button'
 import { ChevronRight, Download, MessageSquare } from 'lucide-react'
 import Image from 'next/image'
 import { HiShare } from 'react-icons/hi2'
-import { getInitialScale, isImageFile } from '../doc_utils'
+import { getInitialScale, isImageFile, isKmlFile } from '../doc_utils'
 import { CommentService } from '../doc_utils/comment.services'
 import { Annotation } from './comment-components/annotation'
 import { CommentMarker } from './comment-components/comment-marker'
 import { CommentModal } from './comment-components/comment-modal'
 import { PDFHeader } from './comment-components/pdf-header'
 
+// Dynamically import Leaflet components for KML viewing
+const MapContainer = dynamic(() => import('react-leaflet').then((mod) => mod.MapContainer), { ssr: false })
+const TileLayer = dynamic(() => import('react-leaflet').then((mod) => mod.TileLayer), { ssr: false })
+const Marker = dynamic(() => import('react-leaflet').then((mod) => mod.Marker), { ssr: false })
+const Popup = dynamic(() => import('react-leaflet').then((mod) => mod.Popup), { ssr: false })
+const Polygon = dynamic(() => import('react-leaflet').then((mod) => mod.Polygon), { ssr: false })
+const Polyline = dynamic(() => import('react-leaflet').then((mod) => mod.Polyline), { ssr: false })
+
 // Set up PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
+
+// Fix Leaflet marker icons
+if (typeof window !== 'undefined') {
+  const L = require('leaflet')
+  delete (L.Icon.Default.prototype as any)._getIconUrl
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  })
+}
+
+interface KmlShape {
+  name: string;
+  type: 'Polygon' | 'LineString' | 'Point';
+  coordinates: any; // e.g., [[lat, lng], ...] for Polyline, or [[[lat, lng], ...]] for Polygon
+}
 
 // API function to get users
 export const getUsers = async (documentId: number, apiClient: any) => {
@@ -59,10 +85,15 @@ export function UnifiedDocumentViewer({
 }: UnifiedDocumentViewerProps) {
   // Document state
   const [documentUrl, setDocumentUrl] = useState<string | null>(null)
-  const [documentType, setDocumentType] = useState<'pdf' | 'image' | null>(null)
+  const [documentType, setDocumentType] = useState<'pdf' | 'image' | 'kml' | null>(null)
   const [numPages, setNumPages] = useState<number | null>(null)
   const [scale, setScale] = useState<number>(getInitialScale())
   const [isLoading, setIsLoading] = useState<boolean>(false)
+
+  // KML-specific state
+  const [kmlLayers, setKmlLayers] = useState<KmlShape[]>([])
+  const [isLoadingKml, setIsLoadingKml] = useState(false)
+  const [isClient, setIsClient] = useState(false)
 
   // Comment and annotation state
   const [comments, setComments] = useState<Comment[]>([])
@@ -112,12 +143,85 @@ export function UnifiedDocumentViewer({
 
   // Load document, comments, and users when document changes
   useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  useEffect(() => {
     if (isOpen && document && !document.isFolder) {
       loadDocument()
       loadComments()
       loadUsers()
     }
   }, [isOpen, document])
+
+  // KML extraction function
+  const extractKmlShapes = useCallback((kmlDoc: Document): KmlShape[] => {
+    const shapes: KmlShape[] = []
+    const placemarks = kmlDoc.querySelectorAll('Placemark')
+
+    placemarks.forEach(placemark => {
+      const name = placemark.querySelector('name')?.textContent || 'Unnamed Shape'
+
+      const processCoordinates = (coordString: string | null | undefined): [number, number][] => {
+        if (!coordString) return []
+        const points: [number, number][] = []
+        const coordPairs = coordString.trim().split(/[\s\n\r]+/).filter(Boolean)
+
+        coordPairs.forEach(pair => {
+          const coords = pair.split(',').map(c => parseFloat(c.trim())).filter(n => !isNaN(n))
+          if (coords.length >= 2) {
+            points.push([coords[1], coords[0]]) // Leaflet uses [lat, lng]
+          }
+        })
+
+        return points
+      }
+
+      // Check for Polygon
+      const polygon = placemark.querySelector('Polygon LinearRing coordinates')
+      if (polygon) {
+        const coordinates = processCoordinates(polygon.textContent)
+        if (coordinates.length >= 3) {
+          shapes.push({
+            name,
+            type: 'Polygon',
+            coordinates: [coordinates] // Polygon expects array of coordinate arrays
+          })
+          return
+        }
+      }
+
+      // Check for LineString
+      const lineString = placemark.querySelector('LineString coordinates')
+      if (lineString) {
+        const coordinates = processCoordinates(lineString.textContent)
+        if (coordinates.length >= 2) {
+          shapes.push({
+            name,
+            type: 'LineString',
+            coordinates
+          })
+          return
+        }
+      }
+
+      // Check for Point
+      const point = placemark.querySelector('Point coordinates')
+      if (point) {
+        const coordinates = processCoordinates(point.textContent)
+        if (coordinates.length >= 1) {
+          shapes.push({
+            name,
+            type: 'Point',
+            coordinates: coordinates[0]
+          })
+          return
+        }
+      }
+    })
+
+    return shapes
+  }, [])
 
   const loadDocument = async () => {
     if (!document) return
@@ -131,8 +235,26 @@ export function UnifiedDocumentViewer({
     try {
       // Determine document type
       const isImage = isImageFile(document)
+      const isKml = isKmlFile(document)
 
-      if (isImage) {
+      if (isKml) {
+        setDocumentType('kml')
+        setIsLoadingKml(true)
+
+        // For KML files, get the raw KML content
+        const response = await apiClient.post('/dashboard/documents/download', {
+          items: [{ id: parseInt(document.id), type: "file" }]
+        }, { responseType: 'text' })
+
+        if (response.data) {
+          const parser = new DOMParser()
+          const kmlDoc = parser.parseFromString(response.data, 'text/xml')
+          const shapes = extractKmlShapes(kmlDoc)
+          setKmlLayers(shapes)
+          console.log(`✅ Loaded ${shapes.length} shapes from KML file: ${document.name}`)
+        }
+        setIsLoadingKml(false)
+      } else if (isImage) {
         setDocumentType('image')
         setScale(getInitialScale())
         // For images, get the original file
@@ -163,10 +285,12 @@ export function UnifiedDocumentViewer({
     } catch (error) {
       console.error('Error loading document:', error)
       toast.error('Failed to load document')
+      setIsLoadingKml(false)
 
       setDocumentUrl(null)
       setDocumentType(null)
       setNumPages(null)
+      setKmlLayers([])
     } finally {
       setIsLoading(false)
     }
@@ -603,8 +727,8 @@ export function UnifiedDocumentViewer({
             onMouseUp={handleMouseUp}
             onClick={handleClick}
           >
-            {/* Zoom Controls - Positioned relative to scrollable container */}
-            {documentUrl && (
+            {/* Zoom Controls - Positioned relative to scrollable container (hidden for KML) */}
+            {documentUrl && documentType !== 'kml' && (
               <div className="zoom-controls sticky top-[92%] left-1/2 z-30 mx-auto hidden w-fit -translate-x-1/2 items-center gap-1 rounded-lg bg-[#9B9B9D] p-1 text-white shadow-lg lg:flex">
                 <button
                   onClick={(e) => {
@@ -725,6 +849,71 @@ export function UnifiedDocumentViewer({
                       })}
                     </div>
                   </PDFDocument>
+                ) : documentType === 'kml' ? (
+                  // KML Map viewer
+                  <div className="h-full w-full relative">
+                    {/* KML Loading Indicator */}
+                    {isLoadingKml && (
+                      <div className="absolute top-4 left-4 z-[1000] bg-white px-3 py-2 rounded-lg shadow-lg">
+                        <div className="flex items-center gap-2">
+                          <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                          <span className="text-sm text-gray-700">Loading KML file...</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {isClient ? (
+                      <MapContainer
+                        center={[20.5937, 78.9629]} // Default to India center
+                        zoom={5}
+                        style={{ height: '100%', width: '100%' }}
+                        zoomControl={true}
+                      >
+                        <TileLayer
+                          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        />
+
+                        {/* KML Shapes */}
+                        {kmlLayers.map((shape, index) => {
+                          const color = '#42d4f4' // Use a consistent color for all KML shapes
+
+                          if (shape.type === 'Polygon' && shape.coordinates) {
+                            return (
+                              <Polygon key={`kml-${index}`} positions={shape.coordinates} pathOptions={{ color: color, fillColor: color, fillOpacity: 0.4 }}>
+                                <Popup>{shape.name}</Popup>
+                              </Polygon>
+                            )
+                          }
+
+                          if (shape.type === 'LineString' && shape.coordinates) {
+                            return (
+                              <Polyline key={`kml-${index}`} positions={shape.coordinates} pathOptions={{ color: color }}>
+                                 <Popup>{shape.name}</Popup>
+                              </Polyline>
+                            )
+                          }
+
+                          if (shape.type === 'Point' && shape.coordinates) {
+                              return (
+                                  <Marker key={`kml-${index}`} position={shape.coordinates}>
+                                      <Popup>{shape.name}</Popup>
+                                  </Marker>
+                              )
+                          }
+
+                          return null;
+                        })}
+                      </MapContainer>
+                    ) : (
+                      <div className="flex h-full items-center justify-center">
+                        <div className="text-center">
+                          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+                          <p className="mt-4 text-gray-600">Loading map...</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   // Image viewer
                   <div

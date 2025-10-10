@@ -24,6 +24,16 @@ export const isPdfFile = (document: Document): boolean => {
   )
 }
 
+// Utility function to check if a file is a KML
+export const isKmlFile = (document: Document): boolean => {
+  if (!document.fileType) return false
+  return (
+    document.fileType.includes('kml') ||
+    document.icon === 'kml' ||
+    document.name.toLowerCase().endsWith('.kml')
+  )
+}
+
 export const getAllFolders = (documents: Document[]) => {
   const folders: Document[] = []
   const extractFolders = (docs: Document[]) => {
