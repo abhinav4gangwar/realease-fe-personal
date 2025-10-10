@@ -8,11 +8,11 @@ import { AnalyticsChartCard } from '../_components/analytics-components/analytic
 import AnalyticsSidebar from '../_components/analytics-components/analytics-sidebar'
 import AnalyticsSTateToggle from '../_components/analytics-state-toggle'
 
-const AnalyticsRenderer = () => {
+export const AnalyticsRenderer = () => {
   return (
     <div className="flex flex-col space-y-6">
       {/* Basic Cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid lg:grid-cols-3 gap-4">
         {dummyAnalytics.cards
           .filter((card) => card.type === "basic")
           .map((card) => (
@@ -27,7 +27,7 @@ const AnalyticsRenderer = () => {
       </div>
 
       {/* Chart Cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid lg:grid-cols-3 gap-4">
         {dummyAnalytics.cards
           .filter((card) => card.type === "chart")
           .map((card) => (
