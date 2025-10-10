@@ -29,6 +29,7 @@ import {
   PieChart,
   ResponsiveContainer,
   Tooltip,
+  XAxis,
   YAxis,
 } from 'recharts'
 
@@ -52,7 +53,7 @@ export const AnalyticsChartCard = ({
           {title}
         </CardTitle>
 
-        <div>
+        <div className="flex items-center">
           <Toltip>
             <TooltipTrigger asChild>
               <Button
@@ -68,9 +69,7 @@ export const AnalyticsChartCard = ({
               className="text-secondary max-w-sm border border-gray-400 bg-white shadow-md"
             >
               <p className="text-base font-bold">Insight</p>
-              <p className="pt-1">
-                {insight}
-              </p>
+              <p className="pt-1">{insight}</p>
             </TooltipContent>
           </Toltip>
           {/* 3-dot Dropdown */}
@@ -116,76 +115,84 @@ export const AnalyticsChartCard = ({
       </CardHeader>
 
       <CardContent>
-        <div className="flex flex-col items-center justify-between gap-10 lg:flex-row">
+        <div className="flex flex-col items-center justify-between gap-6 lg:flex-row lg:gap-10">
           {/* Chart Section */}
-          <div className="flex-2">
-            <ResponsiveContainer width="100%" height={287}>
-              {chartType === 'donut' && (
-                <PieChart>
-                  <Pie
-                    data={data}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={70}
-                    outerRadius={90}
-                    dataKey="value"
-                  >
-                    {data.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              )}
+          <div className="w-full lg:flex-2">
+            {/* Mobile: smaller height, Desktop: original height */}
+            <div className="h-[240px] w-full sm:h-[287px]">
+              <ResponsiveContainer width="100%" height="100%">
+                {chartType === 'donut' && (
+                  <PieChart>
+                    <Pie
+                      data={data}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      dataKey="value"
+                    >
+                      {data.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                )}
 
-              {chartType === 'pie' && (
-                <PieChart>
-                  <Pie
-                    data={data}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={90}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {data.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              )}
+                {chartType === 'pie' && (
+                  <PieChart>
+                    <Pie
+                      data={data}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {data.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                )}
 
-              {chartType === 'bar' && (
-                <BarChart data={data}>
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="value">
-                    {data.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              )}
-            </ResponsiveContainer>
+                {chartType === 'bar' && (
+                  <BarChart data={data} margin={{ left: -20, right: 10 }}>
+                    <XAxis 
+                      dataKey="label" 
+                      tick={{ fontSize: 12 }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                    />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip />
+                    <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                      {data.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                )}
+              </ResponsiveContainer>
+            </div>
           </div>
 
           {/* Legend Section */}
-          <div className="flex-1 space-y-4">
-            <div className="space-y-4">
-              {data.map((item, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <div
-                    className="h-3 w-3 flex-shrink-0 rounded-full"
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <div className="flex gap-4">
-                    <span className="text-secondary text-xs">{item.label}</span>
-                    <span className="text-xs text-gray-600">
-                      {item.percentage}%
-                    </span>
-                  </div>
+          <div className="w-full space-y-3 lg:flex-1 lg:space-y-4">
+            {data.map((item, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <div
+                  className="h-3 w-3 flex-shrink-0 rounded-full"
+                  style={{ backgroundColor: item.color }}
+                />
+                <div className="flex flex-1 items-center justify-between gap-2">
+                  <span className="text-secondary text-xs">{item.label}</span>
+                  <span className="text-xs font-medium text-gray-600">
+                    {item.percentage}%
+                  </span>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         </div>
       </CardContent>
