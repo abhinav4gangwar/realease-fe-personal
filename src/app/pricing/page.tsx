@@ -7,13 +7,21 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card'
-import { Plan } from '@/types/payment.types'
-import { apiClient } from '@/utils/api'
 import { ChevronDown } from 'lucide-react'
 import { useEffect, useState } from 'react'
+
+import {
+    createRazorpayInstance,
+    loadRazorpayScript,
+} from '@/lib/razorpay-loader'
+import { Plan } from '@/types/payment.types'
+import { apiClient } from '@/utils/api'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { FeatureSection } from './_components/feature-section'
 
 const PricingPage = () => {
+  const router = useRouter()
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>(
     'monthly'
   )
@@ -24,6 +32,7 @@ const PricingPage = () => {
   const [plans, setPlans] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [processingPlanId, setProcessingPlanId] = useState<number | null>(null)
 
   useEffect(() => {
     fetchPlans()
@@ -42,6 +51,7 @@ const PricingPage = () => {
     } catch (err) {
       console.error('Failed to fetch plans:', err)
       setError('Failed to load pricing plans')
+      toast.error('Failed to load pricing plans')
     } finally {
       setLoading(false)
     }
@@ -63,19 +73,117 @@ const PricingPage = () => {
       : parseFloat(plan.yearlyAmount)
   }
 
-  const handleChoosePlan = (plan: Plan | undefined) => {
+  const handlePayment = async (plan: Plan | undefined) => {
     if (!plan) return
 
-    const planData = {
-      planId: plan.id,
-      planName: plan.displayName,
-      billingCycle,
-      amount: getPrice(plan),
-      category: plan.category,
-      tier: plan.tier,
-    }
+    try {
+      setProcessingPlanId(plan.id)
+      console.log('Initiating payment for:', {
+        planId: plan.id,
+        planName: plan.displayName,
+        billingCycle,
+        amount: getPrice(plan),
+      })
 
-    console.log('Selected Plan:', planData)
+      // Create subscription order
+      const orderResponse = await apiClient.post('/payments/create-order', {
+        planId: plan.id,
+        billingCycle,
+      })
+
+      console.log('Order response:', orderResponse.data)
+
+      if (!orderResponse.data.success) {
+        throw new Error(orderResponse.data.message || 'Failed to create order')
+      }
+
+      const orderData = orderResponse.data.data
+
+      // Load Razorpay script
+      await loadRazorpayScript()
+      console.log('Razorpay script loaded')
+
+      // Initialize Razorpay
+      const options = {
+        key: orderData.key || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        subscription_id: orderData.subscription_id,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: orderData.name || 'RealEase',
+        description:
+          orderData.description || `${plan.displayName} Subscription`,
+        prefill: orderData.prefill || {},
+        theme: orderData.theme || {
+          color: '#3399cc',
+        },
+        notes: orderData.notes || {},
+        handler: async function (response: any) {
+          try {
+            console.log('Payment response:', response)
+
+            // Validate required parameters
+            if (!response.razorpay_payment_id || !response.razorpay_signature) {
+              throw new Error('Missing payment verification parameters')
+            }
+
+            // Verify payment
+            const verificationPayload = {
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              razorpay_subscription_id: response.razorpay_subscription_id,
+              subscription_id: orderData.subscription_id,
+            }
+
+            console.log('Verifying payment:', verificationPayload)
+
+            const verifyResponse = await apiClient.post(
+              '/payments/verify',
+              verificationPayload
+            )
+
+            console.log('Verification response:', verifyResponse.data)
+
+            if (verifyResponse.data.success) {
+              toast.success(
+                '🎉 Subscription activated successfully! Welcome to RealEase Premium.'
+              )
+
+              // Redirect to homepage after 2 seconds
+              setTimeout(() => {
+                router.push('/')
+              }, 2000)
+            } else {
+              throw new Error(
+                verifyResponse.data.message || 'Payment verification failed'
+              )
+            }
+          } catch (error: any) {
+            console.error('Payment verification failed:', error)
+            toast.error(
+              error.message ||
+                'Payment verification failed. Please contact support.'
+            )
+          } finally {
+            setProcessingPlanId(null)
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            console.log('Payment modal dismissed')
+            setProcessingPlanId(null)
+            toast.info('Payment cancelled')
+          },
+        },
+      }
+
+      console.log('Opening Razorpay checkout...')
+      const rzp = createRazorpayInstance(options)
+      rzp.open()
+    } catch (error: any) {
+      console.error('Payment initiation failed:', error)
+      toast.error(error.message || 'Failed to initiate payment')
+      setProcessingPlanId(null)
+    }
   }
 
   if (loading) {
@@ -200,10 +308,13 @@ const PricingPage = () => {
               )}
 
               <Button
-                onClick={() => handleChoosePlan(standardPlan)}
+                onClick={() => handlePayment(standardPlan)}
+                disabled={processingPlanId === standardPlan.id}
                 className="hover:bg-secondary text-secondary text-md h-11 w-full cursor-pointer border border-gray-400 bg-white font-semibold hover:text-white"
               >
-                Choose Plan
+                {processingPlanId === standardPlan.id
+                  ? 'Processing...'
+                  : 'Choose Plan'}
               </Button>
 
               <div className="flex-1">
@@ -277,10 +388,13 @@ const PricingPage = () => {
               )}
 
               <Button
-                onClick={() => handleChoosePlan(premiumPlan)}
+                onClick={() => handlePayment(premiumPlan)}
+                disabled={processingPlanId === premiumPlan.id}
                 className="hover:bg-secondary text-secondary text-md h-11 w-full cursor-pointer border border-gray-400 bg-white font-semibold hover:text-white"
               >
-                Choose Plan
+                {processingPlanId === premiumPlan.id
+                  ? 'Processing...'
+                  : 'Choose Plan'}
               </Button>
 
               <div className="flex-1">
