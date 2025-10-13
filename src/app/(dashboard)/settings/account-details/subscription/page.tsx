@@ -1,22 +1,27 @@
 'use client'
 import { Button } from '@/components/ui/button'
-import { SubscriptionData } from '@/types/payment.types'
+import { Plan, SubscriptionData } from '@/types/payment.types'
 import { apiClient } from '@/utils/api'
 import { ArrowRight, History, SquareCheckBig } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { toast } from 'sonner'
 import { PaymentHistoryCard } from '../../_components/subscription-control-components/payment-history-card'
+import { UpgradePlanModal } from '../../_components/subscription-control-components/upgrade-plan-model'
+
 
 const SubscriptionPage = () => {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(
     null
   )
+  const [plans, setPlans] = useState<Plan[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
   useEffect(() => {
     fetchSubscription()
+    fetchPlans()
   }, [])
 
   const fetchSubscription = async () => {
@@ -35,6 +40,18 @@ const SubscriptionPage = () => {
       toast.error('Failed to load subscription details')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchPlans = async () => {
+    try {
+      const response = await apiClient.get('/payments/plans')
+
+      if (response.data.success) {
+        setPlans(response.data.data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch plans:', err)
     }
   }
 
@@ -108,6 +125,16 @@ const SubscriptionPage = () => {
   const isExpiringSoon =
     subDetails.daysRemaining !== null && subDetails.daysRemaining <= 30
 
+  if (showUpgradeModal) {
+    return (
+      <UpgradePlanModal
+        subscription={subscription}
+        plans={plans}
+        onBack={() => setShowUpgradeModal(false)}
+      />
+    )
+  }
+
   return (
     <div>
       <div className="border border-gray-300 shadow-md">
@@ -156,7 +183,10 @@ const SubscriptionPage = () => {
             )}
           </div>
 
-          <Button className="bg-primary h-11 cursor-pointer">
+          <Button 
+            onClick={() => setShowUpgradeModal(true)}
+            className="bg-primary h-11 cursor-pointer hover:bg-secondary"
+          >
             Upgrade <ArrowRight />
           </Button>
         </div>

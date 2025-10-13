@@ -217,4 +217,6 @@ export const permissionGroups: PermissionGroup[] = [
       { id: 'settings.delete', label: 'Delete Account' },
     ],
   },
-]
+];
+
+export const DUMMY_CARD_NO="4718 6091 0820 4366";
