@@ -5,6 +5,8 @@ import { useState } from "react"
 import { Header } from "./_components/header"
 import MobileHeader from "./_components/mobile-header"
 import { Sidebar } from "./_components/sidebar"
+import SubscriptionPopup from "./_components/subscription-required-popup"
+
 
 export default function DashboardLayout({
   children,
@@ -20,9 +22,12 @@ export default function DashboardLayout({
   }
 
   const isSettingsPage = pathname.startsWith("/settings")
+  const isPricingPage = pathname === "/pricing"
 
   return (
     <div className="flex h-screen bg-gray-100">
+      {!isPricingPage && <SubscriptionPopup />}
+      
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
