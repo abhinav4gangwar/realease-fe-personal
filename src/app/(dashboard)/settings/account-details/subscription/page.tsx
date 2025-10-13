@@ -2,10 +2,11 @@
 import { Button } from '@/components/ui/button'
 import { SubscriptionData } from '@/types/payment.types'
 import { apiClient } from '@/utils/api'
-import { ArrowRight, SquareCheckBig } from 'lucide-react'
+import { ArrowRight, History, SquareCheckBig } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { toast } from 'sonner'
+import { PaymentHistoryCard } from '../../_components/subscription-control-components/payment-history-card'
 
 const SubscriptionPage = () => {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(
@@ -108,54 +109,74 @@ const SubscriptionPage = () => {
     subDetails.daysRemaining !== null && subDetails.daysRemaining <= 30
 
   return (
-    <div className="border border-gray-300 shadow-md">
-      {/* header */}
-      <div className="flex items-center gap-3 bg-[#F8F8F8] p-4">
-        <SquareCheckBig className="text-primary" />
-        <h1 className="text-lg">
-          {subDetails.isActive ? 'Active Subscription' : 'Subscription Status'}
-        </h1>
-        <span
-          className={`ml-auto text-sm font-medium capitalize ${getStatusColor(subDetails.status)}`}
-        >
-          {subDetails.status}
-        </span>
-      </div>
-
-      {/* content */}
-      <div className="flex items-center justify-between bg-white p-5">
-        <div>
-          <h1 className="text-secondary pb-2 text-lg">
-            {currentPlan.displayName}
+    <div>
+      <div className="border border-gray-300 shadow-md">
+        {/* header */}
+        <div className="flex items-center gap-3 bg-[#F8F8F8] p-4">
+          <SquareCheckBig className="text-primary" />
+          <h1 className="text-lg">
+            {subDetails.isActive
+              ? 'Active Subscription'
+              : 'Subscription Status'}
           </h1>
-
-          {subDetails.status === 'trial' && subDetails.trialEndDate ? (
-            <p className="text-sm text-[#9B9B9D]">
-              Trial ending on {formatDate(subDetails.trialEndDate)}
-            </p>
-          ) : subDetails.isActive && subDetails.nextBillingDate ? (
-            <>
-              <p className="text-sm text-[#9B9B9D]">
-                {subDetails.isExpired ? 'Expired on' : 'Renewing on'}{' '}
-                {formatDate(subDetails.nextBillingDate)}
-              </p>
-              {isExpiringSoon && subDetails.daysRemaining !== null && (
-                <p className="mt-1 text-xs text-orange-600">
-                  {subDetails.daysRemaining} days remaining
-                </p>
-              )}
-            </>
-          ) : (
-            <p className="text-sm text-[#9B9B9D]">
-              Billing cycle: {subDetails.billingCycle || 'N/A'}
-            </p>
-          )}
+          <span
+            className={`ml-auto text-sm font-medium capitalize ${getStatusColor(subDetails.status)}`}
+          >
+            {subDetails.status}
+          </span>
         </div>
 
-        <Button className="bg-primary h-11 cursor-pointer">
-          Upgrade <ArrowRight />
-        </Button>
+        {/* content */}
+        <div className="flex items-center justify-between bg-white p-5">
+          <div>
+            <h1 className="text-secondary pb-2 text-lg">
+              {currentPlan.displayName}
+            </h1>
+
+            {subDetails.status === 'trial' && subDetails.trialEndDate ? (
+              <p className="text-sm text-[#9B9B9D]">
+                Trial ending on {formatDate(subDetails.trialEndDate)}
+              </p>
+            ) : subDetails.isActive && subDetails.nextBillingDate ? (
+              <>
+                <p className="text-sm text-[#9B9B9D]">
+                  {subDetails.isExpired ? 'Expired on' : 'Renewing on'}{' '}
+                  {formatDate(subDetails.nextBillingDate)}
+                </p>
+                {isExpiringSoon && subDetails.daysRemaining !== null && (
+                  <p className="mt-1 text-xs text-orange-600">
+                    {subDetails.daysRemaining} days remaining
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-[#9B9B9D]">
+                Billing cycle: {subDetails.billingCycle || 'N/A'}
+              </p>
+            )}
+          </div>
+
+          <Button className="bg-primary h-11 cursor-pointer">
+            Upgrade <ArrowRight />
+          </Button>
+        </div>
       </div>
+
+      {/* Payment History */}
+      {subscription.orderHistory && subscription.orderHistory.length > 0 && (
+        <div className="mt-4 border border-gray-300 shadow-md">
+          <div className="flex items-center gap-3 bg-[#F8F8F8] p-4">
+            <History className="text-primary" />
+            <h1 className="text-lg">Order History</h1>
+          </div>
+
+          <div className="flex flex-col bg-white">
+            {subscription.orderHistory.map((order) => (
+              <PaymentHistoryCard key={order.id} {...order} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

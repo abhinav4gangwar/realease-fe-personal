@@ -33,4 +33,28 @@ export interface SubscriptionData {
     tier: string
     description: string
   } | null
+  activeOrder?: {
+    id: number
+    amount: string
+    billingCycle: string
+    subscriptionStartDate: string
+    subscriptionEndDate: string
+    status: string
+    createdAt: string
+  } | null
+  orderHistory?: {
+    id: number
+    amount: string
+    billingCycle: string
+    status: string
+    subscriptionStartDate: string
+    subscriptionEndDate: string
+    createdAt: string
+    plan: {
+      id: number
+      displayName: string
+      category: string
+      tier: string
+    }
+  }[]
 }
