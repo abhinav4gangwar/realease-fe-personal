@@ -36,6 +36,12 @@ import {
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import {
+  clearPersistedData,
+  loadPersistedData,
+  PersistedFormData,
+  saveToLocalStorage,
+} from '../_property_utils/property-creation-persistance'
 import { FileItem, PropertyUploadDropzone } from './document-upload'
 
 interface CustomField {
@@ -96,6 +102,52 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     valuePerSQ: '',
     value: '',
   })
+
+  useEffect(() => {
+    if (isOpen) {
+      const persistedData = loadPersistedData()
+      if (persistedData) {
+        setFormData(persistedData.formData)
+        setCustomFields(persistedData.customFields)
+        setIsDisputed(persistedData.isDisputed)
+        setPartyA(persistedData.partyA)
+        setPartyB(persistedData.partyB)
+        setSelectedUnit(persistedData.selectedUnit)
+        setSelectedCountry(persistedData.selectedCountry)
+        setCurrentStep(persistedData.currentStep)
+
+        toast.success('Previous form data restored')
+      }
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (isOpen && currentStep <= 2 && !isSubmitted) {
+      const dataToSave: PersistedFormData = {
+        formData,
+        customFields,
+        isDisputed,
+        partyA,
+        partyB,
+        selectedUnit,
+        selectedCountry,
+        currentStep,
+        timestamp: Date.now(),
+      }
+      saveToLocalStorage(dataToSave)
+    }
+  }, [
+    formData,
+    customFields,
+    isDisputed,
+    partyA,
+    partyB,
+    selectedUnit,
+    selectedCountry,
+    currentStep,
+    isOpen,
+    isSubmitted,
+  ])
 
   // Add these validation functions
   const validateStep1 = () => {
@@ -514,6 +566,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
         response.data.properties.length > 0
       ) {
         setCreatedPropertyId(response.data.properties[0].id.toString())
+        clearPersistedData()
         toast.success('Property created successfully!')
         return true
       }
