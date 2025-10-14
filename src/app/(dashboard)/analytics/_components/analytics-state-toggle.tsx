@@ -7,14 +7,14 @@ const AnalyticsSTateToggle = () => {
     <div className="flex items-center rounded-full border border-gray-400">
       <Button
         onClick={() => setAnalyticsState('analytics')}
-        className={`h-12 px-6 ${analyticsState === 'analytics' ? 'bg-secondary rounded-full text-white' : 'text-secondary bg-transparent'} cursor-pointer rounded-l-full`}
+        className={`h-12 px-6 ${analyticsState === 'analytics' ? 'bg-secondary rounded-full text-white' : 'text-secondary bg-transparent hover:bg-transparent'} cursor-pointer rounded-l-full`}
       >
         Stats
       </Button>
 
       <Button
         onClick={() => setAnalyticsState('report')}
-        className={`h-12 px-6 ${analyticsState === 'report' ? 'bg-secondary rounded-full text-white' : 'text-secondary bg-transparent'} cursor-pointer rounded-r-full`}
+        className={`h-12 px-6 ${analyticsState === 'report' ? 'bg-secondary rounded-full text-white' : 'text-secondary bg-transparent hover:bg-transparent'} cursor-pointer rounded-r-full`}
       >
         Report
       </Button>

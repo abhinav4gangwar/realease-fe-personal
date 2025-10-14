@@ -264,7 +264,7 @@ export function DocumentDetailModal({
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8"
-                onClick={handleCancel}
+                onClick={onClose}
                 disabled={isSaving}
               >
                 <X className="h-4 w-4" />

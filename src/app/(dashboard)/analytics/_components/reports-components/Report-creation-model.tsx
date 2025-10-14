@@ -9,7 +9,7 @@ import {
   ReportBlock,
   ReportJSON,
 } from '@/types/report-types'
-import { FileDown, SparkleIcon, X } from 'lucide-react'
+import { ArrowLeft, FileDown, SparkleIcon, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import ReportCanvas from './report-canvas'
 import ReportPreviewModal from './report-preview-model'
@@ -172,6 +172,14 @@ const ReportCreationModel = ({
         <div className="bg-[#F2F2F2] shadow-md">
           <div className="flex items-center justify-between p-5">
             <div className="flex min-w-0 flex-1 items-center gap-3">
+               <Button
+                variant="ghost"
+                size="icon"
+                className="hover:text-primary h-6 w-6 cursor-pointer rounded-full"
+                onClick={onClose}
+              >
+                <ArrowLeft className="size-6 font-bold text-secondary" />
+              </Button>
               <Input
                 value={reportName}
                 onChange={(e) => setReportName(e.target.value)}
@@ -200,10 +208,10 @@ const ReportCreationModel = ({
               <Button
                 variant="ghost"
                 size="icon"
-                className="hover:text-primary h-6 w-6 cursor-pointer rounded-full bg-[#CDCDCE] text-white"
+                className="hover:text-primary h-6 w-6 cursor-pointer rounded-full"
                 onClick={onClose}
               >
-                <X className="h-4 w-4 font-bold" />
+                <X className="h-4 w-4 font-bold text-primary" />
               </Button>
             </div>
           </div>
