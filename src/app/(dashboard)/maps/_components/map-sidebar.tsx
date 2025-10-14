@@ -25,25 +25,22 @@ interface MapPropertiesSidebarProps {
 
 const MapPropertiesSidebar = ({
   properties,
-  isOpen,
   onClose,
   onPropertyClick,
   onPropertyHover,
 }: MapPropertiesSidebarProps) => {
   const [searchQuery, setSearchQuery] = useState('')
 
-  // Filter properties based on search
-  const filteredProperties = properties.filter((property) => {
-    const query = searchQuery.toLowerCase()
+  const filteredProperties = properties.filter((p) => {
+    const q = searchQuery.toLowerCase()
     return (
-      property.name?.toLowerCase().includes(query) ||
-      property.location?.toLowerCase().includes(query) ||
-      property.owner?.toLowerCase().includes(query) ||
-      property.type?.toLowerCase().includes(query)
+      p.name?.toLowerCase().includes(q) ||
+      p.location?.toLowerCase().includes(q) ||
+      p.owner?.toLowerCase().includes(q) ||
+      p.type?.toLowerCase().includes(q)
     )
   })
 
-  // Format coordinates for display
   const getCoordinatesDisplay = (property: Properties) => {
     if ((property as any).latitude && (property as any).longitude) {
       return formatCoordinates(
@@ -54,37 +51,42 @@ const MapPropertiesSidebar = ({
     return property.coordinates || ''
   }
 
-  if (!isOpen) return null
-
   return (
-    <div className="fixed top-0 right-0 z-[1000] flex h-full w-[400px] flex-col border-r border-gray-200 bg-white shadow-2xl">
+    <div className="flex h-full flex-col bg-white overflow-hidden">
       {/* Header */}
-      <div className="bg-[#F2F2F2] shadow-md">
-        <div className="flex items-center justify-between p-5">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
-            <MapPin className="text-primary h-6 w-6 flex-shrink-0" />
+      <div className="flex-shrink-0 border-b border-gray-200 bg-gray-50 p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-5 w-5 text-primary" />
             <div>
-              <h2 className="text-xl font-semibold">Properties</h2>
-              <p className="text-sm text-gray-500">
+              <h2 className="text-lg font-semibold">Properties</h2>
+              <p className="text-xs text-gray-500">
                 {filteredProperties.length}{' '}
-                {filteredProperties.length === 1 ? 'property' : 'properties'}{' '}
-                found
+                {filteredProperties.length === 1 ? 'property' : 'properties'}
               </p>
             </div>
           </div>
           <Button
             variant="ghost"
             size="icon"
-            className="hover:bg-primary h-8 w-8 flex-shrink-0 rounded-full bg-[#CDCDCE] text-white hover:text-white"
+            className="hidden"
             onClick={onClose}
           >
             <X className="h-4 w-4" />
           </Button>
         </div>
+
+       
+        <input
+          type="text"
+          placeholder="Search properties..."
+          className="mt-3 w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
       </div>
 
-      {/* Properties List */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4 no-scrollbar">
         {filteredProperties.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center">
             <MapPin className="mb-3 h-12 w-12 text-gray-300" />
@@ -98,73 +100,64 @@ const MapPropertiesSidebar = ({
             {filteredProperties.map((property) => (
               <div
                 key={property.id}
-                className="group hover:border-primary cursor-pointer rounded-lg border border-gray-200 bg-white p-4 transition-all hover:shadow-md"
+                className="cursor-pointer rounded-lg border border-gray-200 bg-white p-4 transition-all hover:border-primary hover:shadow-md"
                 onClick={() => onPropertyClick(property)}
                 onMouseEnter={() => onPropertyHover?.(property)}
                 onMouseLeave={() => onPropertyHover?.(null)}
               >
-                {/* Property Header */}
-                <div className="mb-3 flex items-start justify-between">
-                  <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-lg font-semibold text-gray-900">
+                {/* header */}
+                <div className="mb-2 flex items-start justify-between">
+                  <div className="flex-1">
+                    <h3 className="truncate text-base font-semibold text-gray-900">
                       {property.name}
                     </h3>
-                    <p className="mt-1 flex items-center gap-1 text-sm text-gray-500">
+                    <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-500">
                       <MapPin className="h-3 w-3" />
                       <span className="truncate">{property.location}</span>
                     </p>
                   </div>
-                  <ChevronRight className="group-hover:text-primary h-5 w-5 flex-shrink-0 text-gray-400 transition-transform group-hover:translate-x-1" />
+                  <ChevronRight className="h-4 w-4 flex-shrink-0 text-gray-400 transition-transform group-hover:translate-x-1" />
                 </div>
 
-                {/* Property Details Grid */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Home className="h-4 w-4 text-gray-400" />
+                {/* details grid */}
+                <div className="space-y-1.5 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Home className="h-3.5 w-3.5 text-gray-400" />
                     <span className="text-gray-500">Type:</span>
-                    <span className="font-medium text-gray-900">
-                      {property.type}
-                    </span>
+                    <span className="font-medium">{property.type}</span>
                   </div>
-
-                  <div className="flex items-center gap-2 text-sm">
-                    <User className="h-4 w-4 text-gray-400" />
+                  <div className="flex items-center gap-2">
+                    <User className="h-3.5 w-3.5 text-gray-400" />
                     <span className="text-gray-500">Owner:</span>
-                    <span className="truncate font-medium text-gray-900">
-                      {property.owner}
-                    </span>
+                    <span className="truncate font-medium">{property.owner}</span>
                   </div>
-
-                  <div className="flex items-center gap-2 text-sm">
-                    <Maximize2 className="h-4 w-4 text-gray-400" />
+                  <div className="flex items-center gap-2">
+                    <Maximize2 className="h-3.5 w-3.5 text-gray-400" />
                     <span className="text-gray-500">Extent:</span>
-                    <span className="font-medium text-gray-900">
-                      {property.extent} sq yd
-                    </span>
+                    <span className="font-medium">{property.extent} sq yd</span>
                   </div>
-
-                  <div className="flex items-center gap-2 text-sm">
-                    <DollarSign className="h-4 w-4 text-gray-400" />
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-3.5 w-3.5 text-gray-400" />
                     <span className="text-gray-500">Value:</span>
-                    <span className="text-primary font-semibold">
+                    <span className="font-semibold text-primary">
                       ₹ {parseInt(property.value).toLocaleString()}
                     </span>
                   </div>
                 </div>
 
-                {/* Disputed Badge */}
+                {/* disputed badge */}
                 {property.isDisputed && (
-                  <div className="mt-3 flex items-center gap-2 rounded-md bg-yellow-50 px-3 py-2">
-                    <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                    <span className="text-sm font-medium text-yellow-800">
+                  <div className="mt-2 flex items-center gap-1.5 rounded bg-yellow-50 px-2 py-1">
+                    <AlertTriangle className="h-3.5 w-3.5 text-yellow-600" />
+                    <span className="text-xs font-medium text-yellow-800">
                       Disputed Property
                     </span>
                   </div>
                 )}
 
-                {/* Coordinates Footer */}
+                {/* coordinates */}
                 {getCoordinatesDisplay(property) && (
-                  <div className="mt-3 border-t border-gray-100 pt-3">
+                  <div className="mt-2 border-t border-gray-100 pt-2">
                     <p className="truncate text-xs text-gray-400">
                       {getCoordinatesDisplay(property)}
                     </p>

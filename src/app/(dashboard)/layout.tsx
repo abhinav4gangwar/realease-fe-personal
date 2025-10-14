@@ -23,6 +23,8 @@ export default function DashboardLayout({
 
   const isSettingsPage = pathname.startsWith("/settings")
   const isPricingPage = pathname === "/pricing"
+  const isMapsPage = pathname.startsWith("/maps")
+  const isFullWidthPage = isSettingsPage || isMapsPage
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -37,8 +39,8 @@ export default function DashboardLayout({
         <Header />
         <MobileHeader />
 
-        <main className={`flex-1 overflow-auto ${isSettingsPage ? "p-0" : "p-6"}`}>
-          <div className={`${isSettingsPage ? "lg:mx-0" : "lg:mx-8"}`}>
+        <main className={`flex-1 overflow-auto ${isFullWidthPage ? "p-0" : "p-6"}`}>
+          <div className={`${isFullWidthPage ? "lg:mx-0" : "lg:mx-8"}`}>
             {children}
           </div>
         </main>

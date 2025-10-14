@@ -16,7 +16,7 @@ const MobileHeader = () => {
   const logout = useLogout()
 
   return (
-    <header className="fixed top-0 z-40 block w-full bg-white px-6 py-4 shadow-sm lg:hidden">
+    <header className="fixed top-0 z-[1000] block w-full bg-white px-6 py-4 shadow-sm lg:hidden">
       <div className="flex items-center justify-between">
         {/* Left: Hamburger + Logo */}
         <div className="flex items-center gap-4">
