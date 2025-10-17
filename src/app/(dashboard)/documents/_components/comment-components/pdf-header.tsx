@@ -1,5 +1,6 @@
 'use client'
 
+import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import { Button } from '@/components/ui/button'
 import {
   Download,
@@ -55,6 +56,7 @@ export const PDFHeader: FC<PDFHeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-4">
+        <PlanAccessWrapper featureId='docs_commentsAnnotationsff'>
         <Button
           variant="ghost"
           size="icon"
@@ -78,6 +80,7 @@ export const PDFHeader: FC<PDFHeaderProps> = ({
         >
           <MessageSquare className="h-3 w-3" />
         </Button>
+        </PlanAccessWrapper>
 
         <Button
           variant="ghost"
