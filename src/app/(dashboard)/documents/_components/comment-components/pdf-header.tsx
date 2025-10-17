@@ -56,7 +56,7 @@ export const PDFHeader: FC<PDFHeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-4">
-        <PlanAccessWrapper featureId='docs_commentsAnnotationsff'>
+        <PlanAccessWrapper featureId='docs_commentsAnnotations'>
         <Button
           variant="ghost"
           size="icon"

@@ -1,6 +1,6 @@
 'use client'
 
-import { basicPlanFeatures } from '@/lib/planAccess.dummy'
+
 import { createContext, useContext, useState } from 'react'
 
 export interface GlobalContextType {
@@ -9,7 +9,7 @@ export interface GlobalContextType {
   accessControlState: string
   setAccessControlState: (state: string) => void
   planAccessValues: string[]
-  setPalnAccessValues: unknown
+  setPlanAccessValues: (values: string[]) => void 
 }
 
 const GlobalContext = createContext<GlobalContextType | undefined>(undefined)
@@ -19,7 +19,7 @@ export const GlobalContextProvider = ({
 }: Readonly<{ children: React.ReactNode }>) => {
   const [analyticsState, setAnalyticsState] = useState<string>('analytics')
   const [accessControlState, setAccessControlState] = useState<string>('permissions')
-  const [planAccessValues, setPalnAccessValues] = useState(basicPlanFeatures)
+  const [planAccessValues, setPlanAccessValues] = useState<string[]>([])
   
   return (
     <GlobalContext.Provider
@@ -29,7 +29,7 @@ export const GlobalContextProvider = ({
         accessControlState,
         setAccessControlState,
         planAccessValues,
-        setPalnAccessValues
+        setPlanAccessValues // Fixed typo
       }}
     >
       {children}

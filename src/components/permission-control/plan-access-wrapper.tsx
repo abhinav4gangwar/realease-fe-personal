@@ -11,6 +11,7 @@ interface PlanAccessWrapperProps {
   showCrown?: boolean
   crownPosition?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left'
   blockInteraction?: boolean
+  className?: string
 }
 
 export const PlanAccessWrapper: React.FC<PlanAccessWrapperProps> = ({
@@ -19,6 +20,7 @@ export const PlanAccessWrapper: React.FC<PlanAccessWrapperProps> = ({
   upgradeMessage = "You don't have access to this feature in your current plan. Upgrade to unlock!",
   showCrown = true,
   crownPosition = 'top-right',
+  className
 }) => {
   const { planAccessValues } = useGlobalContextProvider()
   const [showModal, setShowModal] = useState(false)
@@ -59,7 +61,7 @@ export const PlanAccessWrapper: React.FC<PlanAccessWrapperProps> = ({
 
   return (
     <>
-      <div className="relative inline-block">
+      <div className={`relative inline-block ${className}`}>
         {/* Overlay to block interaction */}
         <div
           className="absolute inset-0 z-20 cursor-not-allowed"
@@ -76,8 +78,7 @@ export const PlanAccessWrapper: React.FC<PlanAccessWrapperProps> = ({
             className={`absolute ${getCrownPositionClasses()} pointer-events-none z-30`}
           >
             <Crown
-              className="h-4 w-4 fill-yellow-400 text-yellow-500 drop-shadow-md "
-              strokeWidth={2}
+              className="h-2 w-2 fill-yellow-400 text-yellow-500 drop-shadow-md "
             />
           </div>
         )}

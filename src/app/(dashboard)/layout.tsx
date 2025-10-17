@@ -1,11 +1,14 @@
 "use client"
 import { useAuth } from "@/hooks/useAuth"
+import { useGlobalContextProvider } from "@/providers/global-context"
+import { apiClient } from "@/utils/api"
 import { usePathname } from "next/navigation"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Header } from "./_components/header"
 import MobileHeader from "./_components/mobile-header"
 import { Sidebar } from "./_components/sidebar"
 import SubscriptionPopup from "./_components/subscription-required-popup"
+
 
 
 export default function DashboardLayout({
@@ -16,6 +19,25 @@ export default function DashboardLayout({
   const pathname = usePathname()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const { isAuthenticated } = useAuth()
+  const { setPlanAccessValues } = useGlobalContextProvider() 
+
+  useEffect(() => {
+    const fetchFeatures = async () => {
+      try {
+        const response = await apiClient.get('/payments/features')
+        
+        if (response.data.success && response.data.features) {
+          setPlanAccessValues(response.data.features)
+        }
+      } catch (error) {
+        console.error('Failed to fetch features:', error)
+      }
+    }
+
+    if (isAuthenticated) {
+      fetchFeatures()
+    }
+  }, [isAuthenticated, setPlanAccessValues])
 
   if (isAuthenticated == false) {
     return <div>Loading.....</div>

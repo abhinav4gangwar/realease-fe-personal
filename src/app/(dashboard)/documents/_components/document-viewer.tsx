@@ -1,4 +1,5 @@
 'use client'
+import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import type {
   BreadcrumbItem,
   Document,
@@ -825,18 +826,23 @@ export function DocumentViewer({
             viewMode={viewMode}
             onViewModeChange={handleViewModeChange}
           />
-          <FilterButton onFilterSelect={handleFilterSelect} />
+          <PlanAccessWrapper featureId="mgmt_categorization">
+            <FilterButton onFilterSelect={handleFilterSelect} />
+          </PlanAccessWrapper>
           <SortButton onSortChange={handleSortChange} />
           {isSelectMode && selectedDocuments.length > 0 && (
             <div className="text-sm text-gray-600">
               {selectedDocuments.length} selected
             </div>
           )}
-          <ActionsButton
-            onActionSelect={handleActionSelect}
-            isSelectMode={isSelectMode}
-            selectedCount={selectedDocuments.length}
-          />
+          <PlanAccessWrapper featureId="mgmt_bulkOps">
+            <ActionsButton
+              onActionSelect={handleActionSelect}
+              isSelectMode={isSelectMode}
+              selectedCount={selectedDocuments.length}
+            />
+          </PlanAccessWrapper>
+
           <AddButton onAddSelect={handleAddSelect} />
         </div>
       </div>

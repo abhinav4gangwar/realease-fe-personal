@@ -18,6 +18,7 @@ import FullMapModal from './map-model'
 import MiniMap from './minimap'
 import { CustomField } from './properties-edit-model'
 
+import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import { apiClient } from '@/utils/api'
 import { toast } from 'sonner'
 
@@ -575,6 +576,7 @@ const PropertiesDetailsModel = ({
               </div>
 
               <div className="flex justify-between gap-3">
+                <PlanAccessWrapper featureId='search_mapView' className='w-full'>
                 <div className="w-full rounded-md bg-[#F2F2F2] p-3">
                   <h3 className="mb-2 text-sm font-medium text-gray-500">
                     Mini Map View
@@ -587,6 +589,7 @@ const PropertiesDetailsModel = ({
                     />
                   </div>
                 </div>
+                </PlanAccessWrapper>
 
                 <div className="flex w-full flex-col space-y-5 rounded-md bg-[#F2F2F2] px-3 py-2">
                   <div>

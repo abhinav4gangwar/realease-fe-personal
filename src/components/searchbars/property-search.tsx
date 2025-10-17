@@ -113,6 +113,7 @@ const PropertySearch = () => {
         {isSearching && (
           <LoaderCircle className="text-primary absolute top-1/2 right-3 h-5 w-5 -translate-y-1/2 transform animate-spin" />
         )}
+
         <Input
           ref={inputRef}
           type="text"

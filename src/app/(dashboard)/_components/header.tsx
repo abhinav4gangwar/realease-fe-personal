@@ -1,5 +1,6 @@
 'use client'
 
+import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import DocumentSearch from '@/components/searchbars/document-search'
 import GlobalSearch from '@/components/searchbars/global-search'
 import PropertySearch from '@/components/searchbars/property-search'
@@ -12,15 +13,17 @@ export function Header() {
   return (
     <header className="z-40 hidden bg-white px-6 py-4 shadow-sm lg:block">
       <div className="flex items-center justify-between">
-        <div className='w-full hidden lg:block'>
-          {pathname === '/properties' ? (
-            <PropertySearch />
-          ) : pathname === '/documents' ? (
-            <DocumentSearch />
-          ) : (
-            <GlobalSearch />
-          )}
-        </div>
+        
+          <div className="hidden w-full lg:block">
+            {pathname === '/properties' ? (
+           <PlanAccessWrapper featureId="search_keyword" className='w-full' crownPosition='top-left'><PropertySearch /></PlanAccessWrapper>   
+            ) : pathname === '/documents' ? (
+            <PlanAccessWrapper featureId="search_keyword" className='w-full' crownPosition='top-left'><DocumentSearch /></PlanAccessWrapper>  
+            ) : (
+            <PlanAccessWrapper featureId='search_advanced' className='w-full' crownPosition='top-left'><GlobalSearch /></PlanAccessWrapper>  
+            )}
+          </div>
+
         {/* Search Bar */}
 
         <div className="block lg:hidden">
