@@ -1,6 +1,6 @@
 "use client"
 import { useGlobalContextProvider } from '@/providers/global-context'
-import { Crown, X } from 'lucide-react'
+import { Crown, Lock, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import React, { useState } from 'react'
 
@@ -22,11 +22,12 @@ export const PlanAccessWrapper: React.FC<PlanAccessWrapperProps> = ({
   crownPosition = 'top-right',
   className
 }) => {
-  const { planAccessValues } = useGlobalContextProvider()
+  const { planAccessValues, userType } = useGlobalContextProvider()
   const [showModal, setShowModal] = useState(false)
   const router = useRouter()
 
   const hasAccess = planAccessValues.includes(featureId)
+  const isCustomer = userType === 'customer'
 
   const getCrownPositionClasses = () => {
     switch (crownPosition) {
@@ -58,7 +59,6 @@ export const PlanAccessWrapper: React.FC<PlanAccessWrapperProps> = ({
     return children
   }
 
-
   return (
     <>
       <div className={`relative inline-block ${className}`}>
@@ -77,14 +77,16 @@ export const PlanAccessWrapper: React.FC<PlanAccessWrapperProps> = ({
           <div
             className={`absolute ${getCrownPositionClasses()} pointer-events-none z-30`}
           >
-            <Crown
-              className="h-2 w-2 fill-yellow-400 text-yellow-500 drop-shadow-md "
-            />
+            {isCustomer ? (
+              <Crown className="h-2 w-2 fill-yellow-400 text-yellow-500 drop-shadow-md" />
+            ) : (
+              <Lock className="h-4 w-4 fill-primary text-primary drop-shadow-md" />
+            )}
           </div>
         )}
       </div>
 
-      {/* Upgrade Modal */}
+      {/* Upgrade/Access Modal */}
       {showModal && (
         <div
           className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 p-4"
@@ -102,30 +104,55 @@ export const PlanAccessWrapper: React.FC<PlanAccessWrapperProps> = ({
             </button>
 
             <div className="flex flex-col items-center text-center">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600">
-                <Crown className="h-8 w-8 fill-white text-white" />
-              </div>
+              {isCustomer ? (
+                <>
+                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600">
+                    <Crown className="h-8 w-8 fill-white text-white" />
+                  </div>
 
-              <h3 className="mb-2 text-xl font-bold text-gray-900">
-                Premium Feature
-              </h3>
+                  <h3 className="mb-2 text-xl font-bold text-gray-900">
+                    Premium Feature
+                  </h3>
 
-              <p className="mb-6 text-gray-600">{upgradeMessage}</p>
+                  <p className="mb-6 text-gray-600">{upgradeMessage}</p>
 
-              <div className="flex w-full gap-3">
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleUpgrade}
-                  className="flex-1 rounded-lg bg-primary px-4 py-2 font-medium text-white shadow-md transition-all"
-                >
-                  Upgrade Now
-                </button>
-              </div>
+                  <div className="flex w-full gap-3">
+                    <button
+                      onClick={() => setShowModal(false)}
+                      className="flex-1 rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleUpgrade}
+                      className="flex-1 rounded-lg bg-primary px-4 py-2 font-medium text-white shadow-md transition-all"
+                    >
+                      Upgrade Now
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary">
+                    <Lock className="h-8 w-8 fill-white text-white" />
+                  </div>
+
+                  <h3 className="mb-2 text-xl font-bold text-gray-900">
+                    Access Restricted
+                  </h3>
+
+                  <p className="mb-6 text-gray-600">
+                    You do not have access to this feature in your user role.
+                  </p>
+
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                  >
+                    Close
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

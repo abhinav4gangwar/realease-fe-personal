@@ -12,7 +12,8 @@ export interface GlobalContextType {
   setPlanAccessValues: (values: string[]) => void
   accountDetails: unknown
   setAccountDetails: (values : any) => void
-
+  userType: string
+  setUserType: (value : string) => void
 }
 
 const GlobalContext = createContext<GlobalContextType | undefined>(undefined)
@@ -24,6 +25,7 @@ export const GlobalContextProvider = ({
   const [accessControlState, setAccessControlState] = useState<string>('permissions')
   const [planAccessValues, setPlanAccessValues] = useState<string[]>([])
   const [accountDetails, setAccountDetails] = useState()
+  const [userType, setUserType] = useState('')
   
   return (
     <GlobalContext.Provider
@@ -35,7 +37,9 @@ export const GlobalContextProvider = ({
         planAccessValues,
         setPlanAccessValues,
         accountDetails,
-        setAccountDetails
+        setAccountDetails,
+        userType,
+        setUserType
       }}
     >
       {children}

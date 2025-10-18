@@ -18,15 +18,16 @@ export default function DashboardLayout({
   const pathname = usePathname()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const { isAuthenticated } = useAuth()
-  const { setPlanAccessValues, setAccountDetails } = useGlobalContextProvider()
+  const { setPlanAccessValues, setAccountDetails, setUserType } = useGlobalContextProvider()
 
   useEffect(() => {
     const fetchFeatures = async () => {
       try {
         const response = await apiClient.get('/payments/features')
 
-        if (response.data.success && response.data.features) {
-          setPlanAccessValues(response.data.features)
+        if (response.data.success && response.data.data.features) {
+          setPlanAccessValues(response.data.data.features)
+          setUserType(response.data.data.userType)
         }
       } catch (error) {
         console.error('Failed to fetch features:', error)
@@ -36,7 +37,7 @@ export default function DashboardLayout({
     if (isAuthenticated) {
       fetchFeatures()
     }
-  }, [isAuthenticated, setPlanAccessValues])
+  }, [isAuthenticated, setPlanAccessValues, setUserType])
 
   useEffect(() => {
     const fetchAccountDetails = async () => {
