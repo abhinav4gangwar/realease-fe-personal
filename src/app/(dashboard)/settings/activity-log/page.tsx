@@ -1,18 +1,55 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { activityLogs } from '@/lib/activity-log.dummy'
+import { apiClient } from '@/utils/api'
+
 import {
-    differenceInCalendarDays,
-    format,
-    isToday,
-    isYesterday,
-    parse,
+  differenceInCalendarDays,
+  format,
+  isToday,
+  isYesterday,
+  parse,
 } from 'date-fns'
 import { Calendar } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { DayPicker } from 'react-day-picker'
 import 'react-day-picker/dist/style.css'
+import { toast } from 'sonner'
+
+interface Activity {
+  id: number
+  time: string
+  name: string
+  activity: string
+  actionType: string
+  resourceType: string
+  userType: string
+  ipAddress: string
+  metadata: any
+}
+
+interface DayLog {
+  date: string
+  activities: Activity[]
+}
+
+interface ActivityLogsResponse {
+  success: boolean
+  data: {
+    logs: DayLog[]
+    pagination: {
+      currentPage: number
+      totalPages: number
+      totalItems: number
+      itemsPerPage: number
+    }
+    dateRange: {
+      startDate: string
+      endDate: string
+      days: number
+    }
+  }
+}
 
 const ActivityLogPage = () => {
   const [showCalendar, setShowCalendar] = useState(false)
@@ -23,6 +60,8 @@ const ActivityLogPage = () => {
   const [appliedRange, setAppliedRange] = useState<{ from?: Date; to?: Date }>(
     {}
   )
+  const [activityLogs, setActivityLogs] = useState<DayLog[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
   const avatarColors = ['#C1B5E4', '#A2CFE3', '#FFEF64']
   const statusColors = ['#38AD9A', '#DE5753']
@@ -30,9 +69,33 @@ const ActivityLogPage = () => {
   const getRandomColor = (arr: string[]) =>
     arr[Math.floor(Math.random() * arr.length)]
 
+  // Fetch activity logs
+  const fetchActivityLogs = async () => {
+    setIsLoading(true)
+    try {
+      const response = await apiClient.get<ActivityLogsResponse>(
+        '/settings/access-logs'
+      )
+
+      if (response.data.success && response.data.data.logs) {
+        setActivityLogs(response.data.data.logs)
+      }
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message || 'Failed to fetch activity logs'
+      toast.error(errorMessage)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchActivityLogs()
+  }, [])
+
   // Format dates dynamically
   const formatReadableDate = (dateString: string) => {
-    const date = parse(dateString, 'dd-MM-yyyy', new Date())
+    const date = parse(dateString, 'dd/MM/yyyy', new Date())
 
     if (isToday(date)) return `Today - ${format(date, 'EEEE d MMMM yyyy')}`
     else if (isYesterday(date))
@@ -48,10 +111,28 @@ const ActivityLogPage = () => {
   const filteredLogs = useMemo(() => {
     if (!appliedRange.from || !appliedRange.to) return activityLogs
     return activityLogs.filter((log) => {
-      const logDate = parse(log.date, 'dd-MM-yyyy', new Date())
-      return logDate >= appliedRange.from && logDate <= appliedRange.to
+      const logDate = parse(log.date, 'dd/MM/yyyy', new Date())
+      return (
+        logDate >= appliedRange.from! &&
+        logDate <= appliedRange.to!
+      )
     })
-  }, [appliedRange])
+  }, [appliedRange, activityLogs])
+
+  if (isLoading) {
+    return (
+      <div>
+        <div className="flex justify-between pb-4">
+          <div className="text-secondary text-2xl font-semibold lg:text-3xl">
+            Activity Log
+          </div>
+        </div>
+        <div className="flex items-center justify-center py-20">
+          <p className="text-gray-400">Loading activity logs...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -104,54 +185,59 @@ const ActivityLogPage = () => {
       </div>
 
       {/* Activity Sections */}
-      <div className="flex flex-col space-y-6 py-6">
-        {filteredLogs.map((day) => (
-          <div
-            key={day.date}
-            className="border border-gray-300 bg-white shadow-md"
-          >
-            <div className="bg-[#F8F8F8] p-4">
-              <h1 className="text-lg">{formatReadableDate(day.date)}</h1>
-            </div>
+      {filteredLogs.length === 0 ? (
+        <div className="flex items-center justify-center py-20">
+          <p className="text-gray-400">No activity logs found</p>
+        </div>
+      ) : (
+        <div className="flex flex-col space-y-6 py-6">
+          {filteredLogs.map((day) => (
+            <div
+              key={day.date}
+              className="border border-gray-300 bg-white shadow-md"
+            >
+              <div className="bg-[#F8F8F8] p-4">
+                <h1 className="text-lg">{formatReadableDate(day.date)}</h1>
+              </div>
 
-            <div className="flex flex-col gap-4 px-4 py-7">
-              {day.activities.map((a, i) => {
-                const initial = a.name.charAt(0).toUpperCase()
-                const avatarColor = getRandomColor(avatarColors)
-                const statusColor = getRandomColor(statusColors)
+              <div className="flex flex-col gap-5 px-4 py-7">
+                {day.activities.map((a) => {
+                  const initial = a.name.charAt(0).toUpperCase()
+                  const avatarColor = getRandomColor(avatarColors)
+                  const statusColor = getRandomColor(statusColors)
 
-                return (
-                  <div
-                    key={i}
-                    className="text-md flex items-center gap-2 text-[#4E4F54]"
-                  >
-                    <p className="w-16 text-right text-[#9B9B9D]">{a.time}</p>
-
-                    <div className="h-0.5 w-6 bg-[#9B9B9D]" />
-
+                  return (
                     <div
-                      className="h-2 w-2 rounded-full"
-                      style={{ backgroundColor: statusColor }}
-                    ></div>
-                    <div
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-center text-xl text-white"
-                      style={{ backgroundColor: avatarColor }}
+                      key={a.id}
+                      className="text-md flex items-center gap-2 text-[#4E4F54]"
                     >
-                      {initial}
+                      <p className="w-16 text-right text-[#9B9B9D]">{a.time}</p>
+
+                      <div className="h-0.5 w-6 bg-[#9B9B9D]" />
+
+                      <div
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: statusColor }}
+                      ></div>
+                      <div
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-center text-xl text-white"
+                        style={{ backgroundColor: avatarColor }}
+                      >
+                        {initial}
+                      </div>
+
+                      <div className="flex gap-5 items-center">
+                        <p className="font-medium">{a.name}</p>
+                        <p className="text-md text-gray-500">{a.activity}</p>
+                      </div>
                     </div>
-
-                    <p className="w-28 truncate font-light text-gray-400">
-                      {a.name}
-                    </p>
-
-                    <p className="flex-1 truncate">{a.activity}</p>
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
