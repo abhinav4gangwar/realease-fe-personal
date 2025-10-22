@@ -1,5 +1,6 @@
 'use client'
 
+import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import { Button } from '@/components/ui/button'
 import type { FileItem } from '@/lib/fileUploadUtils'
 import { ArrowLeft, X } from 'lucide-react'
@@ -109,13 +110,15 @@ export function FileDetailsDialog({
                             }
                             placeholder="Select property..."
                           />
-                          <TagInput
-                            value={item.tags || ''}
-                            onChange={(value) =>
-                              updateFileMetadata(item.path, 'tags', value)
-                            }
-                            placeholder="Select tags..."
-                          />
+                          <PlanAccessWrapper featureId="mgmt_categorization">
+                            <TagInput
+                              value={item.tags || ''}
+                              onChange={(value) =>
+                                updateFileMetadata(item.path, 'tags', value)
+                              }
+                              placeholder="Select tags..."
+                            />
+                          </PlanAccessWrapper>
                         </>
                       ) : (
                         <>

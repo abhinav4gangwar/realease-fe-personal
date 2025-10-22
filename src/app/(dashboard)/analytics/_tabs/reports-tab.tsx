@@ -1,11 +1,14 @@
 'use client'
+import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import { Button } from '@/components/ui/button'
 import { dummyReports } from '@/lib/analytics.dummy'
 import { FilePlus2 } from 'lucide-react'
 import { useState } from 'react'
 import AnalyticsSTateToggle from '../_components/analytics-state-toggle'
 import ReportCreationModel from '../_components/reports-components/Report-creation-model'
-import ReportEditModal, { toBlocks } from '../_components/reports-components/report-edit-model'
+import ReportEditModal, {
+  toBlocks,
+} from '../_components/reports-components/report-edit-model'
 import ReportListView from '../_components/reports-components/report-list-view'
 import ReportPreviewModal from '../_components/reports-components/report-preview-model'
 
@@ -37,12 +40,14 @@ const ReportsTab = () => {
         <div className="flex items-center gap-4">
           <AnalyticsSTateToggle />
 
-          <Button
-            className="text-primary hover:bg-primary h-12 w-12 cursor-pointer rounded-full border border-gray-400 bg-white font-bold hover:text-white"
-            onClick={() => setIsAddReportOpen(true)}
-          >
-            <FilePlus2 className="size-6" />
-          </Button>
+          <PlanAccessWrapper featureId="analytics_reportGen">
+            <Button
+              className="text-primary hover:bg-primary h-12 w-12 cursor-pointer rounded-full border border-gray-400 bg-white font-bold hover:text-white"
+              onClick={() => setIsAddReportOpen(true)}
+            >
+              <FilePlus2 className="size-6" />
+            </Button>
+          </PlanAccessWrapper>
         </div>
       </div>
 
@@ -74,9 +79,9 @@ const ReportsTab = () => {
           selectedReport?.data?.blocks
             ? toBlocks(selectedReport.data.blocks)
             : []
-        } 
+        }
         containerId="preview-report-canvas"
-        showExport={true} 
+        showExport={true}
       />
     </div>
   )

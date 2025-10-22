@@ -18,6 +18,7 @@ import { toast } from 'sonner'
 import { FileIcon } from './file-icon'
 import { TagInput } from './tags-input'
 
+import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import { Properties } from '@/types/property.types'
 import { propertiesApi } from '../../properties/_property_utils/property.services'
 import { PropertyInput } from './properties-input'
@@ -420,11 +421,13 @@ export function DocumentDetailModal({
             <div>
               <h3 className="mb-1 text-sm font-medium text-gray-500">Tags</h3>
               {isEditing ? (
-                <TagInput
-                  value={editedTags}
-                  onChange={setEditedTags}
-                  placeholder="Select tags..."
-                />
+                <PlanAccessWrapper featureId="mgmt_categorization" className='w-full'>
+                  <TagInput
+                    value={editedTags}
+                    onChange={setEditedTags}
+                    placeholder="Select tags..."
+                  />
+                </PlanAccessWrapper>
               ) : (
                 <p className="text-sm">{document.tags || 'No tags'}</p>
               )}

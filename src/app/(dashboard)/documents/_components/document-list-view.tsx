@@ -1,4 +1,5 @@
 'use client'
+import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import { Button } from '@/components/ui/button'
 import type { Document } from '@/types/document.types'
 import {
@@ -137,7 +138,7 @@ export function DocumentListView({
           </div>
           <div className="col-span-2 truncate text-center text-sm text-[#9B9B9D]">
             {hoveredRow === document.id && !isShareMode ? (
-              <div className="flex gap-1 justify-center">
+              <div className="flex justify-center gap-1">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -177,19 +178,22 @@ export function DocumentListView({
                 >
                   <Download className="h-3 w-3" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="hover:text-primary h-6 w-6 cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    if (onShareClick) {
-                      onShareClick(document)
-                    }
-                  }}
-                >
-                  <HiShare className="h-3 w-3" />
-                </Button>
+                <PlanAccessWrapper featureId="docs_secureSharing">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="hover:text-primary h-6 w-6 cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (onShareClick) {
+                        onShareClick(document)
+                      }
+                    }}
+                  >
+                    <HiShare className="h-3 w-3" />
+                  </Button>
+                </PlanAccessWrapper>
+
                 <Button
                   variant="ghost"
                   size="icon"

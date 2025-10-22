@@ -1,8 +1,12 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useGlobalContextProvider } from '@/providers/global-context'
+import { apiClient } from '@/utils/api'
 import { X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
+
 
 const NameModel = ({
   isOpen,
@@ -11,40 +15,67 @@ const NameModel = ({
   isOpen: boolean
   onClose: () => void
 }) => {
-  const dummyData = {
-    firstName: 'Ghanshyam Das ',
-    lastName: 'Sharma',
-  }
-
-  const [formData, setFormData] = useState(dummyData)
-  const [originalData, setOriginalData] = useState(dummyData)
+  const { accountDetails, setAccountDetails } = useGlobalContextProvider()
+  const [formData, setFormData] = useState({ firstName: '' })
+  const [originalData, setOriginalData] = useState({ firstName: '' })
   const [isChanged, setIsChanged] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
-  // When modal opens, reset data
   useEffect(() => {
     if (isOpen) {
-      setFormData(dummyData)
-      setOriginalData(dummyData)
+      const initialData = { firstName: accountDetails.name || '' }
+      setFormData(initialData)
+      setOriginalData(initialData)
       setIsChanged(false)
     }
-  }, [isOpen])
+  }, [isOpen, accountDetails.name])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     const updatedData = { ...formData, [name]: value }
     setFormData(updatedData)
 
-    // Check if anything changed
-    const changed =
-      updatedData.firstName !== originalData.firstName ||
-      updatedData.lastName !== originalData.lastName
+    const changed = updatedData.firstName !== originalData.firstName
     setIsChanged(changed)
   }
 
-  const handleSave = () => {
-    console.log('New name:', formData)
-    setOriginalData(formData)
-    setIsChanged(false)
+  const handleSave = async () => {
+    if (!formData.firstName.trim()) {
+      toast.error('Name cannot be empty')
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await apiClient.put('/settings/name', {
+        name: formData.firstName.trim(),
+      })
+
+      if (response.data.success) {
+        setAccountDetails((prev: any) => ({
+          ...prev,
+          name: formData.firstName.trim(),
+        }))
+
+        setOriginalData(formData)
+        setIsChanged(false)
+
+        toast.success('Name updated successfully')
+        
+        setTimeout(() => {
+          onClose()
+        }, 500)
+      } else {
+        toast.error(response.data.message || 'Failed to update name')
+      }
+    } catch (error: any) {
+      console.error('Failed to update name:', error)
+      toast.error(
+        error.response?.data?.message || 'Failed to update name. Please try again.'
+      )
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleCancel = () => {
@@ -68,6 +99,7 @@ const NameModel = ({
                   size="icon"
                   className="hover:text-primary h-6 w-6 cursor-pointer rounded-full bg-[#CDCDCE] text-white"
                   onClick={onClose}
+                  disabled={isLoading}
                 >
                   <X className="h-4 w-4 font-bold" />
                 </Button>
@@ -79,23 +111,13 @@ const NameModel = ({
               <div className="flex flex-col space-y-6 py-3">
                 <div>
                   <Label className="text-md pb-2 text-[#757575]">
-                    First Name
+                    Update Name
                   </Label>
                   <Input
                     name="firstName"
                     value={formData.firstName}
                     onChange={handleChange}
-                  />
-                </div>
-
-                <div>
-                  <Label className="text-md pb-2 text-[#757575]">
-                    Last Name
-                  </Label>
-                  <Input
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleChange}
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -108,20 +130,21 @@ const NameModel = ({
                   <Button
                     className="text-secondary hover:bg-secondary h-11 w-[150px] cursor-pointer border border-gray-400 bg-white px-6 hover:text-white"
                     onClick={handleCancel}
+                    disabled={isLoading}
                   >
                     Cancel
                   </Button>
 
                   <Button
                     className={`h-11 w-[150px] cursor-pointer px-6 ${
-                      isChanged
+                      isChanged && !isLoading
                         ? 'bg-secondary hover:text-secondary hover:border hover:bg-white'
                         : 'cursor-not-allowed bg-gray-300 text-gray-500'
                     }`}
-                    disabled={!isChanged}
+                    disabled={!isChanged || isLoading}
                     onClick={handleSave}
                   >
-                    Save
+                    {isLoading ? 'Saving...' : 'Save'}
                   </Button>
                 </div>
               </div>
