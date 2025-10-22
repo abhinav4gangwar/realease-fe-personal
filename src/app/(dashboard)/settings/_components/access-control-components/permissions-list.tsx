@@ -1,16 +1,15 @@
 'use client'
 
-import type React from 'react'
-
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
-import { defaultRoles } from '@/lib/access-control.dummy'
 import { permissionGroups } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { PermissionGroup, Role } from '@/types/permission.types'
+import { apiClient } from '@/utils/api'
 import { Plus, X } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import type React from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import AccessControlStateToggle from './access-control-state-toggle'
 
 function deepClone<T>(obj: T): T {
@@ -28,12 +27,7 @@ const HeaderCell = ({
   children: React.ReactNode
   className?: string
 }) => (
-  <div
-    className={cn(
-      'text-secondary p-4 text-sm font-semibold',
-      className
-    )}
-  >
+  <div className={cn('text-secondary p-4 text-sm font-semibold', className)}>
     {children}
   </div>
 )
@@ -50,9 +44,7 @@ const GroupHeaderRow = ({
   const groupPermId = group.headerPermissionId ?? group.id
   return (
     <div className="contents">
-      <div className="px-4 py-2 text-sm font-semibold">
-        {group.label}
-      </div>
+      <div className="px-4 py-2 text-sm font-semibold">{group.label}</div>
       {roles.map((role) => {
         const isSuper = role.id === 'super-admin'
         const checked = !!role.permissions[groupPermId]
@@ -77,25 +69,55 @@ const GroupHeaderRow = ({
 }
 
 export default function PermissionsList() {
-  // Saved state (authoritative)
-  const [savedRoles, setSavedRoles] = useState<Role[]>(() =>
-    deepClone(defaultRoles)
-  )
-  // Working state (editable)
-  const [roles, setRoles] = useState<Role[]>(() => deepClone(defaultRoles))
-
-  // New role input
+  const [loading, setLoading] = useState(true)
+  const [savedRoles, setSavedRoles] = useState<Role[]>([])
+  const [roles, setRoles] = useState<Role[]>([])
   const [addingRole, setAddingRole] = useState(false)
   const [newRoleName, setNewRoleName] = useState('')
   const newRoleInputRef = useRef<HTMLInputElement>(null)
 
   const dirty = useMemo(() => !isEqual(roles, savedRoles), [roles, savedRoles])
 
+  // Fetch roles from API
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        setLoading(true)
+        const response = await apiClient.get('/roles')
+
+        if (response.data.success && response.data.data) {
+          // Transform API data to match our Role type
+          const transformedRoles: Role[] = [
+            ...response.data.data.defaultRoles.map((role: any) => ({
+              id: role.roleId,
+              name: role.name,
+              permissions: role.permissions,
+            })),
+            ...response.data.data.customRoles.map((role: any) => ({
+              id: role.roleId,
+              name: role.name,
+              permissions: role.permissions,
+            })),
+          ]
+
+          setSavedRoles(transformedRoles)
+          setRoles(deepClone(transformedRoles))
+        }
+      } catch (error) {
+        console.error('Failed to fetch roles:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchRoles()
+  }, [])
+
   const addNewRole = () => {
     const trimmed = newRoleName.trim()
     if (!trimmed) return
 
-    // Build an empty permission map based on our known ids (literal, no helpers)
+    // Build empty permission map
     const emptyPerms: Record<string, boolean> = {
       asset: false,
       location: false,
@@ -126,6 +148,7 @@ export default function PermissionsList() {
       name: trimmed,
       permissions: emptyPerms,
     }
+
     const updated = [...roles, newRole]
     setRoles(updated)
     console.log('New role created:', newRole)
@@ -138,18 +161,20 @@ export default function PermissionsList() {
     permId: string,
     checked: boolean
   ) => {
-    if (roleId === 'super-admin') return // super admin immutable
-    setRoles((prev) => {
-      const next = prev.map((r) =>
+    if (roleId === 'super-admin') return
+    setRoles((prev) =>
+      prev.map((r) =>
         r.id === roleId
           ? { ...r, permissions: { ...r.permissions, [permId]: !!checked } }
           : r
       )
-      return next
-    })
+    )
   }
 
   const saveChanges = () => {
+    console.log('Saving changes:', roles)
+    // TODO: API call to save roles
+    // await apiClient.put('/roles', { roles })
     setSavedRoles(deepClone(roles))
   }
 
@@ -159,12 +184,18 @@ export default function PermissionsList() {
     setNewRoleName('')
   }
 
-  // Focus new role input when it appears
   if (addingRole) {
     setTimeout(() => newRoleInputRef.current?.focus(), 0)
   }
 
-  // Layout constants
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-secondary text-lg">Loading roles...</div>
+      </div>
+    )
+  }
+
   const firstColWidth = 'min-w-[240px]'
   const roleColWidth = 'w-[150px]'
 
@@ -175,9 +206,13 @@ export default function PermissionsList() {
           Roles
         </div>
         <div className="flex items-center gap-3">
-            <AccessControlStateToggle />
+          <AccessControlStateToggle />
           {dirty && (
-            <Button variant="ghost" onClick={cancelChanges} className='h-12 border border-gray-400 cursor-pointer'>
+            <Button
+              variant="ghost"
+              onClick={cancelChanges}
+              className="h-12 border border-gray-400 cursor-pointer"
+            >
               Cancel
             </Button>
           )}
@@ -203,7 +238,7 @@ export default function PermissionsList() {
                 {idx === roles.length - 1 && !addingRole && (
                   <Button
                     aria-label="Add role"
-                    className=" h-5 w-5 bg-white text-primary border border-gray-400 rounded-full cursor-pointer hover:bg-secondary"
+                    className="h-5 w-5 bg-white text-primary border border-gray-400 rounded-full cursor-pointer hover:bg-secondary"
                     onClick={() => setAddingRole(true)}
                     title="Add role"
                   >
@@ -216,44 +251,37 @@ export default function PermissionsList() {
 
           {/* New role inline input */}
           {addingRole && (
-            <>
-              <div className="col-span-full col-start-2">
-                <div className="flex items-center gap-2 px-4 py-2">
-                  <Input
-                    ref={newRoleInputRef}
-                    placeholder="New role name"
-                    value={newRoleName}
-                    onChange={(e) => setNewRoleName(e.target.value)}
-                    className="max-w-xl h-10"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') addNewRole()
-                      if (e.key === 'Escape') {
-                        setAddingRole(false)
-                        setNewRoleName('')
-                      }
-                    }}
-                  />
-                  <Button
-                    
-                    onClick={addNewRole}
-                    disabled={!newRoleName.trim()}
-                  >
-                    Add
-                  </Button>
-                  <Button
-                    
-                    variant="ghost"
-                    onClick={() => {
+            <div className="col-span-full col-start-2">
+              <div className="flex items-center gap-2 px-4 py-2">
+                <Input
+                  ref={newRoleInputRef}
+                  placeholder="New role name"
+                  value={newRoleName}
+                  onChange={(e) => setNewRoleName(e.target.value)}
+                  className="max-w-xl h-10"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') addNewRole()
+                    if (e.key === 'Escape') {
                       setAddingRole(false)
                       setNewRoleName('')
-                    }}
-                  >
-                    <X className="mr-1 h-4 w-4" />
-                    Cancel
-                  </Button>
-                </div>
+                    }
+                  }}
+                />
+                <Button onClick={addNewRole} disabled={!newRoleName.trim()}>
+                  Add
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setAddingRole(false)
+                    setNewRoleName('')
+                  }}
+                >
+                  <X className="mr-1 h-4 w-4" />
+                  Cancel
+                </Button>
               </div>
-            </>
+            </div>
           )}
 
           {/* Body rows */}
@@ -273,12 +301,7 @@ export default function PermissionsList() {
                     rowIdx % 2 === 0 ? 'bg-background' : 'bg-muted/20'
                   )}
                 >
-                  <div
-                    className={cn(
-                      ' px-4 py-3 text-sm',
-                      firstColWidth
-                    )}
-                  >
+                  <div className={cn('px-4 py-3 text-sm', firstColWidth)}>
                     {item.label}
                   </div>
                   {roles.map((role) => {
@@ -289,7 +312,7 @@ export default function PermissionsList() {
                       <div
                         key={`${role.id}-${item.id}`}
                         className={cn(
-                          ' px-10 py-3',
+                          'px-10 py-3',
                           roleColWidth,
                           'flex items-center'
                         )}
