@@ -1,4 +1,5 @@
 'use client'
+import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import { Button } from '@/components/ui/button'
 import {
   Command,
@@ -1213,15 +1214,17 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                 </div>
               ))}
 
-              <div
-                className="flex cursor-pointer justify-between rounded-md bg-[#F2F2F2] p-3 transition-colors hover:bg-[#E8E8E8]"
-                onClick={addCustomField}
-              >
-                <p className="text-secondary font-semibold">
-                  Add more information
-                </p>
-                <PlusIcon className="size-5" />
-              </div>
+              <PlanAccessWrapper featureId='ASSET_CUSTOM_FIELD_CONFIG'>
+                <div
+                  className="flex cursor-pointer justify-between rounded-md bg-[#F2F2F2] p-3 transition-colors hover:bg-[#E8E8E8]"
+                  onClick={addCustomField}
+                >
+                  <p className="text-secondary font-semibold">
+                    Add more information
+                  </p>
+                  <PlusIcon className="size-5" />
+                </div>
+              </PlanAccessWrapper>
             </div>
           </div>
         )

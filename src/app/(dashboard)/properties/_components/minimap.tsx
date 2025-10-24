@@ -76,6 +76,7 @@ const MiniMap = ({
       className="group relative h-full w-full cursor-pointer overflow-hidden rounded"
       onClick={onClick}
     >
+      
       <MapContainer
         center={[coords.lat, coords.lng]}
         zoom={15}

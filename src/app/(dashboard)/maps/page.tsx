@@ -1,12 +1,19 @@
+import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import MapPage from './_components/map-page'
 import MobileMapPage from './_components/mobile-map-page'
 
 const MapViewPage = () => {
   return (
-    <div>
-      <div className='hidden lg:block'><MapPage /></div>
-      <div className='lg:hidden block pt-14'><MobileMapPage /></div>
-    </div>
+    <PlanAccessWrapper featureId="MAP_VIEW_PORTFOLIO_WIDsE" className='w-full'>
+      <div>
+        <div className="hidden lg:block">
+          <MapPage />
+        </div>
+        <div className="block pt-14 lg:hidden">
+          <MobileMapPage />
+        </div>
+      </div>
+    </PlanAccessWrapper>
   )
 }
 

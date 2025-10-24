@@ -1,5 +1,4 @@
 'use client'
-import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import {
   FilterState,
   Properties,
@@ -397,16 +396,16 @@ const PropertiesViewer = ({
 
         <div className="flex items-center gap-4">
           <ArchiveToggle />
-          <PlanAccessWrapper featureId="mgmt_categorization">
+         
             <PropertiesFilterButton onFilterSelect={handleFilterSelect} />
-          </PlanAccessWrapper>
+         
           <PropertiesSortButton onSortChange={handleSortChange} />
-          <PlanAccessWrapper featureId="mgmt_bulkOps">
+          
             <PropertiesActionsButton
               onActionSelect={handleActionSelect}
               selectedCount={selectedProperties.length}
             />
-          </PlanAccessWrapper>
+
           <PropertiesAddButton onAddSelect={handleAddSelect} />
         </div>
       </div>

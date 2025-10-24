@@ -110,7 +110,7 @@ export function FileDetailsDialog({
                             }
                             placeholder="Select property..."
                           />
-                          <PlanAccessWrapper featureId="mgmt_categorization">
+                          <PlanAccessWrapper featureId="DOCUMENT_TAGGING_FILTERING">
                             <TagInput
                               value={item.tags || ''}
                               onChange={(value) =>

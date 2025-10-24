@@ -1,5 +1,4 @@
 'use client'
-import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import { Button } from '@/components/ui/button'
 import { Properties } from '@/types/property.types'
 import { Archive, Download, Info, Pencil, Trash2 } from 'lucide-react'
@@ -148,19 +147,17 @@ const PropertiesListView = ({
                   <Download className="h-3 w-3" />
                 </Button>
 
-                <PlanAccessWrapper featureId="docs_secureSharing">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="hover:text-primary h-6 w-6 cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onShareClick?.(property)
-                    }}
-                  >
-                    <HiShare className="h-3 w-3" />
-                  </Button>
-                </PlanAccessWrapper>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="hover:text-primary h-6 w-6 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onShareClick?.(property)
+                  }}
+                >
+                  <HiShare className="h-3 w-3" />
+                </Button>
 
                 <Button
                   variant="ghost"

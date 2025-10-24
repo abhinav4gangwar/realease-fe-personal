@@ -1,5 +1,5 @@
 'use client'
-import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
+
 import { Button } from '@/components/ui/button'
 import { dummyReports } from '@/lib/analytics.dummy'
 import { FilePlus2 } from 'lucide-react'
@@ -40,14 +40,14 @@ const ReportsTab = () => {
         <div className="flex items-center gap-4">
           <AnalyticsSTateToggle />
 
-          <PlanAccessWrapper featureId="analytics_reportGen">
+      
             <Button
               className="text-primary hover:bg-primary h-12 w-12 cursor-pointer rounded-full border border-gray-400 bg-white font-bold hover:text-white"
               onClick={() => setIsAddReportOpen(true)}
             >
               <FilePlus2 className="size-6" />
             </Button>
-          </PlanAccessWrapper>
+
         </div>
       </div>
 

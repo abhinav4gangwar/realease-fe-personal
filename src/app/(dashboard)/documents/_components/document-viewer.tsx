@@ -826,7 +826,7 @@ export function DocumentViewer({
             viewMode={viewMode}
             onViewModeChange={handleViewModeChange}
           />
-          <PlanAccessWrapper featureId="mgmt_categorization">
+          <PlanAccessWrapper featureId="DOCUMENT_TAGGING_FILTERING">
             <FilterButton onFilterSelect={handleFilterSelect} />
           </PlanAccessWrapper>
           <SortButton onSortChange={handleSortChange} />
@@ -835,7 +835,7 @@ export function DocumentViewer({
               {selectedDocuments.length} selected
             </div>
           )}
-          <PlanAccessWrapper featureId="mgmt_bulkOps">
+          <PlanAccessWrapper featureId="DOCUMENT_BULK_UPLOAD_MGMT">
             <ActionsButton
               onActionSelect={handleActionSelect}
               isSelectMode={isSelectMode}

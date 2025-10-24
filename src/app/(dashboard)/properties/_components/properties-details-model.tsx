@@ -576,12 +576,14 @@ const PropertiesDetailsModel = ({
               </div>
 
               <div className="flex justify-between gap-3">
-                <PlanAccessWrapper featureId='search_mapView' className='w-full'>
+               <PlanAccessWrapper featureId='MAP_VIEW_PROPERTY_LEVEL' className='w-full'>
                 <div className="w-full rounded-md bg-[#F2F2F2] p-3">
                   <h3 className="mb-2 text-sm font-medium text-gray-500">
                     Mini Map View
                   </h3>
+                 
                   <div className="h-40">
+                     
                     <MiniMap
                       coordinates={getCoordinatesForMap()}
                       propertyName={property?.name}
@@ -590,6 +592,7 @@ const PropertiesDetailsModel = ({
                   </div>
                 </div>
                 </PlanAccessWrapper>
+            
 
                 <div className="flex w-full flex-col space-y-5 rounded-md bg-[#F2F2F2] px-3 py-2">
                   <div>
@@ -712,6 +715,7 @@ const PropertiesDetailsModel = ({
               )}
 
               {/* Comments Section */}
+              <PlanAccessWrapper featureId='ASSET_COMMENTING' className='w-full'>
               <div className="flex w-full flex-col space-y-4 rounded-md bg-[#F2F2F2] px-3 py-2">
                 <h3 className="text-sm font-medium text-gray-500">Comments</h3>
 
@@ -789,6 +793,7 @@ const PropertiesDetailsModel = ({
                   )}
                 </div>
               </div>
+              </PlanAccessWrapper>
 
               {sharedUsers.length > 0 && (
                 <div className="flex w-full flex-col space-y-4 rounded-md bg-[#F2F2F2] px-3 py-2">
