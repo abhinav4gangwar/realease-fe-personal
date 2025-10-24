@@ -55,7 +55,7 @@ export function FilterModal({ isOpen, onClose, filterType, documents, selectedIt
     onClose()
   }
 
-  const title = filterType === "property" ? "Filter By Property" : "Filter By Type"
+  const title = filterType === "property" ? "Filter By Property" : "Filter By File Type"
 
   // Split items into two columns
   const midPoint = Math.ceil(filteredItems.length / 2)

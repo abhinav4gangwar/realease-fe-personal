@@ -18,7 +18,7 @@ interface FilterButtonProps {
 const filterOptions: { label: string; value: FilterType }[] = [
   { label: 'No Filter', value: 'none' },
   { label: 'By Property', value: 'property' },
-  { label: 'By Type', value: 'type' },
+  { label: 'By File Type', value: 'type' },
   { label: 'By Recently Uploaded', value: 'recent' },
 ]
 

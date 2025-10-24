@@ -55,7 +55,7 @@ export function MobileDocsFilterModal({ isOpen, onClose, filterType, documents, 
     onClose()
   }
 
-  const title = filterType === "property" ? "Filter By Property" : "Filter By Type"
+  const title = filterType === "property" ? "Filter By Property" : "Filter By File Type"
 
   return (
     <div className={`${isOpen ? 'block' : 'hidden'}`}>

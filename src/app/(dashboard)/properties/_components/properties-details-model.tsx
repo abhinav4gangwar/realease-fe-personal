@@ -1,7 +1,6 @@
 'use client'
 import { Button } from '@/components/ui/button'
 import { Comment, Properties, SharedUser } from '@/types/property.types'
-import { formatCoordinates } from '@/utils/coordinateUtils'
 import {
   Bell,
   ChevronDown,
@@ -124,27 +123,10 @@ const PropertiesDetailsModel = ({
     setIsMapModalOpen(false)
   }
 
-  // Helper function to get coordinates in the correct format for display
-  const getCoordinatesForDisplay = () => {
-    if (!property) return ''
-
-    // If backend sends separate latitude/longitude, combine them
-    if ((property as any).latitude && (property as any).longitude) {
-      return formatCoordinates(
-        (property as any).latitude,
-        (property as any).longitude
-      )
-    }
-
-    // Fallback to existing coordinates field
-    return property.coordinates || ''
-  }
-
   // Helper function to get coordinates for map components (they expect the old format)
   const getCoordinatesForMap = () => {
     if (!property) return ''
 
-    // If backend sends separate latitude/longitude, convert to old format
     if ((property as any).latitude && (property as any).longitude) {
       const lat = parseFloat((property as any).latitude)
       const lng = parseFloat((property as any).longitude)
@@ -576,23 +558,24 @@ const PropertiesDetailsModel = ({
               </div>
 
               <div className="flex justify-between gap-3">
-               <PlanAccessWrapper featureId='MAP_VIEW_PROPERTY_LEVEL' className='w-full'>
-                <div className="w-full rounded-md bg-[#F2F2F2] p-3">
-                  <h3 className="mb-2 text-sm font-medium text-gray-500">
-                    Mini Map View
-                  </h3>
-                 
-                  <div className="h-40">
-                     
-                    <MiniMap
-                      coordinates={getCoordinatesForMap()}
-                      propertyName={property?.name}
-                      onClick={handleMiniMapClick}
-                    />
+                <PlanAccessWrapper
+                  featureId="MAP_VIEW_PROPERTY_LEVEL"
+                  className="w-full"
+                >
+                  <div className="w-full rounded-md bg-[#F2F2F2] p-3">
+                    <h3 className="mb-2 text-sm font-medium text-gray-500">
+                      Mini Map View
+                    </h3>
+
+                    <div className="h-40">
+                      <MiniMap
+                        coordinates={getCoordinatesForMap()}
+                        propertyName={property?.name}
+                        onClick={handleMiniMapClick}
+                      />
+                    </div>
                   </div>
-                </div>
                 </PlanAccessWrapper>
-            
 
                 <div className="flex w-full flex-col space-y-5 rounded-md bg-[#F2F2F2] px-3 py-2">
                   <div>
@@ -634,10 +617,56 @@ const PropertiesDetailsModel = ({
 
                 <div>
                   <h3 className="mb-1 text-sm font-medium text-gray-500">
+                    Location
+                  </h3>
+                  <h2 className="text-lg font-semibold">
+                    {property?.location}
+                  </h2>
+                </div>
+
+                <div>
+                  <h3 className="mb-1 text-sm font-medium text-gray-500">
+                    State
+                  </h3>
+                  <h2 className="text-lg font-semibold">{property?.state}</h2>
+                </div>
+
+                <div>
+                  <h3 className="mb-1 text-sm font-medium text-gray-500">
+                    City
+                  </h3>
+                  <h2 className="text-lg font-semibold">{property?.city}</h2>
+                </div>
+
+                <div>
+                  <h3 className="mb-1 text-sm font-medium text-gray-500">
+                    Country
+                  </h3>
+                  <h2 className="text-lg font-semibold">{property?.country}</h2>
+                </div>
+
+                <div>
+                  <h3 className="mb-1 text-sm font-medium text-gray-500">
+                    Zipcode
+                  </h3>
+                  <h2 className="text-lg font-semibold">{property?.zipcode}</h2>
+                </div>
+
+                <div>
+                  <h3 className="mb-1 text-sm font-medium text-gray-500">
                     Co-ordinates
                   </h3>
                   <h2 className="truncate text-lg font-semibold">
-                    {getCoordinatesForDisplay()}
+                    {property?.latitude === '0.00000000'
+                      ? '-'
+                      : property?.latitude}
+                    {property?.latitude === '0.00000000' &&
+                    property.longitude === '0.00000000'
+                      ? ' '
+                      : ','}
+                    {property?.longitude === '0.00000000'
+                      ? '-'
+                      : property?.longitude}
                   </h2>
                 </div>
               </div>
@@ -715,84 +744,89 @@ const PropertiesDetailsModel = ({
               )}
 
               {/* Comments Section */}
-              <PlanAccessWrapper featureId='ASSET_COMMENTING' className='w-full'>
-              <div className="flex w-full flex-col space-y-4 rounded-md bg-[#F2F2F2] px-3 py-2">
-                <h3 className="text-sm font-medium text-gray-500">Comments</h3>
+              <PlanAccessWrapper
+                featureId="ASSET_COMMENTING"
+                className="w-full"
+              >
+                <div className="flex w-full flex-col space-y-4 rounded-md bg-[#F2F2F2] px-3 py-2">
+                  <h3 className="text-sm font-medium text-gray-500">
+                    Comments
+                  </h3>
 
-                {/* Add Comment Input */}
-                <div className="relative space-y-2">
-                  <textarea
-                    value={newComment}
-                    onChange={(e) => handleCommentChange(e.target.value)}
-                    className="w-full resize-none rounded-md border p-3"
-                    rows={3}
-                    placeholder="Add a comment... You can use @mentions"
-                  />
+                  {/* Add Comment Input */}
+                  <div className="relative space-y-2">
+                    <textarea
+                      value={newComment}
+                      onChange={(e) => handleCommentChange(e.target.value)}
+                      className="w-full resize-none rounded-md border p-3"
+                      rows={3}
+                      placeholder="Add a comment... You can use @mentions"
+                    />
 
-                  {/* Mention dropdown */}
-                  {showMentions && filteredUsers.length > 0 && (
-                    <div className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
-                      {filteredUsers.map((user) => (
-                        <div
-                          key={user.id}
-                          onClick={() => selectMention(user)}
-                          className="cursor-pointer px-3 py-2 hover:bg-gray-100"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="text-secondary font-medium">
-                              @{extractUsername(user.email)}
-                            </span>
-                            <span className="text-sm text-gray-500">
-                              ({user.email})
-                            </span>
+                    {/* Mention dropdown */}
+                    {showMentions && filteredUsers.length > 0 && (
+                      <div className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                        {filteredUsers.map((user) => (
+                          <div
+                            key={user.id}
+                            onClick={() => selectMention(user)}
+                            className="cursor-pointer px-3 py-2 hover:bg-gray-100"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-secondary font-medium">
+                                @{extractUsername(user.email)}
+                              </span>
+                              <span className="text-sm text-gray-500">
+                                ({user.email})
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                        ))}
+                      </div>
+                    )}
 
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={handleAddComment}
-                      disabled={!newComment.trim() || isSubmittingComment}
-                      className="bg-primary hover:bg-secondary"
-                    >
-                      {isSubmittingComment ? (
-                        <div className="flex items-center gap-2">
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                          Posting...
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <Send className="h-4 w-4" />
-                          Post Comment
-                        </div>
-                      )}
-                    </Button>
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={handleAddComment}
+                        disabled={!newComment.trim() || isSubmittingComment}
+                        className="bg-primary hover:bg-secondary"
+                      >
+                        {isSubmittingComment ? (
+                          <div className="flex items-center gap-2">
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                            Posting...
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Send className="h-4 w-4" />
+                            Post Comment
+                          </div>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Comments List */}
+                  <div className="max-h-96 space-y-3 overflow-y-auto">
+                    {loadingComments ? (
+                      <div className="flex items-center justify-center py-4">
+                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+                        <span className="ml-2 text-sm text-gray-500">
+                          Loading comments...
+                        </span>
+                      </div>
+                    ) : comments.length > 0 ? (
+                      comments.map((comment) => renderComment(comment))
+                    ) : (
+                      <div className="py-6 text-center text-gray-500">
+                        <p className="text-sm">No comments yet</p>
+                        <p className="mt-1 text-xs">
+                          Be the first to add a comment!
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
-
-                {/* Comments List */}
-                <div className="max-h-96 space-y-3 overflow-y-auto">
-                  {loadingComments ? (
-                    <div className="flex items-center justify-center py-4">
-                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
-                      <span className="ml-2 text-sm text-gray-500">
-                        Loading comments...
-                      </span>
-                    </div>
-                  ) : comments.length > 0 ? (
-                    comments.map((comment) => renderComment(comment))
-                  ) : (
-                    <div className="py-6 text-center text-gray-500">
-                      <p className="text-sm">No comments yet</p>
-                      <p className="mt-1 text-xs">
-                        Be the first to add a comment!
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
               </PlanAccessWrapper>
 
               {sharedUsers.length > 0 && (
