@@ -3,33 +3,35 @@
 import { useSearchContext } from '@/providers/doc-search-context'
 import { apiClient } from '@/utils/api'
 import { getFileTypeFromMime } from '@/utils/fileTypeUtils'
-import { X } from 'lucide-react'
+import { Loader2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { DocumentViewer } from './_components/document-viewer'
 import MobileDocumentViewer from './_mobile-components/mobile-document-viewer'
 
 const Documentspage = () => {
   const [fetchedDocuments, setFetchedDocuments] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
   const { searchResults, searchQuery, isSearchActive, clearSearchResults } =
     useSearchContext()
 
   useEffect(() => {
     const fetchDocuments = async () => {
+      setIsLoading(true)
       try {
         const response = await apiClient.get('/dashboard/documents/list')
         setFetchedDocuments(response.data)
         console.log('Fetched documents:', response.data)
       } catch (error) {
         console.error('Error fetching documents:', error)
+      } finally {
+        setIsLoading(false)
       }
     }
 
     fetchDocuments()
   }, [])
 
-  // Transform API response to match component expectations
   const transformApiResponse = (apiData: any) => {
-    // Handle direct array (search results)
     if (Array.isArray(apiData)) {
       return apiData.map((item: any) => ({
         id: item.id.toString(),
@@ -46,14 +48,13 @@ const Documentspage = () => {
         tags: Array.isArray(item.tags) ? item.tags.join(', ') : item.tags || '',
         isFolder: item.type === 'folder',
         hasChildren: item.hasChildren,
-        children: [], // Will be populated when folder is clicked
+        children: [],
         size: item.size,
         s3Key: item.s3Key,
         parentId: item.parentId,
       }))
     }
 
-    // Handle object with children property (regular documents fetch)
     if (!apiData || !apiData.children) return []
     return apiData.children.map((item: any) => ({
       id: item.id.toString(),
@@ -70,7 +71,7 @@ const Documentspage = () => {
       tags: Array.isArray(item.tags) ? item.tags.join(', ') : item.tags || '',
       isFolder: item.type === 'folder',
       hasChildren: item.hasChildren,
-      children: [], // Will be populated when folder is clicked
+      children: [],
       size: item.size,
       s3Key: item.s3Key,
       parentId: item.parentId,
@@ -137,7 +138,6 @@ const Documentspage = () => {
   }
 
   const documentsToShow = getDocumentsToShow()
-  console.log(documentsToShow)
 
   const handleClearSearch = () => {
     clearSearchResults()
@@ -145,43 +145,54 @@ const Documentspage = () => {
 
   return (
     <div>
-      {isSearchActive && searchResults && (
-        <div className="mt-20 flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-4 lg:mt-0 lg:mb-4">
-          <div className="flex items-center gap-2">
-            <div className="text-sm font-medium text-blue-900">
-              Search Results for {searchQuery}
-            </div>
-            <div className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-700">
-              {searchResults.totalResults} results found
-            </div>
+      {isLoading ? (
+        <div className="flex h-[70vh] items-center justify-center">
+          <div className="flex flex-col items-center gap-2 text-gray-600">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="text-sm">Loading your documents...</span>
           </div>
-          <button
-            onClick={handleClearSearch}
-            className="flex items-center gap-1 text-sm font-medium text-blue-700 hover:text-blue-900"
-          >
-            <X className="h-4 w-4" />
-            Clear Search
-          </button>
         </div>
-      )}
-      {/* for desktop */}
-      <div className="hidden lg:block">
-        <DocumentViewer
-          // recentlyAccessed={documentsData.recentlyAccessed}
-          allFiles={documentsToShow}
-          apiClient={apiClient}
-          transformApiResponse={transformApiResponse}
-        />
-      </div>
+      ) : (
+        <>
+          {isSearchActive && searchResults && (
+            <div className="mt-20 flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-4 lg:mt-0 lg:mb-4">
+              <div className="flex items-center gap-2">
+                <div className="text-sm font-medium text-blue-900">
+                  Search Results for {searchQuery}
+                </div>
+                <div className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-700">
+                  {searchResults.totalResults} results found
+                </div>
+              </div>
+              <button
+                onClick={handleClearSearch}
+                className="flex items-center gap-1 text-sm font-medium text-blue-700 hover:text-blue-900"
+              >
+                <X className="h-4 w-4" />
+                Clear Search
+              </button>
+            </div>
+          )}
 
-      {/* for mobile */}
-      <div className={`block ${searchResults ? 'pt-4' : 'pt-14'} lg:hidden`}>
-        <MobileDocumentViewer // recentlyAccessed={documentsData.recentlyAccessed}
-          allFiles={documentsToShow}
-          apiClient={apiClient}
-          transformApiResponse={transformApiResponse}
-        />
-      </div>
+          {/* Desktop */}
+          <div className="hidden lg:block">
+            <DocumentViewer
+              allFiles={documentsToShow}
+              apiClient={apiClient}
+              transformApiResponse={transformApiResponse}
+            />
+          </div>
+
+          {/* Mobile */}
+          <div className={`block ${searchResults ? 'pt-4' : 'pt-14'} lg:hidden`}>
+            <MobileDocumentViewer
+              allFiles={documentsToShow}
+              apiClient={apiClient}
+              transformApiResponse={transformApiResponse}
+            />
+          </div>
+        </>
+      )}
     </div>
   )
 }
