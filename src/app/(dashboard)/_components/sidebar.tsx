@@ -76,6 +76,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   ? 'text-primary bg-white'
                   : 'text-gray-300 hover:bg-gray-700 hover:text-white'
               }`}
+              prefetch
             >
               <item.icon className="ml-0.5 h-6 w-6 flex-shrink-0 text-center" />
               {!collapsed && <span className="ml-3">{item.label}</span>}
@@ -100,6 +101,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   ? 'text-primary bg-white'
                   : 'text-gray-300 hover:bg-gray-700 hover:text-white'
               }`}
+              prefetch
             >
               <item.icon className="h-6 w-6 flex-shrink-0 text-center" />
               {!collapsed && <span className="ml-3">{item.label}</span>}

@@ -69,6 +69,7 @@ const MobileHeader = () => {
                   isActive ? 'text-primary' : 'text-secondary hover:bg-gray-700'
                 }`}
                 onClick={() => setMenuOpen(false)}
+                prefetch
               >
                 <item.icon className="h-6 w-6" />
                 <span>{item.label}</span>
