@@ -63,10 +63,18 @@ const PropertiesDetailsModel = ({
   const [loadingComments, setLoadingComments] = useState(false)
   const [replyingToId, setReplyingToId] = useState<number | null>(null)
   const [replyText, setReplyText] = useState<{ [key: number]: string }>({})
-  const [showMentions, setShowMentions] = useState<{ [key: string]: boolean }>({})
-  const [mentionQuery, setMentionQuery] = useState<{ [key: string]: string }>({})
-  const [cursorPosition, setCursorPosition] = useState<{ [key: string]: number }>({})
-  const [filteredUsers, setFilteredUsers] = useState<{ [key: string]: SharedUser[] }>({})
+  const [showMentions, setShowMentions] = useState<{ [key: string]: boolean }>(
+    {}
+  )
+  const [mentionQuery, setMentionQuery] = useState<{ [key: string]: string }>(
+    {}
+  )
+  const [cursorPosition, setCursorPosition] = useState<{
+    [key: string]: number
+  }>({})
+  const [filteredUsers, setFilteredUsers] = useState<{
+    [key: string]: SharedUser[]
+  }>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [commentToDelete, setCommentToDelete] = useState<number | null>(null)
 
@@ -80,7 +88,7 @@ const PropertiesDetailsModel = ({
     if (inputKey === 'main') {
       setNewComment(value)
     } else {
-      setReplyText(prev => ({ ...prev, [inputKey]: value }))
+      setReplyText((prev) => ({ ...prev, [inputKey]: value }))
     }
 
     // Check for @ mentions
@@ -93,9 +101,9 @@ const PropertiesDetailsModel = ({
 
       if (spaceIndex === -1) {
         // Only show mentions if we're still typing after @
-        setMentionQuery(prev => ({ ...prev, [inputKey]: query }))
-        setShowMentions(prev => ({ ...prev, [inputKey]: true }))
-        setCursorPosition(prev => ({ ...prev, [inputKey]: lastAtIndex }))
+        setMentionQuery((prev) => ({ ...prev, [inputKey]: query }))
+        setShowMentions((prev) => ({ ...prev, [inputKey]: true }))
+        setCursorPosition((prev) => ({ ...prev, [inputKey]: lastAtIndex }))
 
         // Filter users based on query
         const filtered = sharedUsers.filter((user) =>
@@ -103,21 +111,22 @@ const PropertiesDetailsModel = ({
             .toLowerCase()
             .includes(query.toLowerCase())
         )
-        setFilteredUsers(prev => ({ ...prev, [inputKey]: filtered }))
+        setFilteredUsers((prev) => ({ ...prev, [inputKey]: filtered }))
       } else {
-        setShowMentions(prev => ({ ...prev, [inputKey]: false }))
+        setShowMentions((prev) => ({ ...prev, [inputKey]: false }))
       }
     } else {
-      setShowMentions(prev => ({ ...prev, [inputKey]: false }))
+      setShowMentions((prev) => ({ ...prev, [inputKey]: false }))
     }
   }
 
   const selectMention = (user: SharedUser, inputKey = 'main') => {
     const username = extractUsername(user.email)
-    const currentText = inputKey === 'main' ? newComment : (replyText[inputKey] || '')
+    const currentText =
+      inputKey === 'main' ? newComment : replyText[inputKey] || ''
     const currentCursorPosition = cursorPosition[inputKey] || 0
     const currentMentionQuery = mentionQuery[inputKey] || ''
-    
+
     const beforeAt = currentText.substring(0, currentCursorPosition)
     const afterMention = currentText.substring(
       currentCursorPosition + 1 + currentMentionQuery.length
@@ -128,11 +137,11 @@ const PropertiesDetailsModel = ({
     if (inputKey === 'main') {
       setNewComment(newText)
     } else {
-      setReplyText(prev => ({ ...prev, [inputKey]: newText }))
+      setReplyText((prev) => ({ ...prev, [inputKey]: newText }))
     }
 
-    setShowMentions(prev => ({ ...prev, [inputKey]: false }))
-    setMentionQuery(prev => ({ ...prev, [inputKey]: '' }))
+    setShowMentions((prev) => ({ ...prev, [inputKey]: false }))
+    setMentionQuery((prev) => ({ ...prev, [inputKey]: '' }))
   }
 
   const handleMapModalClose = () => {
@@ -257,7 +266,7 @@ const PropertiesDetailsModel = ({
       )
 
       setComments(response.data || [])
-      setReplyText(prev => {
+      setReplyText((prev) => {
         const updated = { ...prev }
         delete updated[inputKey]
         return updated
@@ -346,7 +355,7 @@ const PropertiesDetailsModel = ({
     return parts.map((part, index) => {
       if (part.startsWith('@')) {
         return (
-          <span key={index} className="text-blue-400 font-medium">
+          <span key={index} className="font-medium text-blue-400">
             {part}
           </span>
         )
@@ -358,7 +367,7 @@ const PropertiesDetailsModel = ({
   // Render comment component - recursive function to handle all nesting levels
   const renderComment = (comment: Comment, isReply = false, depth = 0) => {
     const inputKey = `reply-${comment.id}`
-    
+
     return (
       <div
         key={comment.id}
@@ -426,45 +435,61 @@ const PropertiesDetailsModel = ({
               </div>
             </div>
 
+            {/* Render replies recursively */}
+            {comment.children &&
+              Array.isArray(comment.children) &&
+              comment.children.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {comment.children.map((reply) =>
+                    renderComment(reply, true, depth + 1)
+                  )}
+                </div>
+              )}
+
             {/* Reply input */}
             {replyingToId === comment.id && (
               <div className="mt-3 space-y-2">
                 <div className="relative">
                   <textarea
                     value={replyText[inputKey] || ''}
-                    onChange={(e) => handleCommentChange(e.target.value, inputKey)}
+                    onChange={(e) =>
+                      handleCommentChange(e.target.value, inputKey)
+                    }
                     className="w-full resize-none rounded-md border p-2"
                     rows={2}
                     placeholder="Write a reply... You can use @mentions"
                   />
 
                   {/* Reply mention dropdown */}
-                  {showMentions[inputKey] && filteredUsers[inputKey]?.length > 0 && (
-                    <div className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
-                      {filteredUsers[inputKey].map((user) => (
-                        <div
-                          key={user.id}
-                          onClick={() => selectMention(user, inputKey)}
-                          className="cursor-pointer px-3 py-2 hover:bg-gray-100"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="text-secondary font-medium">
-                              @{extractUsername(user.email)}
-                            </span>
-                            <span className="text-sm text-gray-500">
-                              ({user.email})
-                            </span>
+                  {showMentions[inputKey] &&
+                    filteredUsers[inputKey]?.length > 0 && (
+                      <div className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                        {filteredUsers[inputKey].map((user) => (
+                          <div
+                            key={user.id}
+                            onClick={() => selectMention(user, inputKey)}
+                            className="cursor-pointer px-3 py-2 hover:bg-gray-100"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-secondary font-medium">
+                                @{extractUsername(user.email)}
+                              </span>
+                              <span className="text-sm text-gray-500">
+                                ({user.email})
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                        ))}
+                      </div>
+                    )}
                 </div>
 
                 <div className="flex gap-2">
                   <Button
                     onClick={() => handleAddReply(comment.id, inputKey)}
-                    disabled={!replyText[inputKey]?.trim() || isSubmittingComment}
+                    disabled={
+                      !replyText[inputKey]?.trim() || isSubmittingComment
+                    }
                   >
                     Reply
                   </Button>
@@ -472,12 +497,12 @@ const PropertiesDetailsModel = ({
                     variant="outline"
                     onClick={() => {
                       setReplyingToId(null)
-                      setReplyText(prev => {
+                      setReplyText((prev) => {
                         const updated = { ...prev }
                         delete updated[inputKey]
                         return updated
                       })
-                      setShowMentions(prev => {
+                      setShowMentions((prev) => {
                         const updated = { ...prev }
                         delete updated[inputKey]
                         return updated
@@ -489,15 +514,6 @@ const PropertiesDetailsModel = ({
                 </div>
               </div>
             )}
-
-            {/* Render replies recursively */}
-            {comment.children &&
-              Array.isArray(comment.children) &&
-              comment.children.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  {comment.children.map((reply) => renderComment(reply, true, depth + 1))}
-                </div>
-              )}
           </>
         )}
       </div>
@@ -827,37 +843,61 @@ const PropertiesDetailsModel = ({
                     Comments
                   </h3>
 
+                  {/* Comments List */}
+                  <div className="space-y-3">
+                    {loadingComments ? (
+                      <div className="flex items-center justify-center py-4">
+                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+                        <span className="ml-2 text-sm text-gray-500">
+                          Loading comments...
+                        </span>
+                      </div>
+                    ) : comments.length > 0 ? (
+                      [...comments].reverse().map((comment) => renderComment(comment))
+                    ) : (
+                      <div className="py-6 text-center text-gray-500">
+                        <p className="text-sm">No comments yet</p>
+                        <p className="mt-1 text-xs">
+                          Be the first to add a comment!
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Add Comment Input */}
                   <div className="relative space-y-2">
                     <textarea
                       value={newComment}
-                      onChange={(e) => handleCommentChange(e.target.value, 'main')}
+                      onChange={(e) =>
+                        handleCommentChange(e.target.value, 'main')
+                      }
                       className="w-full resize-none rounded-md border p-3"
                       rows={3}
                       placeholder="Add a comment... You can use @mentions"
                     />
 
                     {/* Mention dropdown */}
-                    {showMentions['main'] && filteredUsers['main']?.length > 0 && (
-                      <div className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
-                        {filteredUsers['main'].map((user) => (
-                          <div
-                            key={user.id}
-                            onClick={() => selectMention(user, 'main')}
-                            className="cursor-pointer px-3 py-2 hover:bg-gray-100"
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="text-secondary font-medium">
-                                @{extractUsername(user.email)}
-                              </span>
-                              <span className="text-sm text-gray-500">
-                                ({user.email})
-                              </span>
+                    {showMentions['main'] &&
+                      filteredUsers['main']?.length > 0 && (
+                        <div className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                          {filteredUsers['main'].map((user) => (
+                            <div
+                              key={user.id}
+                              onClick={() => selectMention(user, 'main')}
+                              className="cursor-pointer px-3 py-2 hover:bg-gray-100"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="text-secondary font-medium">
+                                  @{extractUsername(user.email)}
+                                </span>
+                                <span className="text-sm text-gray-500">
+                                  ({user.email})
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      )}
 
                     <div className="flex justify-end">
                       <Button
@@ -878,27 +918,6 @@ const PropertiesDetailsModel = ({
                         )}
                       </Button>
                     </div>
-                  </div>
-
-                  {/* Comments List */}
-                  <div className="max-h-96 space-y-3 overflow-y-auto">
-                    {loadingComments ? (
-                      <div className="flex items-center justify-center py-4">
-                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
-                        <span className="ml-2 text-sm text-gray-500">
-                          Loading comments...
-                        </span>
-                      </div>
-                    ) : comments.length > 0 ? (
-                      comments.map((comment) => renderComment(comment))
-                    ) : (
-                      <div className="py-6 text-center text-gray-500">
-                        <p className="text-sm">No comments yet</p>
-                        <p className="mt-1 text-xs">
-                          Be the first to add a comment!
-                        </p>
-                      </div>
-                    )}
                   </div>
                 </div>
               </PlanAccessWrapper>
@@ -957,13 +976,16 @@ const PropertiesDetailsModel = ({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Comment</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this comment? This action cannot be undone.
+              Are you sure you want to delete this comment? This action cannot
+              be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => commentToDelete && handleDeleteComment(commentToDelete)}
+              onClick={() =>
+                commentToDelete && handleDeleteComment(commentToDelete)
+              }
               className="bg-primary"
             >
               Delete
