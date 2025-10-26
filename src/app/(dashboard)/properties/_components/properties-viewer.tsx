@@ -203,9 +203,14 @@ const PropertiesViewer = ({
           }
           break
         case 'value':
-          const valueA = parseFloat(a.value?.replace(/[^0-9.-]+/g, '') || '0')
-          const valueB = parseFloat(b.value?.replace(/[^0-9.-]+/g, '') || '0')
-          comparison = valueA - valueB
+          const extentA = parseFloat(a.extent?.replace(/[^0-9.-]+/g, '') || '0')
+          const extentB = parseFloat(b.extent?.replace(/[^0-9.-]+/g, '') || '0')
+          const valuePerSQA = parseFloat(a.valuePerSQ?.replace(/[^0-9.-]+/g, '') || '0')
+          const valuePerSQB = parseFloat(b.valuePerSQ?.replace(/[^0-9.-]+/g, '') || '0')
+          
+          const totalValueA = extentA * valuePerSQA
+          const totalValueB = extentB * valuePerSQB
+          comparison = totalValueA - totalValueB
           break
         case 'name':
         case 'owner':

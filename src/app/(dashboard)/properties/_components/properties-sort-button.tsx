@@ -22,6 +22,7 @@ const sortOptions: {
   order: PropertySortOrder
 }[] = [
   { label: 'Owner (A-Z)', field: 'owner', order: 'asc' },
+  { label: 'Owner (Z-A)', field: 'owner', order: 'desc' },
   { label: 'Value High-Low', field: 'value', order: 'asc' },
   { label: 'Value Low-High', field: 'value', order: 'desc' },
   { label: 'Newest to Oldest', field: 'dateAdded', order: 'desc' },

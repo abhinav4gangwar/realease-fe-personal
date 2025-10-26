@@ -613,8 +613,6 @@ const PropertiesEditModel = ({
         `/dashboard/properties/edit/${property.id}`,
         requestBody
       )
-
-      toast.success('Property updated successfully!')
       return true
     } catch (error: any) {
       console.error('Property update error:', error)
@@ -1576,7 +1574,7 @@ const PropertiesEditModel = ({
                     disabled={isLoading}
                   >
                     {currentStep === 2 && isLoading ? (
-                      <>Updating Property...</>
+                      <>Next...</>
                     ) : (
                       <>
                         Next

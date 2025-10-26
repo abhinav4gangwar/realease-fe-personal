@@ -30,6 +30,7 @@ import { CustomField } from './properties-edit-model'
 import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import { apiClient } from '@/utils/api'
 import { toast } from 'sonner'
+import { formatCurrency } from '../_property_utils'
 
 export interface PropertiesDetailsModelProps {
   property: Properties | null
@@ -354,8 +355,8 @@ const PropertiesDetailsModel = ({
     })
   }
 
-  // Render comment component
-  const renderComment = (comment: Comment, isReply = false) => {
+  // Render comment component - recursive function to handle all nesting levels
+  const renderComment = (comment: Comment, isReply = false, depth = 0) => {
     const inputKey = `reply-${comment.id}`
     
     return (
@@ -489,12 +490,12 @@ const PropertiesDetailsModel = ({
               </div>
             )}
 
-            {/* Render replies */}
+            {/* Render replies recursively */}
             {comment.children &&
               Array.isArray(comment.children) &&
               comment.children.length > 0 && (
                 <div className="mt-3 space-y-2">
-                  {comment.children.map((reply) => renderComment(reply, true))}
+                  {comment.children.map((reply) => renderComment(reply, true, depth + 1))}
                 </div>
               )}
           </>
@@ -625,7 +626,7 @@ const PropertiesDetailsModel = ({
                     Total Property Value
                   </h3>
                   <h2 className="truncate text-lg font-semibold">
-                    ₹ {property?.value}
+                    ₹ {formatCurrency(property?.value)}
                   </h2>
                 </div>
               </div>
@@ -762,7 +763,7 @@ const PropertiesDetailsModel = ({
                   </h3>
                   <div className="flex justify-between">
                     <h2 className="truncate text-lg font-semibold">
-                      ₹ {property?.valuePerSQ}
+                      ₹ {formatCurrency(property?.valuePerSQ)}
                     </h2>
                     <h3 className="mb-1 text-sm font-medium text-gray-500">
                       /{getUnitFromExtent()}
