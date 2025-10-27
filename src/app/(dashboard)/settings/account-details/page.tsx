@@ -4,6 +4,7 @@ import { useGlobalContextProvider } from '@/providers/global-context'
 import { ArrowRight, SquareUser } from 'lucide-react'
 import { useState } from 'react'
 import AddressModel from '../_components/account-details-components/address-model'
+import EmailChangeModel from '../_components/account-details-components/email-change-model'
 import NameModel from '../_components/account-details-components/name-model'
 import PhoneNumberModel from '../_components/account-details-components/phone-number-model'
 
@@ -54,7 +55,12 @@ const AccountDetailsPage = () => {
         <div className="flex items-center justify-between">
           <h1 className="w-xs">Address</h1>
           <p className="flex-1 text-left font-normal text-gray-400">
-            {accountDetails.address.addressLine1 || accountDetails.address.addressLine2 || accountDetails.address.city || accountDetails.address.state || accountDetails.address.country || accountDetails.address.zipCode
+            {accountDetails.address.addressLine1 ||
+            accountDetails.address.addressLine2 ||
+            accountDetails.address.city ||
+            accountDetails.address.state ||
+            accountDetails.address.country ||
+            accountDetails.address.zipCode
               ? `${accountDetails.address.addressLine1 || ''}${accountDetails.address.addressLine2 ? ', ' + accountDetails.address.addressLine2 : ''}${accountDetails.address.city ? ', ' + accountDetails.address.city : ''}${accountDetails.address.state ? ', ' + accountDetails.address.state : ''}${accountDetails.address.country ? ', ' + accountDetails.address.country : ''}${accountDetails.address.zipCode ? ', ' + accountDetails.address.zipCode : ''}`
               : 'Not Provided'}
           </p>
@@ -104,6 +110,11 @@ const AccountDetailsPage = () => {
       <PhoneNumberModel
         isOpen={isPhoneModelOpen}
         onClose={() => setIsPhoneModelOpen(false)}
+      />
+
+      <EmailChangeModel
+        isOpen={isEmailModelOpen}
+        onClose={() => setIsEmailModelOpen(false)}
       />
     </div>
   )

@@ -1,8 +1,19 @@
 'use client'
+import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import { Button } from '@/components/ui/button'
-import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
+import {
+  Command,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
 import { Input } from '@/components/ui/input'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { useLocationAutoFill } from '@/hooks/useLocationAutoFill'
 import { useAddressGeocoding } from '@/hooks/useAddressGeocoding'
 import { cn } from '@/lib/utils'
@@ -68,7 +79,9 @@ const PropertiesEditModel = ({
   const [createdDuplicates, setCreatedDuplicates] = useState<any[]>([])
   const [showDuplicatesModal, setShowDuplicatesModal] = useState(false)
 
-  const [selectedCountry, setSelectedCountry] = useState<CountryType | null>(null)
+  const [selectedCountry, setSelectedCountry] = useState<CountryType | null>(
+    null
+  )
   const [countries, setCountries] = useState<CountryType[]>([])
 
   const [partyA, setPartyA] = useState('')
@@ -91,7 +104,7 @@ const PropertiesEditModel = ({
     latitude: '',
     longitude: '',
     isDisputed: false,
-    legalStatus: "",
+    legalStatus: '',
     legalParties: '',
     caseNumber: '',
     caseType: '',
@@ -135,35 +148,40 @@ const PropertiesEditModel = ({
     return isPlural ? label.plural : label.singular
   }
 
-  const handleNumericChange = (field: keyof Properties) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\./g, '$1');
-    updateFormData(field, value);
-  };
+  const handleNumericChange =
+    (field: keyof Properties) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value
+        .replace(/[^0-9.]/g, '')
+        .replace(/(\..*?)\./g, '$1')
+      updateFormData(field, value)
+    }
 
-  const handleCoordinateChange = (field: 'latitude' | 'longitude') => (e: React.ChangeEvent<HTMLInputElement>) => {
-    let val = e.target.value;
-    // Allow only one sign at the beginning
-    if (val.startsWith('+') || val.startsWith('-')) {
-      val = val[0] + val.slice(1).replace(/[^0-9.]/g, '');
-    } else {
-      val = val.replace(/[^0-9.]/g, '');
+  const handleCoordinateChange =
+    (field: 'latitude' | 'longitude') =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      let val = e.target.value
+      // Allow only one sign at the beginning
+      if (val.startsWith('+') || val.startsWith('-')) {
+        val = val[0] + val.slice(1).replace(/[^0-9.]/g, '')
+      } else {
+        val = val.replace(/[^0-9.]/g, '')
+      }
+      // Ensure only one decimal point
+      val = val.replace(/(\..*?)\./g, '$1')
+      updateFormData(field, val)
+      // Update coordinates field for backward compatibility
+      if (field === 'latitude' && val && formData.longitude) {
+        const coordinateString = formatCoordinates(val, formData.longitude)
+        updateFormData('coordinates', coordinateString)
+      } else if (field === 'longitude' && formData.latitude && val) {
+        const coordinateString = formatCoordinates(formData.latitude, val)
+        updateFormData('coordinates', coordinateString)
+      }
     }
-    // Ensure only one decimal point
-    val = val.replace(/(\..*?)\./g, '$1');
-    updateFormData(field, val);
-    // Update coordinates field for backward compatibility
-    if (field === 'latitude' && val && formData.longitude) {
-      const coordinateString = formatCoordinates(val, formData.longitude);
-      updateFormData('coordinates', coordinateString);
-    } else if (field === 'longitude' && formData.latitude && val) {
-      const coordinateString = formatCoordinates(formData.latitude, val);
-      updateFormData('coordinates', coordinateString);
-    }
-  };
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateFormData('nextHearing', e.target.value);
-  };
+    updateFormData('nextHearing', e.target.value)
+  }
 
   useEffect(() => {
     // Set default unit based on property type
@@ -189,9 +207,9 @@ const PropertiesEditModel = ({
     const extentString = formData.extent || ''
     const extentMatch = extentString.match(/^[\d.]+/)
     const extentNum = extentMatch ? parseFloat(extentMatch[0]) : NaN
-    
+
     const perNum = parseFloat(formData.valuePerSQ)
-    
+
     if (!isNaN(extentNum) && !isNaN(perNum) && extentNum > 0 && perNum > 0) {
       const total = extentNum * perNum
       updateFormData('value', total.toFixed(2))
@@ -253,8 +271,8 @@ const PropertiesEditModel = ({
         ...property,
         extent: extentValue,
         coordinates, // Use the formatted coordinates for backward compatibility
-        latitude,    // Set separate latitude
-        longitude,   // Set separate longitude
+        latitude, // Set separate latitude
+        longitude, // Set separate longitude
       })
       setIsDisputed(property.isDisputed || false)
 
@@ -275,7 +293,7 @@ const PropertiesEditModel = ({
   useEffect(() => {
     if (property && isOpen) {
       if (formData.country) {
-        const country = countries.find(c => c.name === formData.country)
+        const country = countries.find((c) => c.name === formData.country)
         if (country) {
           setSelectedCountry(country)
         }
@@ -303,6 +321,13 @@ const PropertiesEditModel = ({
     setIsAutoFilling(true)
     setLastAutoFilledZipcode(formData.zipcode || '')
 
+      // Only auto-select country if none is selected or if it matches the current selection
+      if (!selectedCountry) {
+        const foundCountry = countries.find(
+          (c) =>
+            c.name.toLowerCase().includes(location.country.toLowerCase()) ||
+            c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
+        )
     // Only auto-select country if none is selected or if it matches the current selection
     if (!selectedCountry) {
       const foundCountry = countries.find(c =>
@@ -310,6 +335,18 @@ const PropertiesEditModel = ({
         c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
       )
 
+        if (foundCountry) {
+          console.log('🌍 Auto-selecting country:', foundCountry.name)
+          setSelectedCountry(foundCountry)
+        }
+      } else {
+        // Verify the current country matches the location result
+        const currentCountryMatches =
+          selectedCountry.name
+            .toLowerCase()
+            .includes(location.country.toLowerCase()) ||
+          selectedCountry.isoCode.toLowerCase() ===
+            location.countryCode.toLowerCase()
       if (foundCountry) {
         console.log('🌍 Auto-selecting country:', foundCountry.name)
         setSelectedCountry(foundCountry)
@@ -320,6 +357,13 @@ const PropertiesEditModel = ({
         selectedCountry.name.toLowerCase().includes(location.country.toLowerCase()) ||
         selectedCountry.isoCode.toLowerCase() === location.countryCode.toLowerCase()
 
+        if (!currentCountryMatches) {
+          console.log(
+            '⚠️ Country mismatch - keeping user selection:',
+            selectedCountry.name
+          )
+        }
+      }
       if (!currentCountryMatches) {
         console.log('⚠️ Country mismatch - keeping user selection:', selectedCountry.name)
       }
@@ -445,7 +489,7 @@ const PropertiesEditModel = ({
     const [open, setOpen] = useState(false)
     const [searchValue, setSearchValue] = useState('')
 
-    const filteredCountries = countries.filter(country =>
+    const filteredCountries = countries.filter((country) =>
       country.name.toLowerCase().includes(searchValue.toLowerCase())
     )
 
@@ -456,16 +500,16 @@ const PropertiesEditModel = ({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between h-14 truncate"
+            className="h-14 w-full justify-between truncate"
           >
-            {selectedCountry?.name || "Select Country"}
+            {selectedCountry?.name || 'Select Country'}
             <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0 border-gray-400" align="start">
+        <PopoverContent className="w-full border-gray-400 p-0" align="start">
           <Command>
-            <CommandInput 
-              placeholder="Search country..." 
+            <CommandInput
+              placeholder="Search country..."
               value={searchValue}
               onValueChange={setSearchValue}
             />
@@ -484,8 +528,10 @@ const PropertiesEditModel = ({
                   >
                     <Check
                       className={cn(
-                        "mr-2 h-4 w-4",
-                        selectedCountry?.isoCode === country.isoCode ? "opacity-100" : "opacity-0"
+                        'mr-2 h-4 w-4',
+                        selectedCountry?.isoCode === country.isoCode
+                          ? 'opacity-100'
+                          : 'opacity-0'
                       )}
                     />
                     {country.name}
@@ -534,8 +580,8 @@ const PropertiesEditModel = ({
         ...property,
         extent: extentValue,
         coordinates, // Use the formatted coordinates for backward compatibility
-        latitude,    // Set separate latitude
-        longitude,   // Set separate longitude
+        latitude, // Set separate latitude
+        longitude, // Set separate longitude
       })
       setIsDisputed(property.isDisputed || false)
 
@@ -588,17 +634,19 @@ const PropertiesEditModel = ({
           ? `${partyA.trim()} vs ${partyB.trim()}`
           : partyA.trim() || partyB.trim() || ''
 
-      const currentUnit = formData.type === 'Plot' ? 'sqyd' : selectedUnit;
-      const extentWithUnit = formData.extent ? `${formData.extent} ${getUnitLabel(currentUnit, true)}` : '';
+      const currentUnit = formData.type === 'Plot' ? 'sqyd' : selectedUnit
+      const extentWithUnit = formData.extent
+        ? `${formData.extent} ${getUnitLabel(currentUnit, true)}`
+        : ''
 
-      let nextHearingFormatted = '';
+      let nextHearingFormatted = ''
       if (formData.nextHearing) {
-        const clean = formData.nextHearing.replace(/\D/g, '');
+        const clean = formData.nextHearing.replace(/\D/g, '')
         if (clean.length === 8) {
-          const dd = clean.substring(0, 2);
-          const mm = clean.substring(2, 4);
-          const yyyy = clean.substring(4, 8);
-          nextHearingFormatted = `${yyyy}-${mm}-${dd}`;
+          const dd = clean.substring(0, 2)
+          const mm = clean.substring(2, 4)
+          const yyyy = clean.substring(4, 8)
+          nextHearingFormatted = `${yyyy}-${mm}-${dd}`
         }
       }
 
@@ -637,8 +685,6 @@ const PropertiesEditModel = ({
         `/dashboard/properties/edit/${property.id}`,
         requestBody
       )
-
-      toast.success('Property updated successfully!')
       return true
     } catch (error: any) {
       console.error('Property update error:', error)
@@ -728,17 +774,19 @@ const PropertiesEditModel = ({
           ? `${partyA.trim()} vs ${partyB.trim()}`
           : partyA.trim() || partyB.trim() || ''
 
-      const currentUnit = formData.type === 'Plot' ? 'sqyd' : selectedUnit;
-      const extentWithUnit = formData.extent ? `${formData.extent} ${getUnitLabel(currentUnit, true)}` : '';
+      const currentUnit = formData.type === 'Plot' ? 'sqyd' : selectedUnit
+      const extentWithUnit = formData.extent
+        ? `${formData.extent} ${getUnitLabel(currentUnit, true)}`
+        : ''
 
-      let nextHearingFormatted = '';
+      let nextHearingFormatted = ''
       if (formData.nextHearing) {
-        const clean = formData.nextHearing.replace(/\D/g, '');
+        const clean = formData.nextHearing.replace(/\D/g, '')
         if (clean.length === 8) {
-          const dd = clean.substring(0, 2);
-          const mm = clean.substring(2, 4);
-          const yyyy = clean.substring(4, 8);
-          nextHearingFormatted = `${yyyy}-${mm}-${dd}`;
+          const dd = clean.substring(0, 2)
+          const mm = clean.substring(2, 4)
+          const yyyy = clean.substring(4, 8)
+          nextHearingFormatted = `${yyyy}-${mm}-${dd}`
         }
       }
 
@@ -980,21 +1028,25 @@ const PropertiesEditModel = ({
                           locationError || (!isValidZipcode && formData.zipcode)
                             ? 'border-red-300 focus:border-red-500'
                             : isLocationLoading
-                            ? 'border-blue-300 focus:border-blue-500'
-                            : 'border-gray-300'
+                              ? 'border-blue-300 focus:border-blue-500'
+                              : 'border-gray-300'
                         }`}
                         placeholder="Enter zip-code (optional)"
                       />
 
                       {/* Status Icon */}
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div className="absolute top-1/2 right-3 -translate-y-1/2">
                         {isLocationLoading && (
                           <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
                         )}
-                        {!isLocationLoading && formData.zipcode && isValidZipcode && !locationError && (
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                        )}
-                        {(locationError || (!isValidZipcode && formData.zipcode)) && (
+                        {!isLocationLoading &&
+                          formData.zipcode &&
+                          isValidZipcode &&
+                          !locationError && (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          )}
+                        {(locationError ||
+                          (!isValidZipcode && formData.zipcode)) && (
                           <AlertCircle className="h-4 w-4 text-red-500" />
                         )}
                       </div>
@@ -1003,13 +1055,12 @@ const PropertiesEditModel = ({
                     {/* Status Messages */}
                     {!isValidZipcode && formData.zipcode && (
                       <p className="text-xs text-red-500">
-                        Invalid zipcode format for {selectedCountry?.name || 'selected country'}
+                        Invalid zipcode format for{' '}
+                        {selectedCountry?.name || 'selected country'}
                       </p>
                     )}
                     {locationError && (
-                      <p className="text-xs text-red-500">
-                        {locationError}
-                      </p>
+                      <p className="text-xs text-red-500">{locationError}</p>
                     )}
                     {isLocationLoading && (
                       <p className="text-xs text-blue-600">
@@ -1033,7 +1084,9 @@ const PropertiesEditModel = ({
                   </div>
 
                   <div className="flex flex-col space-y-1">
-                    <label className="text-md text-secondary block">State</label>
+                    <label className="text-md text-secondary block">
+                      State
+                    </label>
                     <Input
                       type="text"
                       placeholder="Enter state"
@@ -1182,7 +1235,7 @@ const PropertiesEditModel = ({
                       onChange={(e) =>
                         updateFormData('legalStatus', e.target.value)
                       }
-                      className="w-full rounded-md border border-gray-400 bg-white px-3 py-2 h-14"
+                      className="h-14 w-full rounded-md border border-gray-400 bg-white px-3 py-2"
                     >
                       <option value="-">Select Case Status</option>
                       <option value="Disputed - Ongoing">Ongoing</option>
@@ -1295,7 +1348,8 @@ const PropertiesEditModel = ({
             <div className="flex flex-col space-y-3">
               <div className="flex flex-col space-y-3">
                 <label className="text-md text-secondary block font-semibold">
-                  Value per {getUnitLabel(
+                  Value per{' '}
+                  {getUnitLabel(
                     formData.type === 'Plot' ? 'sqyd' : selectedUnit,
                     false
                   )}{' '}
@@ -1381,17 +1435,19 @@ const PropertiesEditModel = ({
               ))}
 
               {/* Add more information button */}
-              <div className="flex flex-col space-y-1">
-                <div
-                  className="flex cursor-pointer justify-between rounded-md bg-[#F2F2F2] p-3 transition-colors hover:bg-[#E8E8E8]"
-                  onClick={addCustomField}
-                >
-                  <p className="text-secondary font-semibold">
-                    Add more information
-                  </p>
-                  <PlusIcon className="size-5" />
+              <PlanAccessWrapper featureId="ASSET_CUSTOM_FIELD_CONFIG">
+                <div className="flex flex-col space-y-1">
+                  <div
+                    className="flex cursor-pointer justify-between rounded-md bg-[#F2F2F2] p-3 transition-colors hover:bg-[#E8E8E8]"
+                    onClick={addCustomField}
+                  >
+                    <p className="text-secondary font-semibold">
+                      Add more information
+                    </p>
+                    <PlusIcon className="size-5" />
+                  </div>
                 </div>
-              </div>
+              </PlanAccessWrapper>
             </div>
 
             {/* Duplicate Property Section */}
@@ -1453,7 +1509,11 @@ const PropertiesEditModel = ({
                         <Button
                           className="bg-secondary h-14 w-14 cursor-pointer font-semibold hover:bg-white hover:text-black"
                           onClick={createDuplicateProperties}
-                          disabled={isLoading || !duplicateCount || parseInt(duplicateCount) < 1}
+                          disabled={
+                            isLoading ||
+                            !duplicateCount ||
+                            parseInt(duplicateCount) < 1
+                          }
                         >
                           <Check className="size-5" />
                         </Button>
@@ -1599,7 +1659,7 @@ const PropertiesEditModel = ({
                     disabled={isLoading}
                   >
                     {currentStep === 2 && isLoading ? (
-                      <>Updating Property...</>
+                      <>Next...</>
                     ) : (
                       <>
                         Next

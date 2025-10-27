@@ -2,13 +2,29 @@
 
 import type { Comment, CommentAnnotation, User } from '@/types/comment.types'
 import type { Document } from '@/types/document.types'
-import { useEffect, useRef, useState, useMemo, type MouseEvent, useCallback } from 'react'
+import dynamic from 'next/dynamic'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+} from 'react'
 import { Document as PDFDocument, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 import { toast } from 'sonner'
-import dynamic from 'next/dynamic'
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { ChevronRight, Download, MessageSquare } from 'lucide-react'
 import Image from 'next/image'
@@ -21,12 +37,29 @@ import { CommentModal } from './comment-components/comment-modal'
 import { PDFHeader } from './comment-components/pdf-header'
 
 // Dynamically import Leaflet components for KML viewing
-const MapContainer = dynamic(() => import('react-leaflet').then((mod) => mod.MapContainer), { ssr: false })
-const TileLayer = dynamic(() => import('react-leaflet').then((mod) => mod.TileLayer), { ssr: false })
-const Marker = dynamic(() => import('react-leaflet').then((mod) => mod.Marker), { ssr: false })
-const Popup = dynamic(() => import('react-leaflet').then((mod) => mod.Popup), { ssr: false })
-const Polygon = dynamic(() => import('react-leaflet').then((mod) => mod.Polygon), { ssr: false })
-const Polyline = dynamic(() => import('react-leaflet').then((mod) => mod.Polyline), { ssr: false })
+const MapContainer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.MapContainer),
+  { ssr: false }
+)
+const TileLayer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.TileLayer),
+  { ssr: false }
+)
+const Marker = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Marker),
+  { ssr: false }
+)
+const Popup = dynamic(() => import('react-leaflet').then((mod) => mod.Popup), {
+  ssr: false,
+})
+const Polygon = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Polygon),
+  { ssr: false }
+)
+const Polyline = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Polyline),
+  { ssr: false }
+)
 
 // Set up PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
@@ -36,16 +69,19 @@ if (typeof window !== 'undefined') {
   const L = require('leaflet')
   delete (L.Icon.Default.prototype as any)._getIconUrl
   L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+    iconRetinaUrl:
+      'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    iconUrl:
+      'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    shadowUrl:
+      'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
   })
 }
 
 interface KmlShape {
-  name: string;
-  type: 'Polygon' | 'LineString' | 'Point';
-  coordinates: any; // e.g., [[lat, lng], ...] for Polyline, or [[[lat, lng], ...]] for Polygon
+  name: string
+  type: 'Polygon' | 'LineString' | 'Point'
+  coordinates: any // e.g., [[lat, lng], ...] for Polyline, or [[[lat, lng], ...]] for Polygon
 }
 
 // API function to get users
@@ -85,7 +121,9 @@ export function UnifiedDocumentViewer({
 }: UnifiedDocumentViewerProps) {
   // Document state
   const [documentUrl, setDocumentUrl] = useState<string | null>(null)
-  const [documentType, setDocumentType] = useState<'pdf' | 'image' | 'kml' | null>(null)
+  const [documentType, setDocumentType] = useState<
+    'pdf' | 'image' | 'kml' | null
+  >(null)
   const [numPages, setNumPages] = useState<number | null>(null)
   const [scale, setScale] = useState<number>(getInitialScale())
   const [isLoading, setIsLoading] = useState<boolean>(false)
@@ -108,11 +146,44 @@ export function UnifiedDocumentViewer({
   const [deletingCommentId, setDeletingCommentId] = useState<number | null>(
     null
   )
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false)
+  const [commentToDelete, setCommentToDelete] = useState<{
+    id: number
+    type: 'comment' | 'reply'
+  } | null>(null)
   const [deletingReplyId, setDeletingReplyId] = useState<number | null>(null)
   const [activeCommentId, setActiveCommentId] = useState<number | null>(null)
   const [replyingToCommentId, setReplyingToCommentId] = useState<number | null>(
     null
   )
+
+  const handleCommentDeleteClick = (commentId: number) => {
+    setCommentToDelete({ id: commentId, type: 'comment' })
+    setDeleteDialogOpen(true)
+  }
+
+  const handleReplyDeleteClick = (replyId: number) => {
+    setCommentToDelete({ id: replyId, type: 'reply' })
+    setDeleteDialogOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!commentToDelete) return
+
+    if (commentToDelete.type === 'comment') {
+      await handleCommentDelete(commentToDelete.id)
+    } else {
+      await handleDeleteReply(commentToDelete.id)
+    }
+
+    setDeleteDialogOpen(false)
+    setCommentToDelete(null)
+  }
+
+  const handleCancelDelete = () => {
+    setDeleteDialogOpen(false)
+    setCommentToDelete(null)
+  }
 
   // UI state
   const [hasTextSelection, setHasTextSelection] = useState<boolean>(false)
@@ -175,16 +246,25 @@ export function UnifiedDocumentViewer({
     const shapes: KmlShape[] = []
     const placemarks = kmlDoc.querySelectorAll('Placemark')
 
-    placemarks.forEach((placemark: Element) => {
-      const name = placemark.querySelector('name')?.textContent || 'Unnamed Shape'
+    placemarks.forEach((placemark) => {
+      const name =
+        placemark.querySelector('name')?.textContent || 'Unnamed Shape'
 
-      const processCoordinates = (coordString: string | null | undefined): [number, number][] => {
+      const processCoordinates = (
+        coordString: string | null | undefined
+      ): [number, number][] => {
         if (!coordString) return []
         const points: [number, number][] = []
-        const coordPairs = coordString.trim().split(/[\s\n\r]+/).filter(Boolean)
+        const coordPairs = coordString
+          .trim()
+          .split(/[\s\n\r]+/)
+          .filter(Boolean)
 
-        coordPairs.forEach(pair => {
-          const coords = pair.split(',').map(c => parseFloat(c.trim())).filter(n => !isNaN(n))
+        coordPairs.forEach((pair) => {
+          const coords = pair
+            .split(',')
+            .map((c) => parseFloat(c.trim()))
+            .filter((n) => !isNaN(n))
           if (coords.length >= 2) {
             points.push([coords[1], coords[0]]) // Leaflet uses [lat, lng]
           }
@@ -201,7 +281,7 @@ export function UnifiedDocumentViewer({
           shapes.push({
             name,
             type: 'Polygon',
-            coordinates: [coordinates] // Polygon expects array of coordinate arrays
+            coordinates: [coordinates], // Polygon expects array of coordinate arrays
           })
           return
         }
@@ -215,7 +295,7 @@ export function UnifiedDocumentViewer({
           shapes.push({
             name,
             type: 'LineString',
-            coordinates
+            coordinates,
           })
           return
         }
@@ -229,7 +309,7 @@ export function UnifiedDocumentViewer({
           shapes.push({
             name,
             type: 'Point',
-            coordinates: coordinates[0]
+            coordinates: coordinates[0],
           })
           return
         }
@@ -906,11 +986,11 @@ export function UnifiedDocumentViewer({
                                     }
                                     onEdit={() => handleCommentEdit(comment)}
                                     onDelete={() =>
-                                      handleCommentDelete(comment.id)
+                                      handleCommentDeleteClick(comment.id)
                                     }
                                     onReply={handleReply}
                                     onEditReply={handleEditReply}
-                                    onDeleteReply={handleDeleteReply}
+                                    onDeleteReply={handleReplyDeleteClick}
                                     isDeleting={
                                       deletingCommentId === comment.id
                                     }
@@ -931,13 +1011,15 @@ export function UnifiedDocumentViewer({
                   </PDFDocument>
                 ) : documentType === 'kml' ? (
                   // KML Map viewer
-                  <div className="h-full w-full relative" style={{ minHeight: '500px' }}>
+                  <div className="relative h-full w-full">
                     {/* KML Loading Indicator */}
                     {isLoadingKml && (
-                      <div className="absolute top-4 left-4 z-[1000] bg-white px-3 py-2 rounded-lg shadow-lg">
+                      <div className="absolute top-4 left-4 z-[1000] rounded-lg bg-white px-3 py-2 shadow-lg">
                         <div className="flex items-center gap-2">
-                          <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-                          <span className="text-sm text-gray-700">Loading KML file...</span>
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
+                          <span className="text-sm text-gray-700">
+                            Loading KML file...
+                          </span>
                         </div>
                       </div>
                     )}
@@ -961,29 +1043,47 @@ export function UnifiedDocumentViewer({
 
                           if (shape.type === 'Polygon' && shape.coordinates) {
                             return (
-                              <Polygon key={`kml-${index}`} positions={shape.coordinates} pathOptions={{ color: color, fillColor: color, fillOpacity: 0.4 }}>
+                              <Polygon
+                                key={`kml-${index}`}
+                                positions={shape.coordinates}
+                                pathOptions={{
+                                  color: color,
+                                  fillColor: color,
+                                  fillOpacity: 0.4,
+                                }}
+                              >
                                 <Popup>{shape.name}</Popup>
                               </Polygon>
                             )
                           }
 
-                          if (shape.type === 'LineString' && shape.coordinates) {
+                          if (
+                            shape.type === 'LineString' &&
+                            shape.coordinates
+                          ) {
                             return (
-                              <Polyline key={`kml-${index}`} positions={shape.coordinates} pathOptions={{ color: color }}>
-                                 <Popup>{shape.name}</Popup>
+                              <Polyline
+                                key={`kml-${index}`}
+                                positions={shape.coordinates}
+                                pathOptions={{ color: color }}
+                              >
+                                <Popup>{shape.name}</Popup>
                               </Polyline>
                             )
                           }
 
                           if (shape.type === 'Point' && shape.coordinates) {
-                              return (
-                                  <Marker key={`kml-${index}`} position={shape.coordinates}>
-                                      <Popup>{shape.name}</Popup>
-                                  </Marker>
-                              )
+                            return (
+                              <Marker
+                                key={`kml-${index}`}
+                                position={shape.coordinates}
+                              >
+                                <Popup>{shape.name}</Popup>
+                              </Marker>
+                            )
                           }
 
-                          return null;
+                          return null
                         })}
                       </MapContainer>
                     ) : (
@@ -1045,10 +1145,12 @@ export function UnifiedDocumentViewer({
                               users={users}
                               onClick={() => setActiveCommentId(comment.id)}
                               onEdit={() => handleCommentEdit(comment)}
-                              onDelete={() => handleCommentDelete(comment.id)}
+                              onDelete={() =>
+                                handleCommentDeleteClick(comment.id)
+                              }
+                              onDeleteReply={handleReplyDeleteClick}
                               onReply={handleReply}
                               onEditReply={handleEditReply}
-                              onDeleteReply={handleDeleteReply}
                               isDeleting={deletingCommentId === comment.id}
                               isActive={activeCommentId === comment.id}
                               isReplying={replyingToCommentId === comment.id}
@@ -1197,7 +1299,7 @@ export function UnifiedDocumentViewer({
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  handleCommentDelete(comment.id)
+                                  handleCommentDeleteClick(comment.id)
                                 }}
                                 className="hover:text-red-600"
                                 disabled={deletingCommentId === comment.id}
@@ -1284,6 +1386,30 @@ export function UnifiedDocumentViewer({
           editingComment={editingComment}
         />
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className='z-[99999]'>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this{' '}
+              {commentToDelete?.type === 'comment' ? 'comment' : 'reply'}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelDelete}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-primary hover:bg-primary/90"
+            >
+              Yes, delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

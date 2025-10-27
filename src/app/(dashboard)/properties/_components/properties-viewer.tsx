@@ -1,5 +1,4 @@
 'use client'
-import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import {
   FilterState,
   Properties,
@@ -204,9 +203,14 @@ const PropertiesViewer = ({
           }
           break
         case 'value':
-          const valueA = parseFloat(a.value?.replace(/[^0-9.-]+/g, '') || '0')
-          const valueB = parseFloat(b.value?.replace(/[^0-9.-]+/g, '') || '0')
-          comparison = valueA - valueB
+          const extentA = parseFloat(a.extent?.replace(/[^0-9.-]+/g, '') || '0')
+          const extentB = parseFloat(b.extent?.replace(/[^0-9.-]+/g, '') || '0')
+          const valuePerSQA = parseFloat(a.valuePerSQ?.replace(/[^0-9.-]+/g, '') || '0')
+          const valuePerSQB = parseFloat(b.valuePerSQ?.replace(/[^0-9.-]+/g, '') || '0')
+          
+          const totalValueA = extentA * valuePerSQA
+          const totalValueB = extentB * valuePerSQB
+          comparison = totalValueA - totalValueB
           break
         case 'name':
         case 'owner':
@@ -397,16 +401,16 @@ const PropertiesViewer = ({
 
         <div className="flex items-center gap-4">
           <ArchiveToggle />
-          <PlanAccessWrapper featureId="mgmt_categorization">
+         
             <PropertiesFilterButton onFilterSelect={handleFilterSelect} />
-          </PlanAccessWrapper>
+         
           <PropertiesSortButton onSortChange={handleSortChange} />
-          <PlanAccessWrapper featureId="mgmt_bulkOps">
+          
             <PropertiesActionsButton
               onActionSelect={handleActionSelect}
               selectedCount={selectedProperties.length}
             />
-          </PlanAccessWrapper>
+
           <PropertiesAddButton onAddSelect={handleAddSelect} />
         </div>
       </div>

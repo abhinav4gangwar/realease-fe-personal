@@ -178,7 +178,8 @@ export function DocumentListView({
                 >
                   <Download className="h-3 w-3" />
                 </Button>
-                <PlanAccessWrapper featureId="docs_secureSharing">
+
+                <PlanAccessWrapper featureId="DOCUMENT_SHARE_TEAM_PERMISSIONS">
                   <Button
                     variant="ghost"
                     size="icon"

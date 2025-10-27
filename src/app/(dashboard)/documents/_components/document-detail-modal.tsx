@@ -312,17 +312,19 @@ export function DocumentDetailModal({
                   >
                     Download
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (onShareClick) {
-                        onShareClick(document)
-                      }
-                    }}
-                    className="cursor-pointer font-semibold hover:bg-[#A2CFE333]"
-                  >
-                    Share
-                  </DropdownMenuItem>
+                  {/* <PlanAccessWrapper featureId="DOCUMENT_SHARE_TEAM_PERMISSIONS">
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (onShareClick) {
+                          onShareClick(document)
+                        }
+                      }}
+                      className="cursor-pointer font-semibold hover:bg-[#A2CFE333]"
+                    >
+                      Share
+                    </DropdownMenuItem>
+                  </PlanAccessWrapper> */}
                   <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation()
@@ -421,7 +423,10 @@ export function DocumentDetailModal({
             <div>
               <h3 className="mb-1 text-sm font-medium text-gray-500">Tags</h3>
               {isEditing ? (
-                <PlanAccessWrapper featureId="DOCUMENT_TAGGING_ADVANCED" className='w-full'>
+                <PlanAccessWrapper
+                  featureId="DOCUMENT_TAGGING_FILTERING"
+                  className="w-full"
+                >
                   <TagInput
                     value={editedTags}
                     onChange={setEditedTags}

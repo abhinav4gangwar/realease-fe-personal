@@ -29,33 +29,17 @@ export function Header() {
   return (
     <header className="z-40 hidden bg-white px-6 py-4 shadow-sm lg:block">
       <div className="flex items-center justify-between">
-        <div className="hidden w-full lg:block">
-          {pathname === '/properties' ? (
-            <PlanAccessWrapper
-              featureId="search_keyword"
-              className="w-full"
-              crownPosition="top-left"
-            >
+        <PlanAccessWrapper featureId="SEARCH_KEYWORD" className='w-full' crownPosition='top-left'>
+          <div className="hidden w-full lg:block">
+            {pathname === '/properties' ? (
               <PropertySearch />
-            </PlanAccessWrapper>
-          ) : pathname === '/documents' ? (
-            <PlanAccessWrapper
-              featureId="search_keyword"
-              className="w-full"
-              crownPosition="top-left"
-            >
+            ) : pathname === '/documents' ? (
               <DocumentSearch />
-            </PlanAccessWrapper>
-          ) : (
-            <PlanAccessWrapper
-              featureId="search_advanced"
-              className="w-full"
-              crownPosition="top-left"
-            >
+            ) : (
               <GlobalSearch />
-            </PlanAccessWrapper>
-          )}
-        </div>
+            )}
+          </div>
+        </PlanAccessWrapper>
 
         {/* Search Bar */}
 
@@ -86,8 +70,10 @@ export function Header() {
               <DropdownMenuItem className="flex items-center gap-4">
                 <CircleUser className="size-10" />
                 <div className="flex flex-col">
-                {accountDetails && (<h1>{accountDetails.name || 'Not Provided'}</h1>)}  
-                  {userType && (<p>{userType || 'Not Provided'}</p>)}
+                  {accountDetails && (
+                    <h1>{accountDetails.name || 'Not Provided'}</h1>
+                  )}
+                  {userType && <p>{userType || 'Not Provided'}</p>}
                 </div>
               </DropdownMenuItem>
 

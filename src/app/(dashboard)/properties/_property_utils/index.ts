@@ -54,3 +54,10 @@ export const handleDownloadClick = async (property: Properties) => {
     console.error('Download failed:', error)
   }
 }
+
+
+export  const formatCurrency = (value: string | number | undefined) => {
+    if (!value) return '0'
+    const numValue = typeof value === 'string' ? parseFloat(value) : value
+    return numValue.toLocaleString('en-IN')
+  }

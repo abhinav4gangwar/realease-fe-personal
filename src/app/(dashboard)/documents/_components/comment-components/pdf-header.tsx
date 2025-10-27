@@ -9,7 +9,7 @@ import {
   Loader2,
   MessageSquare,
   Pencil,
-  X
+  X,
 } from 'lucide-react'
 import type { FC } from 'react'
 import { HiShare } from 'react-icons/hi2'
@@ -38,7 +38,7 @@ export const PDFHeader: FC<PDFHeaderProps> = ({
   onMoveClick,
   onEditClick,
   onCommentClick,
-  onSideClick
+  onSideClick,
 }) => {
   return (
     <div className="flex items-center justify-between p-5">
@@ -56,30 +56,30 @@ export const PDFHeader: FC<PDFHeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-4">
-        <PlanAccessWrapper featureId='docs_commentsAnnotations'>
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`hidden h-6 w-6 cursor-pointer items-center justify-center text-white transition-all lg:flex ${
-            hasTextSelection
-              ? 'hover:text-primary bg-blue-500/20 ring-2 ring-blue-400'
-              : 'cursor-not-allowed opacity-50'
-          }`}
-          onClick={(e) => {
-            e.stopPropagation()
-            if (hasTextSelection) {
-              onCommentClick()
+        <PlanAccessWrapper featureId="DOCUMENT_COMMENTING_ANNOTATIONS">
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`hidden h-6 w-6 cursor-pointer items-center justify-center text-white transition-all lg:flex ${
+              hasTextSelection
+                ? 'hover:text-primary bg-blue-500/20 ring-2 ring-blue-400'
+                : 'cursor-not-allowed opacity-50'
+            }`}
+            onClick={(e) => {
+              e.stopPropagation()
+              if (hasTextSelection) {
+                onCommentClick()
+              }
+            }}
+            disabled={!hasTextSelection}
+            title={
+              hasTextSelection
+                ? 'Add comment to selection'
+                : 'Select text to comment'
             }
-          }}
-          disabled={!hasTextSelection}
-          title={
-            hasTextSelection
-              ? 'Add comment to selection'
-              : 'Select text to comment'
-          }
-        >
-          <MessageSquare className="h-3 w-3" />
-        </Button>
+          >
+            <MessageSquare className="h-3 w-3" />
+          </Button>
         </PlanAccessWrapper>
 
         <Button
@@ -97,19 +97,21 @@ export const PDFHeader: FC<PDFHeaderProps> = ({
           <Pencil className="h-3 w-3" />
         </Button>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="hover:text-primary hidden h-6 w-6 cursor-pointer items-center justify-center text-white lg:flex"
-          onClick={(e) => {
-            e.stopPropagation()
-            if (onShareClick) {
-              onShareClick(document)
-            }
-          }}
-        >
-          <HiShare className="h-3 w-3" />
-        </Button>
+        <PlanAccessWrapper featureId="DOCUMENT_SHARE_TEAM_PERMISSIONS">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hover:text-primary hidden h-6 w-6 cursor-pointer items-center justify-center text-white lg:flex"
+            onClick={(e) => {
+              e.stopPropagation()
+              if (onShareClick) {
+                onShareClick(document)
+              }
+            }}
+          >
+            <HiShare className="h-3 w-3" />
+          </Button>
+        </PlanAccessWrapper>
 
         <Button
           variant="ghost"

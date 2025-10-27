@@ -1,7 +1,16 @@
 'use client'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Comment, Properties, SharedUser } from '@/types/property.types'
-import { formatCoordinates } from '@/utils/coordinateUtils'
 import {
   Bell,
   ChevronDown,
@@ -21,6 +30,7 @@ import { CustomField } from './properties-edit-model'
 import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import { apiClient } from '@/utils/api'
 import { toast } from 'sonner'
+import { formatCurrency } from '../_property_utils'
 
 export interface PropertiesDetailsModelProps {
   property: Properties | null
@@ -52,11 +62,21 @@ const PropertiesDetailsModel = ({
   const [editingText, setEditingText] = useState('')
   const [loadingComments, setLoadingComments] = useState(false)
   const [replyingToId, setReplyingToId] = useState<number | null>(null)
-  const [replyText, setReplyText] = useState('')
-  const [showMentions, setShowMentions] = useState(false)
-  const [mentionQuery, setMentionQuery] = useState('')
-  const [cursorPosition, setCursorPosition] = useState(0)
-  const [filteredUsers, setFilteredUsers] = useState<SharedUser[]>([])
+  const [replyText, setReplyText] = useState<{ [key: number]: string }>({})
+  const [showMentions, setShowMentions] = useState<{ [key: string]: boolean }>(
+    {}
+  )
+  const [mentionQuery, setMentionQuery] = useState<{ [key: string]: string }>(
+    {}
+  )
+  const [cursorPosition, setCursorPosition] = useState<{
+    [key: string]: number
+  }>({})
+  const [filteredUsers, setFilteredUsers] = useState<{
+    [key: string]: SharedUser[]
+  }>({})
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [commentToDelete, setCommentToDelete] = useState<number | null>(null)
 
   const uploadedDocuments = property?.documents
 
@@ -64,11 +84,11 @@ const PropertiesDetailsModel = ({
     setIsMapModalOpen(true)
   }
 
-  const handleCommentChange = (value: string, isReply = false) => {
-    if (isReply) {
-      setReplyText(value)
-    } else {
+  const handleCommentChange = (value: string, inputKey = 'main') => {
+    if (inputKey === 'main') {
       setNewComment(value)
+    } else {
+      setReplyText((prev) => ({ ...prev, [inputKey]: value }))
     }
 
     // Check for @ mentions
@@ -81,9 +101,9 @@ const PropertiesDetailsModel = ({
 
       if (spaceIndex === -1) {
         // Only show mentions if we're still typing after @
-        setMentionQuery(query)
-        setShowMentions(true)
-        setCursorPosition(lastAtIndex)
+        setMentionQuery((prev) => ({ ...prev, [inputKey]: query }))
+        setShowMentions((prev) => ({ ...prev, [inputKey]: true }))
+        setCursorPosition((prev) => ({ ...prev, [inputKey]: lastAtIndex }))
 
         // Filter users based on query
         const filtered = sharedUsers.filter((user) =>
@@ -91,60 +111,47 @@ const PropertiesDetailsModel = ({
             .toLowerCase()
             .includes(query.toLowerCase())
         )
-        setFilteredUsers(filtered)
+        setFilteredUsers((prev) => ({ ...prev, [inputKey]: filtered }))
       } else {
-        setShowMentions(false)
+        setShowMentions((prev) => ({ ...prev, [inputKey]: false }))
       }
     } else {
-      setShowMentions(false)
+      setShowMentions((prev) => ({ ...prev, [inputKey]: false }))
     }
   }
 
-  const selectMention = (user: SharedUser, isReply = false) => {
+  const selectMention = (user: SharedUser, inputKey = 'main') => {
     const username = extractUsername(user.email)
-    const currentText = isReply ? replyText : newComment
-    const beforeAt = currentText.substring(0, cursorPosition)
+    const currentText =
+      inputKey === 'main' ? newComment : replyText[inputKey] || ''
+    const currentCursorPosition = cursorPosition[inputKey] || 0
+    const currentMentionQuery = mentionQuery[inputKey] || ''
+
+    const beforeAt = currentText.substring(0, currentCursorPosition)
     const afterMention = currentText.substring(
-      cursorPosition + 1 + mentionQuery.length
+      currentCursorPosition + 1 + currentMentionQuery.length
     )
 
     const newText = `${beforeAt}@${username} ${afterMention}`
 
-    if (isReply) {
-      setReplyText(newText)
-    } else {
+    if (inputKey === 'main') {
       setNewComment(newText)
+    } else {
+      setReplyText((prev) => ({ ...prev, [inputKey]: newText }))
     }
 
-    setShowMentions(false)
-    setMentionQuery('')
+    setShowMentions((prev) => ({ ...prev, [inputKey]: false }))
+    setMentionQuery((prev) => ({ ...prev, [inputKey]: '' }))
   }
 
   const handleMapModalClose = () => {
     setIsMapModalOpen(false)
   }
 
-  // Helper function to get coordinates in the correct format for display
-  const getCoordinatesForDisplay = () => {
-    if (!property) return ''
-
-    // If backend sends separate latitude/longitude, combine them
-    if ((property as any).latitude && (property as any).longitude) {
-      return formatCoordinates(
-        (property as any).latitude,
-        (property as any).longitude
-      )
-    }
-
-    // Fallback to existing coordinates field
-    return property.coordinates || ''
-  }
-
   // Helper function to get coordinates for map components (they expect the old format)
   const getCoordinatesForMap = () => {
     if (!property) return ''
 
-    // If backend sends separate latitude/longitude, convert to old format
     if ((property as any).latitude && (property as any).longitude) {
       const lat = parseFloat((property as any).latitude)
       const lng = parseFloat((property as any).longitude)
@@ -243,22 +250,27 @@ const PropertiesDetailsModel = ({
   }
 
   // Add reply to comment
-  const handleAddReply = async (parentId: number) => {
-    if (!replyText.trim() || !property?.id) return
+  const handleAddReply = async (parentId: number, inputKey: string) => {
+    const replyContent = replyText[inputKey]
+    if (!replyContent?.trim() || !property?.id) return
 
     setIsSubmittingComment(true)
     try {
       const response = await apiClient.post(
         '/dashboard/properties/comments/create',
         {
-          text: replyText,
+          text: replyContent,
           propertyId: property.id,
           parentId: parentId,
         }
       )
 
       setComments(response.data || [])
-      setReplyText('')
+      setReplyText((prev) => {
+        const updated = { ...prev }
+        delete updated[inputKey]
+        return updated
+      })
       setReplyingToId(null)
       toast.success('Reply added successfully')
     } catch (error: any) {
@@ -292,20 +304,26 @@ const PropertiesDetailsModel = ({
 
   // Delete comment
   const handleDeleteComment = async (commentId: number) => {
-    if (!confirm('Are you sure you want to delete this comment?')) return
-
     try {
       await apiClient.delete(
         `/dashboard/properties/comments/delete/${commentId}`
       )
 
-      // Remove the comment from local state
-      setComments((prev) => prev.filter((comment) => comment.id !== commentId))
+      // Reload comments to get updated list
+      await loadComments()
+      setDeleteDialogOpen(false)
+      setCommentToDelete(null)
       toast.success('Comment deleted successfully')
     } catch (error: any) {
       toast.error('Failed to delete comment')
       console.error('Error deleting comment:', error)
     }
+  }
+
+  // Open delete confirmation dialog
+  const confirmDeleteComment = (commentId: number) => {
+    setCommentToDelete(commentId)
+    setDeleteDialogOpen(true)
   }
 
   // Start editing comment
@@ -331,46 +349,65 @@ const PropertiesDetailsModel = ({
     })
   }
 
-  // Render comment component
-  const renderComment = (comment: Comment, isReply = false) => (
-    <div
-      key={comment.id}
-      className={`rounded-md border p-3 ${isReply ? 'ml-6 bg-gray-50' : 'bg-white'}`}
-    >
-      {editingCommentId === comment.id ? (
-        <div className="space-y-2">
-          <textarea
-            value={editingText}
-            onChange={(e) => setEditingText(e.target.value)}
-            className="w-full resize-none rounded-md border p-2"
-            rows={3}
-            placeholder="Edit your comment..."
-          />
-          <div className="flex gap-2">
-            <Button
-              onClick={() => handleUpdateComment(comment.id)}
-              disabled={!editingText.trim()}
-            >
-              Save
-            </Button>
-            <Button variant="outline" onClick={cancelEditing}>
-              Cancel
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <p className="mb-2 text-sm text-gray-800">{comment.text}</p>
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <span>Author: {comment.author}</span>
-                <span>•</span>
-                <span>{formatDate(comment.createdAt)}</span>
-              </div>
+  // Helper function to render text with highlighted mentions
+  const renderTextWithMentions = (text: string) => {
+    const parts = text.split(/(@\w+)/g)
+    return parts.map((part, index) => {
+      if (part.startsWith('@')) {
+        return (
+          <span key={index} className="font-medium text-blue-400">
+            {part}
+          </span>
+        )
+      }
+      return part
+    })
+  }
+
+  // Render comment component - recursive function to handle all nesting levels
+  const renderComment = (comment: Comment, isReply = false, depth = 0) => {
+    const inputKey = `reply-${comment.id}`
+
+    return (
+      <div
+        key={comment.id}
+        className={`rounded-md border p-3 ${isReply ? 'ml-6 bg-gray-50' : 'bg-white'}`}
+      >
+        {editingCommentId === comment.id ? (
+          <div className="space-y-2">
+            <textarea
+              value={editingText}
+              onChange={(e) => setEditingText(e.target.value)}
+              className="w-full resize-none rounded-md border p-2"
+              rows={3}
+              placeholder="Edit your comment..."
+            />
+            <div className="flex gap-2">
+              <Button
+                onClick={() => handleUpdateComment(comment.id)}
+                disabled={!editingText.trim()}
+              >
+                Save
+              </Button>
+              <Button variant="outline" onClick={cancelEditing}>
+                Cancel
+              </Button>
             </div>
-            <div className="flex gap-1">
-              {!isReply && (
+          </div>
+        ) : (
+          <>
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <p className="mb-2 text-sm text-gray-800">
+                  {renderTextWithMentions(comment.text)}
+                </p>
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <span>Author: {comment.author}</span>
+                  <span>•</span>
+                  <span>{formatDate(comment.createdAt)}</span>
+                </div>
+              </div>
+              <div className="flex gap-1">
                 <Button
                   size="sm"
                   variant="ghost"
@@ -379,74 +416,109 @@ const PropertiesDetailsModel = ({
                 >
                   <Reply className="h-3 w-3" />
                 </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => startEditing(comment)}
+                  className="h-6 w-6 p-0"
+                >
+                  <Edit2 className="h-3 w-3" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => confirmDeleteComment(comment.id)}
+                  className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Render replies recursively */}
+            {comment.children &&
+              Array.isArray(comment.children) &&
+              comment.children.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {comment.children.map((reply) =>
+                    renderComment(reply, true, depth + 1)
+                  )}
+                </div>
               )}
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => startEditing(comment)}
-                className="h-6 w-6 p-0"
-              >
-                <Edit2 className="h-3 w-3" />
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => handleDeleteComment(comment.id)}
-                className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-              >
-                <Trash2 className="h-3 w-3" />
-              </Button>
-            </div>
-          </div>
 
-          {/* Reply input */}
-          {replyingToId === comment.id && (
-            <div className="mt-3 space-y-2">
-              <div className="relative">
-                <textarea
-                  value={replyText}
-                  onChange={(e) => handleCommentChange(e.target.value, true)}
-                  className="w-full resize-none rounded-md border p-2"
-                  rows={2}
-                  placeholder="Write a reply..."
-                />
-
-                {/* Reply mention dropdown */}
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => handleAddReply(comment.id)}
-                  disabled={!replyText.trim() || isSubmittingComment}
-                >
-                  Reply
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setReplyingToId(null)
-                    setReplyText('')
-                    setShowMentions(false)
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Render replies */}
-          {comment.children &&
-            Array.isArray(comment.children) &&
-            comment.children.length > 0 && (
+            {/* Reply input */}
+            {replyingToId === comment.id && (
               <div className="mt-3 space-y-2">
-                {comment.children.map((reply) => renderComment(reply, true))}
+                <div className="relative">
+                  <textarea
+                    value={replyText[inputKey] || ''}
+                    onChange={(e) =>
+                      handleCommentChange(e.target.value, inputKey)
+                    }
+                    className="w-full resize-none rounded-md border p-2"
+                    rows={2}
+                    placeholder="Write a reply... You can use @mentions"
+                  />
+
+                  {/* Reply mention dropdown */}
+                  {showMentions[inputKey] &&
+                    filteredUsers[inputKey]?.length > 0 && (
+                      <div className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                        {filteredUsers[inputKey].map((user) => (
+                          <div
+                            key={user.id}
+                            onClick={() => selectMention(user, inputKey)}
+                            className="cursor-pointer px-3 py-2 hover:bg-gray-100"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-secondary font-medium">
+                                @{extractUsername(user.email)}
+                              </span>
+                              <span className="text-sm text-gray-500">
+                                ({user.email})
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => handleAddReply(comment.id, inputKey)}
+                    disabled={
+                      !replyText[inputKey]?.trim() || isSubmittingComment
+                    }
+                  >
+                    Reply
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setReplyingToId(null)
+                      setReplyText((prev) => {
+                        const updated = { ...prev }
+                        delete updated[inputKey]
+                        return updated
+                      })
+                      setShowMentions((prev) => {
+                        const updated = { ...prev }
+                        delete updated[inputKey]
+                        return updated
+                      })
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
               </div>
             )}
-        </>
-      )}
-    </div>
-  )
+          </>
+        )}
+      </div>
+    )
+  }
 
   useEffect(() => {
     if (property?.additionalDetails) {
@@ -570,25 +642,29 @@ const PropertiesDetailsModel = ({
                     Total Property Value
                   </h3>
                   <h2 className="truncate text-lg font-semibold">
-                    ₹ {property?.value}
+                    ₹ {formatCurrency(property?.value)}
                   </h2>
                 </div>
               </div>
 
               <div className="flex justify-between gap-3">
-                <PlanAccessWrapper featureId='search_mapView' className='w-full'>
-                <div className="w-full rounded-md bg-[#F2F2F2] p-3">
-                  <h3 className="mb-2 text-sm font-medium text-gray-500">
-                    Mini Map View
-                  </h3>
-                  <div className="h-40">
-                    <MiniMap
-                      coordinates={getCoordinatesForMap()}
-                      propertyName={property?.name}
-                      onClick={handleMiniMapClick}
-                    />
+                <PlanAccessWrapper
+                  featureId="MAP_VIEW_PROPERTY_LEVEL"
+                  className="w-full"
+                >
+                  <div className="w-full rounded-md bg-[#F2F2F2] p-3">
+                    <h3 className="mb-2 text-sm font-medium text-gray-500">
+                      Mini Map View
+                    </h3>
+
+                    <div className="h-40">
+                      <MiniMap
+                        coordinates={getCoordinatesForMap()}
+                        propertyName={property?.name}
+                        onClick={handleMiniMapClick}
+                      />
+                    </div>
                   </div>
-                </div>
                 </PlanAccessWrapper>
 
                 <div className="flex w-full flex-col space-y-5 rounded-md bg-[#F2F2F2] px-3 py-2">
@@ -631,10 +707,56 @@ const PropertiesDetailsModel = ({
 
                 <div>
                   <h3 className="mb-1 text-sm font-medium text-gray-500">
+                    Location
+                  </h3>
+                  <h2 className="text-lg font-semibold">
+                    {property?.location}
+                  </h2>
+                </div>
+
+                <div>
+                  <h3 className="mb-1 text-sm font-medium text-gray-500">
+                    State
+                  </h3>
+                  <h2 className="text-lg font-semibold">{property?.state}</h2>
+                </div>
+
+                <div>
+                  <h3 className="mb-1 text-sm font-medium text-gray-500">
+                    City
+                  </h3>
+                  <h2 className="text-lg font-semibold">{property?.city}</h2>
+                </div>
+
+                <div>
+                  <h3 className="mb-1 text-sm font-medium text-gray-500">
+                    Country
+                  </h3>
+                  <h2 className="text-lg font-semibold">{property?.country}</h2>
+                </div>
+
+                <div>
+                  <h3 className="mb-1 text-sm font-medium text-gray-500">
+                    Zipcode
+                  </h3>
+                  <h2 className="text-lg font-semibold">{property?.zipcode}</h2>
+                </div>
+
+                <div>
+                  <h3 className="mb-1 text-sm font-medium text-gray-500">
                     Co-ordinates
                   </h3>
                   <h2 className="truncate text-lg font-semibold">
-                    {getCoordinatesForDisplay()}
+                    {property?.latitude === '0.00000000'
+                      ? '-'
+                      : property?.latitude}
+                    {property?.latitude === '0.00000000' &&
+                    property.longitude === '0.00000000'
+                      ? ' '
+                      : ','}
+                    {property?.longitude === '0.00000000'
+                      ? '-'
+                      : property?.longitude}
                   </h2>
                 </div>
               </div>
@@ -657,7 +779,7 @@ const PropertiesDetailsModel = ({
                   </h3>
                   <div className="flex justify-between">
                     <h2 className="truncate text-lg font-semibold">
-                      ₹ {property?.valuePerSQ}
+                      ₹ {formatCurrency(property?.valuePerSQ)}
                     </h2>
                     <h3 className="mb-1 text-sm font-medium text-gray-500">
                       /{getUnitFromExtent()}
@@ -712,83 +834,93 @@ const PropertiesDetailsModel = ({
               )}
 
               {/* Comments Section */}
-              <div className="flex w-full flex-col space-y-4 rounded-md bg-[#F2F2F2] px-3 py-2">
-                <h3 className="text-sm font-medium text-gray-500">Comments</h3>
+              <PlanAccessWrapper
+                featureId="ASSET_COMMENTING"
+                className="w-full"
+              >
+                <div className="flex w-full flex-col space-y-4 rounded-md bg-[#F2F2F2] px-3 py-2">
+                  <h3 className="text-sm font-medium text-gray-500">
+                    Comments
+                  </h3>
 
-                {/* Add Comment Input */}
-                <div className="relative space-y-2">
-                  <textarea
-                    value={newComment}
-                    onChange={(e) => handleCommentChange(e.target.value)}
-                    className="w-full resize-none rounded-md border p-3"
-                    rows={3}
-                    placeholder="Add a comment... You can use @mentions"
-                  />
+                  {/* Comments List */}
+                  <div className="space-y-3">
+                    {loadingComments ? (
+                      <div className="flex items-center justify-center py-4">
+                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+                        <span className="ml-2 text-sm text-gray-500">
+                          Loading comments...
+                        </span>
+                      </div>
+                    ) : comments.length > 0 ? (
+                      [...comments].reverse().map((comment) => renderComment(comment))
+                    ) : (
+                      <div className="py-6 text-center text-gray-500">
+                        <p className="text-sm">No comments yet</p>
+                        <p className="mt-1 text-xs">
+                          Be the first to add a comment!
+                        </p>
+                      </div>
+                    )}
+                  </div>
 
-                  {/* Mention dropdown */}
-                  {showMentions && filteredUsers.length > 0 && (
-                    <div className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
-                      {filteredUsers.map((user) => (
-                        <div
-                          key={user.id}
-                          onClick={() => selectMention(user)}
-                          className="cursor-pointer px-3 py-2 hover:bg-gray-100"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="text-secondary font-medium">
-                              @{extractUsername(user.email)}
-                            </span>
-                            <span className="text-sm text-gray-500">
-                              ({user.email})
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  {/* Add Comment Input */}
+                  <div className="relative space-y-2">
+                    <textarea
+                      value={newComment}
+                      onChange={(e) =>
+                        handleCommentChange(e.target.value, 'main')
+                      }
+                      className="w-full resize-none rounded-md border p-3"
+                      rows={3}
+                      placeholder="Add a comment... You can use @mentions"
+                    />
 
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={handleAddComment}
-                      disabled={!newComment.trim() || isSubmittingComment}
-                      className="bg-primary hover:bg-secondary"
-                    >
-                      {isSubmittingComment ? (
-                        <div className="flex items-center gap-2">
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                          Posting...
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <Send className="h-4 w-4" />
-                          Post Comment
+                    {/* Mention dropdown */}
+                    {showMentions['main'] &&
+                      filteredUsers['main']?.length > 0 && (
+                        <div className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                          {filteredUsers['main'].map((user) => (
+                            <div
+                              key={user.id}
+                              onClick={() => selectMention(user, 'main')}
+                              className="cursor-pointer px-3 py-2 hover:bg-gray-100"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="text-secondary font-medium">
+                                  @{extractUsername(user.email)}
+                                </span>
+                                <span className="text-sm text-gray-500">
+                                  ({user.email})
+                                </span>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       )}
-                    </Button>
+
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={handleAddComment}
+                        disabled={!newComment.trim() || isSubmittingComment}
+                        className="bg-primary hover:bg-secondary"
+                      >
+                        {isSubmittingComment ? (
+                          <div className="flex items-center gap-2">
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                            Posting...
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Send className="h-4 w-4" />
+                            Post Comment
+                          </div>
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </div>
-
-                {/* Comments List */}
-                <div className="max-h-96 space-y-3 overflow-y-auto">
-                  {loadingComments ? (
-                    <div className="flex items-center justify-center py-4">
-                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
-                      <span className="ml-2 text-sm text-gray-500">
-                        Loading comments...
-                      </span>
-                    </div>
-                  ) : comments.length > 0 ? (
-                    comments.map((comment) => renderComment(comment))
-                  ) : (
-                    <div className="py-6 text-center text-gray-500">
-                      <p className="text-sm">No comments yet</p>
-                      <p className="mt-1 text-xs">
-                        Be the first to add a comment!
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
+              </PlanAccessWrapper>
 
               {sharedUsers.length > 0 && (
                 <div className="flex w-full flex-col space-y-4 rounded-md bg-[#F2F2F2] px-3 py-2">
@@ -837,6 +969,30 @@ const PropertiesDetailsModel = ({
         propertyAddress={property?.address}
         documents={property?.documents}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Comment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this comment? This action cannot
+              be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                commentToDelete && handleDeleteComment(commentToDelete)
+              }
+              className="bg-primary"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

@@ -1,5 +1,6 @@
 'use client'
 import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
+import { Button } from '@/components/ui/button'
 import type {
   BreadcrumbItem,
   Document,
@@ -11,6 +12,7 @@ import type {
 } from '@/types/document.types'
 import { Properties } from '@/types/property.types'
 import { getFileTypeFromMime } from '@/utils/fileTypeUtils'
+import { ArrowLeft } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -826,7 +828,7 @@ export function DocumentViewer({
             viewMode={viewMode}
             onViewModeChange={handleViewModeChange}
           />
-          <PlanAccessWrapper featureId="mgmt_categorization">
+          <PlanAccessWrapper featureId="DOCUMENT_TAGGING_FILTERING">
             <FilterButton onFilterSelect={handleFilterSelect} />
           </PlanAccessWrapper>
           <SortButton onSortChange={handleSortChange} />
@@ -835,7 +837,7 @@ export function DocumentViewer({
               {selectedDocuments.length} selected
             </div>
           )}
-          <PlanAccessWrapper featureId="mgmt_bulkOps">
+          <PlanAccessWrapper featureId="DOCUMENT_BULK_UPLOAD_MGMT">
             <ActionsButton
               onActionSelect={handleActionSelect}
               isSelectMode={isSelectMode}
@@ -848,7 +850,10 @@ export function DocumentViewer({
       </div>
 
       {currentFolder && (
-        <div className="mb-6">
+        <div className="mb-6 flex gap-2">
+          <Button className='bg-transparent text-secondary pt-3 hover:bg-transparent cursor-pointer w-1 h-1' onClick={() => handleBreadcrumbNavigate(0)}>
+            <ArrowLeft className='size-4' />
+          </Button>
           <BreadcrumbNavigation
             items={breadcrumbs}
             onNavigate={handleBreadcrumbNavigate}
