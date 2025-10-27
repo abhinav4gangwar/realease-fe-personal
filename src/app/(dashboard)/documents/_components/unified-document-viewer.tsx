@@ -94,6 +94,8 @@ export function UnifiedDocumentViewer({
   const [kmlLayers, setKmlLayers] = useState<KmlShape[]>([])
   const [isLoadingKml, setIsLoadingKml] = useState(false)
   const [isClient, setIsClient] = useState(false)
+  const [kmlMapCenter, setKmlMapCenter] = useState<[number, number]>([20.5937, 78.9629])
+  const [kmlMapZoom, setKmlMapZoom] = useState(5)
 
   // Comment and annotation state
   const [comments, setComments] = useState<Comment[]>([])
@@ -154,12 +156,26 @@ export function UnifiedDocumentViewer({
     }
   }, [isOpen, document])
 
+  // Debug KML state changes
+  useEffect(() => {
+    if (documentType === 'kml') {
+      console.log('🗺️ KML State Update:', {
+        documentType,
+        isClient,
+        kmlLayersCount: kmlLayers.length,
+        isLoadingKml,
+        kmlMapCenter,
+        kmlMapZoom
+      })
+    }
+  }, [documentType, isClient, kmlLayers, isLoadingKml, kmlMapCenter, kmlMapZoom])
+
   // KML extraction function
-  const extractKmlShapes = useCallback((kmlDoc: Document): KmlShape[] => {
+  const extractKmlShapes = useCallback((kmlDoc: XMLDocument): KmlShape[] => {
     const shapes: KmlShape[] = []
     const placemarks = kmlDoc.querySelectorAll('Placemark')
 
-    placemarks.forEach(placemark => {
+    placemarks.forEach((placemark: Element) => {
       const name = placemark.querySelector('name')?.textContent || 'Unnamed Shape'
 
       const processCoordinates = (coordString: string | null | undefined): [number, number][] => {
@@ -223,6 +239,54 @@ export function UnifiedDocumentViewer({
     return shapes
   }, [])
 
+  // Calculate bounds for KML shapes and set map center/zoom
+  const calculateKmlBounds = useCallback((shapes: KmlShape[]) => {
+    if (shapes.length === 0) return
+
+    let minLat = Infinity, maxLat = -Infinity
+    let minLng = Infinity, maxLng = -Infinity
+
+    shapes.forEach(shape => {
+      if (shape.type === 'Point' && shape.coordinates) {
+        const [lat, lng] = shape.coordinates as [number, number]
+        minLat = Math.min(minLat, lat)
+        maxLat = Math.max(maxLat, lat)
+        minLng = Math.min(minLng, lng)
+        maxLng = Math.max(maxLng, lng)
+      } else if ((shape.type === 'Polygon' || shape.type === 'LineString') && shape.coordinates) {
+        const coords = shape.type === 'Polygon' ? shape.coordinates[0] : shape.coordinates
+        coords.forEach(([lat, lng]: [number, number]) => {
+          minLat = Math.min(minLat, lat)
+          maxLat = Math.max(maxLat, lat)
+          minLng = Math.min(minLng, lng)
+          maxLng = Math.max(maxLng, lng)
+        })
+      }
+    })
+
+    if (minLat !== Infinity && maxLat !== -Infinity && minLng !== Infinity && maxLng !== -Infinity) {
+      const centerLat = (minLat + maxLat) / 2
+      const centerLng = (minLng + maxLng) / 2
+      setKmlMapCenter([centerLat, centerLng])
+
+      // Calculate appropriate zoom level based on bounds
+      const latDiff = maxLat - minLat
+      const lngDiff = maxLng - minLng
+      const maxDiff = Math.max(latDiff, lngDiff)
+
+      let zoom = 10
+      if (maxDiff < 0.01) zoom = 16
+      else if (maxDiff < 0.05) zoom = 14
+      else if (maxDiff < 0.1) zoom = 12
+      else if (maxDiff < 0.5) zoom = 10
+      else if (maxDiff < 1) zoom = 8
+      else if (maxDiff < 5) zoom = 6
+      else zoom = 4
+
+      setKmlMapZoom(zoom)
+    }
+  }, [])
+
   const loadDocument = async () => {
     if (!document) return
 
@@ -236,22 +300,38 @@ export function UnifiedDocumentViewer({
       // Determine document type
       const isImage = isImageFile(document)
       const isKml = isKmlFile(document)
-
       if (isKml) {
-        setDocumentType('kml')
-        setIsLoadingKml(true)
+        setDocumentType('kml')
+        setIsLoadingKml(true)
 
-        // For KML files, get the raw KML content
-        const response = await apiClient.post('/dashboard/documents/download', {
-          items: [{ id: parseInt(document.id), type: "file" }]
-        }, { responseType: 'text' })
+        // For KML files, get the raw KML content using the view endpoint
+        const response = await apiClient.get(
+          `/dashboard/documents/view/${document.id}`, // Use the view endpoint
+          { responseType: 'text' } // Request raw text
+        )
+
+        console.log('📥 KML response received, data length:', response.data?.length)
 
         if (response.data) {
           const parser = new DOMParser()
           const kmlDoc = parser.parseFromString(response.data, 'text/xml')
+
+          // Check for parsing errors
+          const parserError = kmlDoc.querySelector('parsererror')
+          if (parserError) {
+            console.error('❌ KML parsing error:', parserError.textContent)
+          }
+
           const shapes = extractKmlShapes(kmlDoc)
+          console.log('📊 Extracted shapes:', shapes)
+          console.log('🗺️ isClient:', isClient)
+          console.log('🗺️ kmlMapCenter:', kmlMapCenter)
+          console.log('🗺️ kmlMapZoom:', kmlMapZoom)
           setKmlLayers(shapes)
+          calculateKmlBounds(shapes)
           console.log(`✅ Loaded ${shapes.length} shapes from KML file: ${document.name}`)
+        } else {
+          console.warn('⚠️ No KML data received')
         }
         setIsLoadingKml(false)
       } else if (isImage) {
@@ -763,9 +843,9 @@ export function UnifiedDocumentViewer({
                   <p className="mt-4 text-gray-600">Loading document...</p>
                 </div>
               </div>
-            ) : documentUrl ? (
-              <div className="flex justify-center p-6">
-                {documentType === 'pdf' ? (
+            ) : documentType ? (
+              <div className={documentType === 'kml' ? 'h-full w-full' : 'flex justify-center p-6'}>
+                {documentType === 'pdf' && documentUrl ? (
                   <PDFDocument
                     file={documentUrl}
                     onLoadSuccess={onDocumentLoadSuccess}
@@ -851,7 +931,7 @@ export function UnifiedDocumentViewer({
                   </PDFDocument>
                 ) : documentType === 'kml' ? (
                   // KML Map viewer
-                  <div className="h-full w-full relative">
+                  <div className="h-full w-full relative" style={{ minHeight: '500px' }}>
                     {/* KML Loading Indicator */}
                     {isLoadingKml && (
                       <div className="absolute top-4 left-4 z-[1000] bg-white px-3 py-2 rounded-lg shadow-lg">
@@ -864,10 +944,11 @@ export function UnifiedDocumentViewer({
 
                     {isClient ? (
                       <MapContainer
-                        center={[20.5937, 78.9629]} // Default to India center
-                        zoom={5}
+                        center={kmlMapCenter}
+                        zoom={kmlMapZoom}
                         style={{ height: '100%', width: '100%' }}
                         zoomControl={true}
+                        key={`kml-map-${kmlLayers.length}`} // Force re-render when KML changes
                       >
                         <TileLayer
                           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -914,7 +995,7 @@ export function UnifiedDocumentViewer({
                       </div>
                     )}
                   </div>
-                ) : (
+                ) : documentType === 'image' && documentUrl ? (
                   // Image viewer
                   <div
                     ref={imageContainerRef}
@@ -977,6 +1058,13 @@ export function UnifiedDocumentViewer({
                           </div>
                         ))}
                       </div>
+                    </div>
+                  </div>
+                ) : (
+                  // Fallback for when documentType is set but documentUrl/KML data is missing
+                  <div className="flex h-full items-center justify-center">
+                    <div className="text-center">
+                      <p className="mt-4 text-gray-600">Preparing preview...</p>
                     </div>
                   </div>
                 )}

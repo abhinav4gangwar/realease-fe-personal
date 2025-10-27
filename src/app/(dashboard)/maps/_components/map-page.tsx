@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { apiClient } from '@/utils/api'
 import { propertiesApi } from '../../properties/_property_utils/property.services'
 import MapPropertiesSidebar from './map-sidebar'
+import { LayerSelector, LayerType, getLayerConfig } from './layer-selector'
 
 const MapContainer = dynamic(
   () => import('react-leaflet').then((mod) => mod.MapContainer),
@@ -84,6 +85,7 @@ const MapPage = () => {
   >(null)
   const [kmlLayers, setKmlLayers] = useState<KmlShape[]>([])
   const [isLoadingKml, setIsLoadingKml] = useState(false)
+  const [selectedLayer, setSelectedLayer] = useState<LayerType>('normal')
 
   useEffect(() => {
     setIsClient(true)
@@ -274,6 +276,13 @@ const MapPage = () => {
           </div>
         )}
 
+        {/* Layer Selector - positioned below zoom controls */}
+        <LayerSelector
+          selectedLayer={selectedLayer}
+          onLayerChange={setSelectedLayer}
+          className="top-20 left-4"
+        />
+
         <MapContainer
           center={mapCenter}
           zoom={12}
@@ -281,8 +290,9 @@ const MapPage = () => {
         >
           <MapController center={flyToCoordinates} zoom={16} />
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            key={selectedLayer} // Force re-render when layer changes
+            attribution={getLayerConfig(selectedLayer).attribution}
+            url={getLayerConfig(selectedLayer).url}
           />
 
           {/* Property markers */}

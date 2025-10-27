@@ -91,7 +91,7 @@ export function useLocationAutoFill({
         setIsLoading(false)
       }
     }
-  }, [country, zipcode, isValidZipcode, onLocationFound, onError])
+  }, [country, zipcode, isValidZipcode]) // Removed onLocationFound and onError from dependencies
 
   const clearError = useCallback(() => {
     setError(null)
@@ -135,7 +135,7 @@ export function useLocationAutoFill({
         clearTimeout(timer)
       }
     }
-  }, [country, zipcode, isValidZipcode, autoTrigger, debounceMs])
+  }, [country, zipcode, isValidZipcode, autoTrigger, debounceMs, lookupLocation])
 
   // Cleanup timer on unmount
   useEffect(() => {

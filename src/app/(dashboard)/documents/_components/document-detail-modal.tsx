@@ -421,7 +421,7 @@ export function DocumentDetailModal({
             <div>
               <h3 className="mb-1 text-sm font-medium text-gray-500">Tags</h3>
               {isEditing ? (
-                <PlanAccessWrapper featureId="mgmt_categorization" className='w-full'>
+                <PlanAccessWrapper featureId="DOCUMENT_TAGGING_ADVANCED" className='w-full'>
                   <TagInput
                     value={editedTags}
                     onChange={setEditedTags}

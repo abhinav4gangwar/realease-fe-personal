@@ -3,6 +3,8 @@
  * Supports multiple APIs with fallback mechanisms
  */
 
+import { indianPincodeService } from './indianPincodeService'
+
 export interface LocationData {
   city: string
   state: string
@@ -316,11 +318,108 @@ class PostalPincodeService {
 }
 
 /**
+ * GeoJSON Indian Pincode Service
+ * Uses local GeoJSON data where division=district and circle=state
+ */
+class GeoJSONIndianPincodeService {
+  async lookup(countryCode: string, zipcode: string): Promise<LocationServiceResponse> {
+    if (countryCode.toLowerCase() !== 'in') {
+      throw new Error('This service only supports India')
+    }
+
+    try {
+      console.log(`🗺️ GeoJSON service: Looking up Indian pincode ${zipcode}`)
+      const result = await indianPincodeService.findByPincode(zipcode)
+
+      if (result) {
+        console.log(`✅ GeoJSON service: Found data for ${zipcode}:`, result)
+        return {
+          success: true,
+          data: {
+            city: result.district,     // Use district as city
+            state: result.state,       // Circle maps to state
+            country: 'India',
+            countryCode: 'IN',
+            latitude: result.coordinates?.[0].toString(),
+            longitude: result.coordinates?.[1].toString(),
+          }
+        }
+      }
+
+      console.log(`❌ GeoJSON service: Pincode ${zipcode} not found in local data`)
+      return {
+        success: false,
+        error: 'Pincode not found in GeoJSON data'
+      }
+    } catch (error) {
+      console.error(`💥 GeoJSON service error for ${zipcode}:`, error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+}
+
+/**
+ * Enhanced Indian Postal Service for API-based pincode data
+ * Handles the structure where division=district and circle=state
+ */
+class EnhancedIndianPostalService {
+  private baseUrl = 'https://api.postalpincode.in'
+
+  async lookup(countryCode: string, zipcode: string): Promise<LocationServiceResponse> {
+    if (countryCode.toLowerCase() !== 'in') {
+      throw new Error('This service only supports India')
+    }
+
+    try {
+      const url = `${this.baseUrl}/pincode/${zipcode}`
+      const response = await fetch(url)
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data.Status === 'Success' && data.PostOffice && data.PostOffice.length > 0) {
+        const place = data.PostOffice[0]
+
+        // Map according to user's specification:
+        // division = district, circle = state
+        return {
+          success: true,
+          data: {
+            city: place.District || place.Division || 'Unknown', // Use Division as fallback for district
+            state: place.State || place.Circle || 'Unknown',     // Use Circle as fallback for state
+            country: 'India',
+            countryCode: 'IN',
+          }
+        }
+      }
+
+      return {
+        success: false,
+        error: 'No location data found for this pincode'
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+}
+
+/**
  * Main Location Service with fallback mechanism
  */
 export class LocationService {
-  private services: Array<{ name: string; service: GoogleGeocodingService | NominatimService | ZippopotamService | PostalPincodeService }> = [
+  private services: Array<{ name: string; service: GoogleGeocodingService | NominatimService | ZippopotamService | PostalPincodeService | EnhancedIndianPostalService | GeoJSONIndianPincodeService }> = [
     { name: 'Google Geocoding', service: new GoogleGeocodingService() },
+    { name: 'GeoJSON Indian Pincode', service: new GeoJSONIndianPincodeService() },
+    { name: 'Enhanced Indian Postal', service: new EnhancedIndianPostalService() },
     { name: 'Nominatim', service: new NominatimService() },
     { name: 'Zippopotam', service: new ZippopotamService() },
     { name: 'PostalPincode', service: new PostalPincodeService() },
@@ -519,8 +618,19 @@ export class LocationService {
    * Perform the actual lookup with all services
    */
   private async performLookup(countryCode: string, zipcode: string, cacheKey: string): Promise<LocationServiceResponse> {
+    // For Indian pincodes, prioritize GeoJSON service
+    let servicesToTry = this.services
+    if (countryCode.toLowerCase() === 'in') {
+      // Reorder services to put GeoJSON first for India
+      servicesToTry = [
+        ...this.services.filter(s => s.name === 'GeoJSON Indian Pincode'),
+        ...this.services.filter(s => s.name !== 'GeoJSON Indian Pincode')
+      ]
+      console.log(`🇮🇳 Using prioritized service order for Indian pincode: ${zipcode}`)
+    }
+
     // Try each service in order until one succeeds
-    for (const { name, service } of this.services) {
+    for (const { name, service } of servicesToTry) {
       try {
         console.log(`Trying ${name} service for ${cacheKey}`)
         const result = await service.lookup(countryCode, zipcode)
@@ -545,14 +655,20 @@ export class LocationService {
 
   /**
    * Validate zipcode format based on country
+   * Now more flexible - zipcode is optional for most countries including India
    */
   validateZipcode(country: string, zipcode: string): boolean {
+    // If zipcode is empty, it's valid (non-mandatory)
+    if (!zipcode || zipcode.trim().length === 0) {
+      return true
+    }
+
     const countryCode = this.getCountryCode(country)
-    
+
     const patterns: Record<string, RegExp> = {
       'us': /^\d{5}(-\d{4})?$/, // 12345 or 12345-6789
       'ca': /^[A-Za-z]\d[A-Za-z] ?\d[A-Za-z]\d$/, // A1A 1A1 or A1A1A1
-      'in': /^\d{6}$/, // 123456
+      'in': /^\d{6}$/, // 123456 (Indian pincode - but now optional)
       'de': /^\d{5}$/, // 12345
       'fr': /^\d{5}$/, // 12345
       'gb': /^[A-Za-z]{1,2}\d[A-Za-z\d]? ?\d[A-Za-z]{2}$/, // SW1A 1AA
@@ -560,11 +676,24 @@ export class LocationService {
 
     const pattern = patterns[countryCode]
     if (!pattern) {
-      // If no specific pattern, just check it's not empty
-      return zipcode.trim().length > 0
+      // If no specific pattern, just check it's reasonable (alphanumeric)
+      return /^[A-Za-z0-9\s\-]{1,20}$/.test(zipcode.trim())
     }
 
     return pattern.test(zipcode.trim())
+  }
+
+  /**
+   * Check if zipcode is required for a country
+   * Most countries now have optional zipcodes
+   */
+  isZipcodeRequired(country: string): boolean {
+    const countryCode = this.getCountryCode(country)
+
+    // Only a few countries strictly require zipcodes
+    const requiredZipcodeCountries = ['us', 'ca', 'de', 'fr', 'gb']
+
+    return requiredZipcodeCountries.includes(countryCode)
   }
 }
 

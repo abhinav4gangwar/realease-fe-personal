@@ -7,7 +7,7 @@ import {
   PropertySortOrder,
 } from '@/types/property.types'
 import { apiClient } from '@/utils/api'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import ScrollToTop from '../../documents/_components/scroll-to-top'
 import { handleDownloadClick } from '../_property_utils'
@@ -189,8 +189,8 @@ const PropertiesViewer = ({
     })
   }, [allProperties, activeFilters])
 
-  // sorting logic
-  const sortProperties = (properties: Properties[]) => {
+  // sorting logic - memoized to prevent infinite re-renders
+  const sortProperties = useCallback((properties: Properties[]) => {
     return properties.sort((a, b) => {
       let comparison = 0
       switch (sortField) {
@@ -219,11 +219,11 @@ const PropertiesViewer = ({
       }
       return sortOrder === 'asc' ? comparison : -comparison
     })
-  }
+  }, [sortField, sortOrder])
 
   const sortedAndFilteredProperties = useMemo(() => {
     return sortProperties([...filteredProperties])
-  }, [filteredProperties, sortField, sortOrder])
+  }, [filteredProperties, sortProperties])
 
   const handleToggleSelect = (id: string) => {
     setSelectedProperties((prev) =>

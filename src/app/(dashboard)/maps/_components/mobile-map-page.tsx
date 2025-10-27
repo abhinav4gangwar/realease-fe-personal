@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import { apiClient } from '@/utils/api'
 import { propertiesApi } from '../../properties/_property_utils/property.services'
 import MobilePropertyList from './mobile-property-sheet'
+import { LayerSelector, LayerType, getLayerConfig } from './layer-selector'
 
 
 const MapContainer = dynamic(
@@ -84,6 +85,7 @@ const MobileMapPage = () => {
   const [kmlLayers, setKmlLayers] = useState<KmlShape[]>([])
   const [isLoadingKml, setIsLoadingKml] = useState(false)
   const [isListOpen, setIsListOpen] = useState(false)
+  const [selectedLayer, setSelectedLayer] = useState<LayerType>('normal')
 
   useEffect(() => {
     setIsClient(true)
@@ -278,6 +280,13 @@ const MobileMapPage = () => {
         </div>
       )}
 
+      {/* Layer Selector - positioned below zoom controls */}
+      <LayerSelector
+        selectedLayer={selectedLayer}
+        onLayerChange={setSelectedLayer}
+        className="top-20 left-4"
+      />
+
       {/* Map Container */}
       <MapContainer
         center={mapCenter}
@@ -286,8 +295,9 @@ const MobileMapPage = () => {
       >
         <MapController center={flyToCoordinates} zoom={16} />
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          key={selectedLayer} // Force re-render when layer changes
+          attribution={getLayerConfig(selectedLayer).attribution}
+          url={getLayerConfig(selectedLayer).url}
         />
 
         {/* Property markers */}

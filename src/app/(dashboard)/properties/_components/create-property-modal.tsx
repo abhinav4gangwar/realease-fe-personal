@@ -15,6 +15,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { useLocationAutoFill } from '@/hooks/useLocationAutoFill'
+import { useAddressGeocoding } from '@/hooks/useAddressGeocoding'
 import { cn } from '@/lib/utils'
 import { CountryType, Properties } from '@/types/property.types'
 import { apiClient } from '@/utils/api'
@@ -34,7 +35,7 @@ import {
   X,
 } from 'lucide-react'
 import Image from 'next/image'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import {
   clearPersistedData,
@@ -102,6 +103,14 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     valuePerSQ: '',
     value: '',
   })
+
+  // Stable updateFormData function - defined early to prevent "Cannot access before initialization" errors
+  const updateFormData = useCallback((field: keyof Properties, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }))
+  }, [])
 
   useEffect(() => {
     if (isOpen) {
@@ -290,6 +299,58 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
   const [isAutoFilling, setIsAutoFilling] = useState(false)
   const [lastAutoFilledZipcode, setLastAutoFilledZipcode] = useState('')
 
+  // Stable callback for location found to prevent infinite re-renders
+  const handleLocationFound = useCallback((location) => {
+    // Prevent infinite loops by checking if we're already auto-filling
+    if (isAutoFilling || lastAutoFilledZipcode === formData.zipcode) {
+      return
+    }
+
+    setIsAutoFilling(true)
+    setLastAutoFilledZipcode(formData.zipcode || '')
+
+    // Only auto-select country if none is selected or if it matches the current selection
+    if (!selectedCountry) {
+      const foundCountry = countries.find(
+        (c) =>
+          c.name.toLowerCase().includes(location.country.toLowerCase()) ||
+          c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
+      )
+
+      if (foundCountry) {
+        console.log('🌍 Auto-selecting country:', foundCountry.name)
+        setSelectedCountry(foundCountry)
+      }
+    } else {
+      // Verify the current country matches the location result
+      const currentCountryMatches =
+        selectedCountry.name
+          .toLowerCase()
+          .includes(location.country.toLowerCase()) ||
+        selectedCountry.isoCode.toLowerCase() ===
+          location.countryCode.toLowerCase()
+
+      if (!currentCountryMatches) {
+        console.log(
+          '⚠️ Country mismatch - keeping user selection:',
+          selectedCountry.name
+        )
+      }
+    }
+
+    // Auto-fill state and city from location data (NO COORDINATES)
+    console.log('🏛️ Auto-filling state:', location.state)
+    updateFormData('state', location.state)
+
+    console.log('🏙️ Auto-filling city:', location.city)
+    updateFormData('city', location.city)
+
+    // Reset auto-filling flag after a short delay
+    setTimeout(() => {
+      setIsAutoFilling(false)
+    }, 100)
+  }, [isAutoFilling, lastAutoFilledZipcode, formData.zipcode, selectedCountry, countries])
+
   // Location auto-fill functionality (city and state only, no coordinates)
   const {
     isLoading: isLocationLoading,
@@ -298,56 +359,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
   } = useLocationAutoFill({
     country: selectedCountry?.name || '',
     zipcode: formData.zipcode || '',
-    onLocationFound: (location) => {
-      // Prevent infinite loops by checking if we're already auto-filling
-      if (isAutoFilling || lastAutoFilledZipcode === formData.zipcode) {
-        return
-      }
-
-      setIsAutoFilling(true)
-      setLastAutoFilledZipcode(formData.zipcode || '')
-
-      // Only auto-select country if none is selected or if it matches the current selection
-      if (!selectedCountry) {
-        const foundCountry = countries.find(
-          (c) =>
-            c.name.toLowerCase().includes(location.country.toLowerCase()) ||
-            c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
-        )
-
-        if (foundCountry) {
-          console.log('🌍 Auto-selecting country:', foundCountry.name)
-          setSelectedCountry(foundCountry)
-        }
-      } else {
-        // Verify the current country matches the location result
-        const currentCountryMatches =
-          selectedCountry.name
-            .toLowerCase()
-            .includes(location.country.toLowerCase()) ||
-          selectedCountry.isoCode.toLowerCase() ===
-            location.countryCode.toLowerCase()
-
-        if (!currentCountryMatches) {
-          console.log(
-            '⚠️ Country mismatch - keeping user selection:',
-            selectedCountry.name
-          )
-        }
-      }
-
-      // Auto-fill state and city from location data (NO COORDINATES)
-      console.log('🏛️ Auto-filling state:', location.state)
-      updateFormData('state', location.state)
-
-      console.log('🏙️ Auto-filling city:', location.city)
-      updateFormData('city', location.city)
-
-      // Reset auto-filling flag after a short delay
-      setTimeout(() => {
-        setIsAutoFilling(false)
-      }, 100)
-    },
+    onLocationFound: handleLocationFound,
     autoTrigger: !isAutoFilling, // Only auto-trigger when not already auto-filling
     debounceMs: 1000,
   })
@@ -358,6 +370,56 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
       setLastAutoFilledZipcode('')
     }
   }, [formData.zipcode, lastAutoFilledZipcode])
+
+  // Stable callback for coordinates found to prevent infinite re-renders
+  const handleCoordinatesFound = useCallback((result) => {
+    // Auto-fill coordinates if they're not already set or if they're different
+    const currentLat = parseFloat(formData.latitude || '0')
+    const currentLng = parseFloat(formData.longitude || '0')
+
+    const latDiff = Math.abs(currentLat - result.latitude)
+    const lngDiff = Math.abs(currentLng - result.longitude)
+
+    // Only update if coordinates are significantly different (more than ~100m)
+    if (latDiff > 0.001 || lngDiff > 0.001 || (!formData.latitude && !formData.longitude)) {
+      console.log('📍 Auto-filling coordinates:', result.latitude, result.longitude)
+      updateFormData('latitude', result.latitude.toString())
+      updateFormData('longitude', result.longitude.toString())
+
+      // Update the combined coordinates field
+      updateFormData('coordinates', `${result.latitude}, ${result.longitude}`)
+
+      toast.success('Coordinates auto-filled from address')
+    }
+  }, [formData.latitude, formData.longitude])
+
+  // Stable callback for geocoding errors
+  const handleGeocodingError = useCallback((error) => {
+    console.warn('Geocoding error:', error)
+    // Don't show error toast for geocoding failures as it's not critical
+  }, [])
+
+  // Address geocoding functionality for coordinates
+  const {
+    isLoading: isGeocodingLoading,
+    coordinates,
+    error: geocodingError,
+  } = useAddressGeocoding({
+    addressComponents: {
+      addressLine1: formData.address,
+      locality: formData.location,
+      district: formData.district,
+      city: formData.city,
+      state: formData.state,
+      country: selectedCountry?.name,
+      zipcode: formData.zipcode,
+    },
+    onCoordinatesFound: handleCoordinatesFound,
+    onError: handleGeocodingError,
+    autoTrigger: true,
+    enabled: true,
+    debounceMs: 2000, // Wait 2 seconds after user stops typing
+  })
 
   const CountrySelect = () => {
     const [open, setOpen] = useState(false)
@@ -417,13 +479,6 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
         </PopoverContent>
       </Popover>
     )
-  }
-
-  const updateFormData = (field: keyof Properties, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }))
   }
 
   const addCustomField = () => {
@@ -807,7 +862,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
 
                   <div className="flex flex-col space-y-1">
                     <label className="text-md text-secondary block">
-                      Zip-code <span className="text-primary">*</span>
+                      Zip-code
                     </label>
                     <div className="relative">
                       <Input
@@ -823,8 +878,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                               ? 'border-blue-300 focus:border-blue-500'
                               : 'border-gray-300'
                         }`}
-                        placeholder="Enter zip-code"
-                        required
+                        placeholder="Enter zip-code (optional)"
                       />
 
                       {/* Status Icon */}
@@ -894,7 +948,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                 <div className="mt-3 grid grid-cols-2 gap-3">
                   <div className="flex flex-col space-y-1">
                     <label className="text-md text-secondary block">
-                      District <span className="text-primary">*</span>
+                      District
                     </label>
                     <Input
                       type="text"
@@ -903,7 +957,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                         updateFormData('district', e.target.value)
                       }
                       className="w-full rounded-md border border-gray-300 px-3 py-2"
-                      placeholder="Enter district"
+                      placeholder="Enter district (optional)"
                     />
                   </div>
 
@@ -945,9 +999,23 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
 
             {/* coordinates */}
             <div className="flex flex-col space-y-3">
-              <label className="text-md text-secondary block font-semibold">
-                Co-ordinates
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-md text-secondary block font-semibold">
+                  Co-ordinates
+                </label>
+                {isGeocodingLoading && (
+                  <div className="flex items-center gap-2 text-sm text-blue-600">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Finding coordinates...</span>
+                  </div>
+                )}
+                {coordinates && !isGeocodingLoading && (
+                  <div className="flex items-center gap-2 text-sm text-green-600">
+                    <CheckCircle className="h-4 w-4" />
+                    <span>Auto-filled from address</span>
+                  </div>
+                )}
+              </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {/* Latitude */}
