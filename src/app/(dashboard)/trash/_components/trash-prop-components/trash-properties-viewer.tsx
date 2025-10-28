@@ -3,20 +3,20 @@ import ScrollToTop from '@/app/(dashboard)/documents/_components/scroll-to-top'
 import { PropertiesSortButton } from '@/app/(dashboard)/properties/_components/properties-sort-button'
 import { PropertiesViewerProps } from '@/app/(dashboard)/properties/_components/properties-viewer'
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import {
-    FilterState,
-    Properties,
-    PropertySortField,
-    PropertySortOrder,
+  FilterState,
+  Properties,
+  PropertySortField,
+  PropertySortOrder,
 } from '@/types/property.types'
 import { apiClient } from '@/utils/api'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -229,11 +229,13 @@ const TrashPropertiesViewer = ({
     try {
       const response = await apiClient.post(
         '/dashboard/bin/restore/properties',
-        [
-          {
-            itemId: Number.parseInt(selectedProperty.id),
-          },
-        ]
+        {
+          data: [
+            {
+              itemId: Number.parseInt(selectedProperty.id),
+            },
+          ],
+        }
       )
       setSelectedProperty(null)
       onPropertyCreated()
@@ -296,7 +298,9 @@ const TrashPropertiesViewer = ({
 
       const response = await apiClient.post(
         '/dashboard/bin/restore/properties',
-        restorePayload
+        {
+          data: restorePayload,
+        }
       )
 
       setSelectedProperties([])
