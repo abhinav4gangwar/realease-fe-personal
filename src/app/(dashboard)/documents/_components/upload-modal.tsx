@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button'
 import { useUploadHandler } from '@/hooks/useUploadHandler'
 import { X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { CreateFolderForm } from './CreateFolderForm'
 import { FileDetailsDialog } from './FileDetailsDialog'
 import { UploadDropzone } from './UploadDropzone'
@@ -38,14 +38,6 @@ export function UploadModal({
     currentFolderId,
   })
 
-  useEffect(() => {
-    if (uploader.uploadedFiles.length > 0 && !showDetailsDialog) {
-      setShowUploadQueue(true)
-    } else if (uploader.uploadedFiles.length === 0) {
-      setShowUploadQueue(false)
-    }
-  }, [uploader.uploadedFiles.length, showDetailsDialog])
-
   const handleClose = () => {
     uploader.clearQueue()
     setShowUploadQueue(false)
@@ -69,28 +61,36 @@ export function UploadModal({
     }
   }
 
-  if (!isOpen || showUploadQueue || showDetailsDialog) {
-    return (
-      <>
-        <UploadQueueDialog
-          isOpen={showUploadQueue}
-          onOpenChange={handleQueueClose}
-          uploadedFiles={uploader.uploadedFiles}
-          totalFiles={uploader.totalFiles}
-          totalFolders={uploader.totalFolders}
-          onUploadMore={() => uploader.openFolderDialog()}
-          onContinue={() => {
-            setShowUploadQueue(false)
-            setShowDetailsDialog(true)
-          }}
-        />
+  const handleProceed = () => {
+    setShowUploadQueue(true)
+  }
 
-        <FileDetailsDialog
-          isOpen={showDetailsDialog}
-          onOpenChange={handleDetailsClose}
-          {...uploader}
-        />
-      </>
+  if (!isOpen) return null
+
+  if (showUploadQueue && !showDetailsDialog) {
+    return (
+      <UploadQueueDialog
+        isOpen={showUploadQueue}
+        onOpenChange={handleQueueClose}
+        uploadedFiles={uploader.uploadedFiles}
+        totalFiles={uploader.totalFiles}
+        totalFolders={uploader.totalFolders}
+        onUploadMore={() => uploader.openFolderDialog()}
+        onContinue={() => {
+          setShowUploadQueue(false)
+          setShowDetailsDialog(true)
+        }}
+      />
+    )
+  }
+
+  if (showDetailsDialog) {
+    return (
+      <FileDetailsDialog
+        isOpen={showDetailsDialog}
+        onOpenChange={handleDetailsClose}
+        {...uploader}
+      />
     )
   }
 
@@ -116,9 +116,38 @@ export function UploadModal({
           </div>
 
           {addType === 'createFolder' && (
-            <CreateFolderForm onClose={handleClose} onSuccess={onSuccess} currentFolderId={currentFolderId}/>
+            <CreateFolderForm
+              onClose={handleClose}
+              onSuccess={onSuccess}
+              currentFolderId={currentFolderId}
+            />
           )}
-          {addType === 'uploadFile' && <UploadDropzone {...uploader} />}
+          {addType === 'uploadFile' && (
+            <>
+              {uploader.uploadedFiles.length > 0 && (
+                <div className="border-t border-gray-400 p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="text-muted-foreground text-sm">
+                      {uploader.totalFolders > 0 &&
+                        `${uploader.totalFolders} folder${uploader.totalFolders > 1 ? 's' : ''}, `}
+                      {uploader.totalFiles} file
+                      {uploader.totalFiles > 1 ? 's' : ''} selected
+                    </p>
+
+                    <div className='flex gap-6 items-center'>
+                      <Button onClick={handleProceed} className='cursor-pointer'>Proceed to Upload</Button>
+                      <Button className='bg-secondary hover:bg-secondary cursor-pointer'
+                        onClick={() => uploader.clearQueue()}
+                      >
+                        Clear All
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <UploadDropzone {...uploader} />
+            </>
+          )}
         </div>
       </div>
     </>
