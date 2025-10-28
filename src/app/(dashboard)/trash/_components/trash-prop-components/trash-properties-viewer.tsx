@@ -1,7 +1,17 @@
-'use state'
+'use client'
 import ScrollToTop from '@/app/(dashboard)/documents/_components/scroll-to-top'
 import { PropertiesSortButton } from '@/app/(dashboard)/properties/_components/properties-sort-button'
 import { PropertiesViewerProps } from '@/app/(dashboard)/properties/_components/properties-viewer'
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import {
     FilterState,
     Properties,
@@ -22,15 +32,13 @@ const TrashPropertiesViewer = ({
   const [selectedProperty, setSelectedProperty] = useState<Properties | null>(
     null
   )
-  const [isModalOpen, setIsModalOpen] = useState(false)
+
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false)
-  const [isCreatePropertyModalOpen, setIsCreatePropertyModalOpen] =
-    useState(false)
-  const [isEditPropertyModalOpen, setIsEditPropertyModalOpen] = useState(false)
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
+  const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false)
+  const [isBulkRestoreModalOpen, setIsBulkRestoreModalOpen] = useState(false)
+
   const [selectedProperties, setSelectedProperties] = useState<string[]>([])
-  const [OpenBulkArchiveModal, setOpenBulkArchiveModal] = useState(false)
 
   const [sortField, setSortField] = useState<PropertySortField>('dateAdded')
   const [sortOrder, setSortOrder] = useState<PropertySortOrder>('desc')
@@ -40,17 +48,6 @@ const TrashPropertiesViewer = ({
     propertyTypes: [],
     legalStatuses: [],
   })
-  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false)
-  const [isSharePropertyModalOpen, setIsSharePropertyModalOpen] =
-    useState(false)
-  const [isIndividualPropertyShare, setIsIndividualPropertyShare] =
-    useState(false)
-
-  const getSelectedPropertyObjects = () => {
-    return selectedProperties
-      .map((id) => sortedAndFilteredProperties.find((prop) => prop.id === id))
-      .filter(Boolean) as Properties[]
-  }
 
   const handleSortChange = (
     field: PropertySortField,
@@ -65,22 +62,21 @@ const TrashPropertiesViewer = ({
     setIsDeleteModalOpen(true)
   }
 
+  const handleRestoreClick = (property: Properties) => {
+    setSelectedProperty(property)
+    setIsRestoreModalOpen(true)
+  }
+
   const handleActionSelect = (actionType: string) => {
     switch (actionType) {
-      case 'share':
-        if (selectedProperties.length > 0) {
-          setIsIndividualPropertyShare(false)
-          setIsSharePropertyModalOpen(true)
-        }
-        break
       case 'delete':
         if (selectedProperties.length > 0) {
           setIsBulkDeleteModalOpen(true)
         }
         break
-      case 'archive':
+      case 'restore':
         if (selectedProperties.length > 0) {
-          setOpenBulkArchiveModal(true)
+          setIsBulkRestoreModalOpen(true)
         }
         break
     }
@@ -202,24 +198,54 @@ const TrashPropertiesViewer = ({
     if (!selectedProperty) return
 
     try {
-      const response = await apiClient.delete('/dashboard/properties/delete', {
-        data: [
-          {
-            itemId: Number.parseInt(selectedProperty.id),
-          },
-        ],
-      })
+      const response = await apiClient.delete(
+        '/dashboard/bin/delete/properties',
+        {
+          data: [
+            {
+              itemId: Number.parseInt(selectedProperty.id),
+            },
+          ],
+        }
+      )
       setSelectedProperty(null)
       onPropertyCreated()
       setIsDeleteModalOpen(false)
 
       const successMessage =
-        response.data?.message || 'Property deleted successfully'
+        response.data?.message || 'Property permanently deleted successfully'
       toast.success(successMessage)
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message ||
         'Failed to delete property. Please try again.'
+      toast.error(errorMessage)
+    }
+  }
+
+  const confirmRestore = async () => {
+    if (!selectedProperty) return
+
+    try {
+      const response = await apiClient.post(
+        '/dashboard/bin/restore/properties',
+        [
+          {
+            itemId: Number.parseInt(selectedProperty.id),
+          },
+        ]
+      )
+      setSelectedProperty(null)
+      onPropertyCreated()
+      setIsRestoreModalOpen(false)
+
+      const successMessage =
+        response.data?.message || 'Property restored successfully'
+      toast.success(successMessage)
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        'Failed to restore property. Please try again.'
       toast.error(errorMessage)
     }
   }
@@ -233,13 +259,16 @@ const TrashPropertiesViewer = ({
     if (selectedProperties.length === 0) return
 
     try {
-      const archivePayload = selectedProperties.map((id) => ({
+      const deletePayload = selectedProperties.map((id) => ({
         itemId: Number.parseInt(id),
       }))
 
-      const response = await apiClient.delete('/dashboard/properties/delete', {
-        data: archivePayload,
-      })
+      const response = await apiClient.delete(
+        '/dashboard/bin/delete/properties',
+        {
+          data: deletePayload,
+        }
+      )
 
       setSelectedProperties([])
       onPropertyCreated()
@@ -247,12 +276,41 @@ const TrashPropertiesViewer = ({
 
       const successMessage =
         response.data?.message ||
-        `${selectedProperties.length} properties deleted successfully`
+        `${selectedProperties.length} properties permanently deleted successfully`
       toast.success(successMessage)
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message ||
         'Failed to delete properties. Please try again.'
+      toast.error(errorMessage)
+    }
+  }
+
+  const handleBulkRestore = async () => {
+    if (selectedProperties.length === 0) return
+
+    try {
+      const restorePayload = selectedProperties.map((id) => ({
+        itemId: Number.parseInt(id),
+      }))
+
+      const response = await apiClient.post(
+        '/dashboard/bin/restore/properties',
+        restorePayload
+      )
+
+      setSelectedProperties([])
+      onPropertyCreated()
+      setIsBulkRestoreModalOpen(false)
+
+      const successMessage =
+        response.data?.message ||
+        `${selectedProperties.length} properties restored successfully`
+      toast.success(successMessage)
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.message ||
+        'Failed to restore properties. Please try again.'
       toast.error(errorMessage)
     }
   }
@@ -287,9 +345,105 @@ const TrashPropertiesViewer = ({
             onSelectAll={handleSelectAll}
             onToggleSelect={handleToggleSelect}
             selectAllState={getSelectAllState()}
+            onDeleteClick={handleDeleteClick}
+            onRestoreClick={handleRestoreClick}
           />
         </div>
       </div>
+
+      {/* Single Property Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <AlertDialogContent className="border-gray-400">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the
+              property and all related documents from the system.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-primary">
+              Yes, Delete Permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <AlertDialog
+        open={isBulkDeleteModalOpen}
+        onOpenChange={setIsBulkDeleteModalOpen}
+      >
+        <AlertDialogContent className="border-gray-400">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete{' '}
+              {selectedProperties.length}{' '}
+              {selectedProperties.length === 1 ? 'property' : 'properties'}
+              and all related documents from the system.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              className="bg-primary"
+            >
+              Yes, Delete Permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Single Property Restore Confirmation Dialog */}
+      <AlertDialog
+        open={isRestoreModalOpen}
+        onOpenChange={setIsRestoreModalOpen}
+      >
+        <AlertDialogContent className="border-gray-400">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Restore Property</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to restore this property? It will be moved
+              back to your active properties list.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRestore} className="bg-primary">
+              Yes, Restore
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Restore Confirmation Dialog */}
+      <AlertDialog
+        open={isBulkRestoreModalOpen}
+        onOpenChange={setIsBulkRestoreModalOpen}
+      >
+        <AlertDialogContent className="border-gray-400">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Restore Properties</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to restore {selectedProperties.length}{' '}
+              {selectedProperties.length === 1 ? 'property' : 'properties'}?
+              They will be moved back to your active properties list.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkRestore}
+              className="bg-primary"
+            >
+              Yes, Restore
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <ScrollToTop />
     </div>
