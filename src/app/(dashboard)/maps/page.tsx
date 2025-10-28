@@ -4,7 +4,7 @@ import MobileMapPage from './_components/mobile-map-page'
 
 const MapViewPage = () => {
   return (
-    <PlanAccessWrapper featureId="MAP_VIEW_PORTFOLIO_WIDsE" className='w-full'>
+    <PlanAccessWrapper featureId="MAP_VIEW_PORTFOLIO" className='w-full'>
       <div>
         <div className="hidden lg:block">
           <MapPage />

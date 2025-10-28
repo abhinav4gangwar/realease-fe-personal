@@ -321,32 +321,14 @@ const PropertiesEditModel = ({
     setIsAutoFilling(true)
     setLastAutoFilledZipcode(formData.zipcode || '')
 
-      // Only auto-select country if none is selected or if it matches the current selection
-      if (!selectedCountry) {
-        const foundCountry = countries.find(
-          (c) =>
-            c.name.toLowerCase().includes(location.country.toLowerCase()) ||
-            c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
-        )
     // Only auto-select country if none is selected or if it matches the current selection
     if (!selectedCountry) {
-      const foundCountry = countries.find(c =>
-        c.name.toLowerCase().includes(location.country.toLowerCase()) ||
-        c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
+      const foundCountry = countries.find(
+        (c) =>
+          c.name.toLowerCase().includes(location.country.toLowerCase()) ||
+          c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
       )
 
-        if (foundCountry) {
-          console.log('🌍 Auto-selecting country:', foundCountry.name)
-          setSelectedCountry(foundCountry)
-        }
-      } else {
-        // Verify the current country matches the location result
-        const currentCountryMatches =
-          selectedCountry.name
-            .toLowerCase()
-            .includes(location.country.toLowerCase()) ||
-          selectedCountry.isoCode.toLowerCase() ===
-            location.countryCode.toLowerCase()
       if (foundCountry) {
         console.log('🌍 Auto-selecting country:', foundCountry.name)
         setSelectedCountry(foundCountry)
@@ -357,13 +339,6 @@ const PropertiesEditModel = ({
         selectedCountry.name.toLowerCase().includes(location.country.toLowerCase()) ||
         selectedCountry.isoCode.toLowerCase() === location.countryCode.toLowerCase()
 
-        if (!currentCountryMatches) {
-          console.log(
-            '⚠️ Country mismatch - keeping user selection:',
-            selectedCountry.name
-          )
-        }
-      }
       if (!currentCountryMatches) {
         console.log('⚠️ Country mismatch - keeping user selection:', selectedCountry.name)
       }
