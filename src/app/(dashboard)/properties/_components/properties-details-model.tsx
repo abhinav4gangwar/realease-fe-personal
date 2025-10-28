@@ -1,4 +1,5 @@
 'use client'
+import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,6 +12,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Comment, Properties, SharedUser } from '@/types/property.types'
+import { apiClient } from '@/utils/api'
 import {
   Bell,
   ChevronDown,
@@ -22,15 +24,12 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { FileIcon } from '../../documents/_components/file-icon'
+import { formatCurrency } from '../_property_utils'
 import FullMapModal from './map-model'
 import MiniMap from './minimap'
 import { CustomField } from './properties-edit-model'
-
-import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
-import { apiClient } from '@/utils/api'
-import { toast } from 'sonner'
-import { formatCurrency } from '../_property_utils'
 
 export interface PropertiesDetailsModelProps {
   property: Properties | null
@@ -63,20 +62,24 @@ const PropertiesDetailsModel = ({
   const [loadingComments, setLoadingComments] = useState(false)
   const [replyingToId, setReplyingToId] = useState<number | null>(null)
   const [replyText, setReplyText] = useState<{ [key: number]: string }>({})
-  const [showMentions, setShowMentions] = useState<{ [key: string]: boolean }>(
-    {}
-  )
-  const [mentionQuery, setMentionQuery] = useState<{ [key: string]: string }>(
-    {}
-  )
-  const [cursorPosition, setCursorPosition] = useState<{
-    [key: string]: number
-  }>({})
-  const [filteredUsers, setFilteredUsers] = useState<{
-    [key: string]: SharedUser[]
-  }>({})
+  const [showMentions, setShowMentions] = useState<{ [key: string]: boolean }>({})
+  const [mentionQuery, setMentionQuery] = useState<{ [key: string]: string }>({})
+  const [cursorPosition, setCursorPosition] = useState<{ [key: string]: number }>({})
+  const [filteredUsers, setFilteredUsers] = useState<{ [key: string]: SharedUser[] }>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [commentToDelete, setCommentToDelete] = useState<number | null>(null)
+
+  // Collapsible threads: any comment with children can be collapsed
+  const [openThreads, setOpenThreads] = useState<Set<number>>(new Set())
+
+  const toggleThread = (commentId: number) => {
+    setOpenThreads(prev => {
+      const next = new Set(prev)
+      if (next.has(commentId)) next.delete(commentId)
+      else next.add(commentId)
+      return next
+    })
+  }
 
   const uploadedDocuments = property?.documents
 
@@ -88,67 +91,56 @@ const PropertiesDetailsModel = ({
     if (inputKey === 'main') {
       setNewComment(value)
     } else {
-      setReplyText((prev) => ({ ...prev, [inputKey]: value }))
+      setReplyText(prev => ({ ...prev, [inputKey]: value }))
     }
 
-    // Check for @ mentions
     const lastAtIndex = value.lastIndexOf('@')
     if (lastAtIndex !== -1) {
       const textAfterAt = value.substring(lastAtIndex + 1)
       const spaceIndex = textAfterAt.indexOf(' ')
-      const query =
-        spaceIndex === -1 ? textAfterAt : textAfterAt.substring(0, spaceIndex)
+      const query = spaceIndex === -1 ? textAfterAt : textAfterAt.substring(0, spaceIndex)
 
       if (spaceIndex === -1) {
-        // Only show mentions if we're still typing after @
-        setMentionQuery((prev) => ({ ...prev, [inputKey]: query }))
-        setShowMentions((prev) => ({ ...prev, [inputKey]: true }))
-        setCursorPosition((prev) => ({ ...prev, [inputKey]: lastAtIndex }))
+        setMentionQuery(prev => ({ ...prev, [inputKey]: query }))
+        setShowMentions(prev => ({ ...prev, [inputKey]: true }))
+        setCursorPosition(prev => ({ ...prev, [inputKey]: lastAtIndex }))
 
-        // Filter users based on query
-        const filtered = sharedUsers.filter((user) =>
-          extractUsername(user.email)
-            .toLowerCase()
-            .includes(query.toLowerCase())
+        const filtered = sharedUsers.filter(user =>
+          extractUsername(user.email).toLowerCase().includes(query.toLowerCase())
         )
-        setFilteredUsers((prev) => ({ ...prev, [inputKey]: filtered }))
+        setFilteredUsers(prev => ({ ...prev, [inputKey]: filtered }))
       } else {
-        setShowMentions((prev) => ({ ...prev, [inputKey]: false }))
+        setShowMentions(prev => ({ ...prev, [inputKey]: false }))
       }
     } else {
-      setShowMentions((prev) => ({ ...prev, [inputKey]: false }))
+      setShowMentions(prev => ({ ...prev, [inputKey]: false }))
     }
   }
 
   const selectMention = (user: SharedUser, inputKey = 'main') => {
     const username = extractUsername(user.email)
-    const currentText =
-      inputKey === 'main' ? newComment : replyText[inputKey] || ''
+    const currentText = inputKey === 'main' ? newComment : replyText[inputKey] || ''
     const currentCursorPosition = cursorPosition[inputKey] || 0
     const currentMentionQuery = mentionQuery[inputKey] || ''
 
     const beforeAt = currentText.substring(0, currentCursorPosition)
-    const afterMention = currentText.substring(
-      currentCursorPosition + 1 + currentMentionQuery.length
-    )
-
+    const afterMention = currentText.substring(currentCursorPosition + 1 + currentMentionQuery.length)
     const newText = `${beforeAt}@${username} ${afterMention}`
 
     if (inputKey === 'main') {
       setNewComment(newText)
     } else {
-      setReplyText((prev) => ({ ...prev, [inputKey]: newText }))
+      setReplyText(prev => ({ ...prev, [inputKey]: newText }))
     }
 
-    setShowMentions((prev) => ({ ...prev, [inputKey]: false }))
-    setMentionQuery((prev) => ({ ...prev, [inputKey]: '' }))
+    setShowMentions(prev => ({ ...prev, [inputKey]: false }))
+    setMentionQuery(prev => ({ ...prev, [inputKey]: '' }))
   }
 
   const handleMapModalClose = () => {
     setIsMapModalOpen(false)
   }
 
-  // Helper function to get coordinates for map components (they expect the old format)
   const getCoordinatesForMap = () => {
     if (!property) return ''
 
@@ -163,7 +155,6 @@ const PropertiesDetailsModel = ({
       }
     }
 
-    // Fallback to existing coordinates field
     return property.coordinates || ''
   }
 
@@ -192,29 +183,21 @@ const PropertiesDetailsModel = ({
     return 'unit'
   }
 
-  //load users
   const loadUsers = async () => {
     if (!property?.id) return
-
     try {
-      const response = await apiClient.get(
-        `/dashboard/properties/getUsers/${property.id}`
-      )
+      const response = await apiClient.get(`/dashboard/properties/getUsers/${property.id}`)
       setSharedUsers(response.data.users)
     } catch (error: any) {
       toast.error(error)
     }
   }
 
-  // Load comments
   const loadComments = async () => {
     if (!property?.id) return
-
     setLoadingComments(true)
     try {
-      const response = await apiClient.get(
-        `/dashboard/properties/comments/list/${property.id}`
-      )
+      const response = await apiClient.get(`/dashboard/properties/comments/list/${property.id}`)
       setComments(response.data.comments || [])
     } catch (error: any) {
       toast.error('Failed to load comments')
@@ -224,20 +207,14 @@ const PropertiesDetailsModel = ({
     }
   }
 
-  // Add new comment
   const handleAddComment = async () => {
     if (!newComment.trim() || !property?.id) return
-
     setIsSubmittingComment(true)
     try {
-      const response = await apiClient.post(
-        '/dashboard/properties/comments/create',
-        {
-          text: newComment,
-          propertyId: property.id,
-        }
-      )
-
+      const response = await apiClient.post('/dashboard/properties/comments/create', {
+        text: newComment,
+        propertyId: property.id,
+      })
       setComments(response.data || [])
       setNewComment('')
       toast.success('Comment added successfully')
@@ -249,24 +226,18 @@ const PropertiesDetailsModel = ({
     }
   }
 
-  // Add reply to comment
   const handleAddReply = async (parentId: number, inputKey: string) => {
     const replyContent = replyText[inputKey]
     if (!replyContent?.trim() || !property?.id) return
-
     setIsSubmittingComment(true)
     try {
-      const response = await apiClient.post(
-        '/dashboard/properties/comments/create',
-        {
-          text: replyContent,
-          propertyId: property.id,
-          parentId: parentId,
-        }
-      )
-
+      const response = await apiClient.post('/dashboard/properties/comments/create', {
+        text: replyContent,
+        propertyId: property.id,
+        parentId,
+      })
       setComments(response.data || [])
-      setReplyText((prev) => {
+      setReplyText(prev => {
         const updated = { ...prev }
         delete updated[inputKey]
         return updated
@@ -281,17 +252,13 @@ const PropertiesDetailsModel = ({
     }
   }
 
-  // Update comment
   const handleUpdateComment = async (commentId: number) => {
     if (!editingText.trim()) return
-
     try {
       await apiClient.put('/dashboard/properties/comments/update', {
         text: editingText,
-        commentId: commentId,
+        commentId,
       })
-
-      // Reload comments after update
       await loadComments()
       setEditingCommentId(null)
       setEditingText('')
@@ -302,14 +269,9 @@ const PropertiesDetailsModel = ({
     }
   }
 
-  // Delete comment
   const handleDeleteComment = async (commentId: number) => {
     try {
-      await apiClient.delete(
-        `/dashboard/properties/comments/delete/${commentId}`
-      )
-
-      // Reload comments to get updated list
+      await apiClient.delete(`/dashboard/properties/comments/delete/${commentId}`)
       await loadComments()
       setDeleteDialogOpen(false)
       setCommentToDelete(null)
@@ -320,25 +282,21 @@ const PropertiesDetailsModel = ({
     }
   }
 
-  // Open delete confirmation dialog
   const confirmDeleteComment = (commentId: number) => {
     setCommentToDelete(commentId)
     setDeleteDialogOpen(true)
   }
 
-  // Start editing comment
   const startEditing = (comment: Comment) => {
     setEditingCommentId(comment.id)
     setEditingText(comment.text)
   }
 
-  // Cancel editing
   const cancelEditing = () => {
     setEditingCommentId(null)
     setEditingText('')
   }
 
-  // Format date
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -349,7 +307,6 @@ const PropertiesDetailsModel = ({
     })
   }
 
-  // Helper function to render text with highlighted mentions
   const renderTextWithMentions = (text: string) => {
     const parts = text.split(/(@\w+)/g)
     return parts.map((part, index) => {
@@ -364,29 +321,29 @@ const PropertiesDetailsModel = ({
     })
   }
 
-  // Render comment component - recursive function to handle all nesting levels
+  // Updated: Collapsible threads at every level (including replies to replies)
   const renderComment = (comment: Comment, isReply = false, depth = 0) => {
     const inputKey = `reply-${comment.id}`
+    const hasReplies = comment.children && comment.children.length > 0
+    const isThreadOpen = openThreads.has(comment.id)
 
     return (
       <div
         key={comment.id}
         className={`rounded-md border p-3 ${isReply ? 'ml-6 bg-gray-50' : 'bg-white'}`}
       >
+        {/* EDIT MODE */}
         {editingCommentId === comment.id ? (
           <div className="space-y-2">
             <textarea
               value={editingText}
-              onChange={(e) => setEditingText(e.target.value)}
+              onChange={e => setEditingText(e.target.value)}
               className="w-full resize-none rounded-md border p-2"
               rows={3}
               placeholder="Edit your comment..."
             />
             <div className="flex gap-2">
-              <Button
-                onClick={() => handleUpdateComment(comment.id)}
-                disabled={!editingText.trim()}
-              >
+              <Button onClick={() => handleUpdateComment(comment.id)} disabled={!editingText.trim()}>
                 Save
               </Button>
               <Button variant="outline" onClick={cancelEditing}>
@@ -396,17 +353,35 @@ const PropertiesDetailsModel = ({
           </div>
         ) : (
           <>
+            {/* COMMENT HEADER */}
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <p className="mb-2 text-sm text-gray-800">
                   {renderTextWithMentions(comment.text)}
                 </p>
-                <div className="flex items-center gap-2 text-xs text-gray-500">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
                   <span>Author: {comment.author}</span>
                   <span>•</span>
                   <span>{formatDate(comment.createdAt)}</span>
+
+                  {/* Show/Hide replies for ANY comment with children */}
+                  {hasReplies && (
+                    <>
+                      <span>•</span>
+                      <button
+                        onClick={() => toggleThread(comment.id)}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {isThreadOpen
+                          ? 'Hide replies'
+                          : `Show replies (${comment.children!.length})`}
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
+
+              {/* ACTION BUTTONS */}
               <div className="flex gap-1">
                 <Button
                   size="sm"
@@ -435,61 +410,48 @@ const PropertiesDetailsModel = ({
               </div>
             </div>
 
-            {/* Render replies recursively */}
-            {comment.children &&
-              Array.isArray(comment.children) &&
-              comment.children.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  {comment.children.map((reply) =>
-                    renderComment(reply, true, depth + 1)
-                  )}
-                </div>
-              )}
+            {/* COLLAPSIBLE REPLIES */}
+            {hasReplies && isThreadOpen && (
+              <div className="mt-3 space-y-2 border-l-2 border-gray-200 pl-3">
+                {comment.children!.map(reply => renderComment(reply, true, depth + 1))}
+              </div>
+            )}
 
-            {/* Reply input */}
+            {/* REPLY INPUT */}
             {replyingToId === comment.id && (
               <div className="mt-3 space-y-2">
                 <div className="relative">
                   <textarea
                     value={replyText[inputKey] || ''}
-                    onChange={(e) =>
-                      handleCommentChange(e.target.value, inputKey)
-                    }
+                    onChange={e => handleCommentChange(e.target.value, inputKey)}
                     className="w-full resize-none rounded-md border p-2"
                     rows={2}
                     placeholder="Write a reply... You can use @mentions"
                   />
-
-                  {/* Reply mention dropdown */}
-                  {showMentions[inputKey] &&
-                    filteredUsers[inputKey]?.length > 0 && (
-                      <div className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
-                        {filteredUsers[inputKey].map((user) => (
-                          <div
-                            key={user.id}
-                            onClick={() => selectMention(user, inputKey)}
-                            className="cursor-pointer px-3 py-2 hover:bg-gray-100"
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="text-secondary font-medium">
-                                @{extractUsername(user.email)}
-                              </span>
-                              <span className="text-sm text-gray-500">
-                                ({user.email})
-                              </span>
-                            </div>
+                  {showMentions[inputKey] && filteredUsers[inputKey]?.length > 0 && (
+                    <div className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                      {filteredUsers[inputKey].map(user => (
+                        <div
+                          key={user.id}
+                          onClick={() => selectMention(user, inputKey)}
+                          classState="cursor-pointer px-3 py-2 hover:bg-gray-100"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-secondary font-medium">
+                              @{extractUsername(user.email)}
+                            </span>
+                            <span className="text-sm text-gray-500">({user.email})</span>
                           </div>
-                        ))}
-                      </div>
-                    )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-2">
                   <Button
                     onClick={() => handleAddReply(comment.id, inputKey)}
-                    disabled={
-                      !replyText[inputKey]?.trim() || isSubmittingComment
-                    }
+                    disabled={!replyText[inputKey]?.trim() || isSubmittingComment}
                   >
                     Reply
                   </Button>
@@ -497,15 +459,15 @@ const PropertiesDetailsModel = ({
                     variant="outline"
                     onClick={() => {
                       setReplyingToId(null)
-                      setReplyText((prev) => {
-                        const updated = { ...prev }
-                        delete updated[inputKey]
-                        return updated
+                      setReplyText(prev => {
+                        const upd = { ...prev }
+                        delete upd[inputKey]
+                        return upd
                       })
-                      setShowMentions((prev) => {
-                        const updated = { ...prev }
-                        delete updated[inputKey]
-                        return updated
+                      setShowMentions(prev => {
+                        const upd = { ...prev }
+                        delete upd[inputKey]
+                        return upd
                       })
                     }}
                   >
@@ -522,17 +484,16 @@ const PropertiesDetailsModel = ({
 
   useEffect(() => {
     if (property?.additionalDetails) {
-      const customFieldsFromProperty = Object.entries(
-        property.additionalDetails
-      ).map(([key, value], index) => ({
-        id: `custom-${index}`,
-        label: key,
-        value: String(value),
-      }))
+      const customFieldsFromProperty = Object.entries(property.additionalDetails).map(
+        ([key, value], index) => ({
+          id: `custom-${index}`,
+          label: key,
+          value: String(value),
+        })
+      )
       setCustomFields(customFieldsFromProperty)
     }
 
-    // Load comments when modal opens
     if (isOpen && property?.id) {
       loadComments()
       loadUsers()
@@ -544,13 +505,11 @@ const PropertiesDetailsModel = ({
       {isOpen && (
         <div className="fixed top-0 right-0 z-50 h-full w-full bg-black/30">
           <div className="fixed top-0 right-0 z-50 flex h-full w-[700px] flex-col border-l border-none bg-white shadow-lg">
-            {/* Header - unchanged */}
+            {/* Header */}
             <div className="bg-[#F2F2F2] shadow-md">
               <div className="flex items-center justify-between p-5">
                 <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <h2 className="truncate pl-1 text-xl font-semibold">
-                    Property Details
-                  </h2>
+                  <h2 className="truncate pl-1 text-xl font-semibold">Property Details</h2>
                 </div>
                 <div className="flex flex-shrink-0 items-center gap-5">
                   <Button className="text-primary cursor-pointer rounded-full bg-white hover:text-white">
@@ -570,67 +529,39 @@ const PropertiesDetailsModel = ({
 
             {/* Content */}
             <div className="flex-1 space-y-4 overflow-y-auto p-5">
+              {/* Legal Status */}
               <div className="flex justify-between gap-3">
                 <div className="flex w-full justify-between rounded-md bg-[#F2F2F2] px-3 py-2">
                   <div>
-                    <h3 className="mb-2 text-sm font-medium text-gray-500">
-                      Legal Status
-                    </h3>
+                    <h3 className="mb-2 text-sm font-medium text-gray-500">Legal Status</h3>
                     <h2 className="truncate text-lg font-semibold">
-                      {property?.isDisputed
-                        ? property?.legalStatus
-                        : 'Undisputed'}
+                      {property?.isDisputed ? property?.legalStatus : 'Undisputed'}
                     </h2>
                     {property?.isDisputed && openItems && (
                       <div className="flex flex-col space-y-3 pt-3">
-                        <div>
-                          <h3 className="mb-1 text-sm font-medium text-gray-500">
-                            Parties
-                          </h3>
-                          <h2 className="truncate text-lg font-semibold">
-                            {property?.legalParties}
-                          </h2>
-                        </div>
-                        <div>
-                          <h3 className="mb-1 text-sm font-medium text-gray-500">
-                            Case Number
-                          </h3>
-                          <h2 className="truncate text-lg font-semibold">
-                            {property?.caseNumber}
-                          </h2>
-                        </div>
-                        <div>
-                          <h3 className="mb-1 text-sm font-medium text-gray-500">
-                            Case Type
-                          </h3>
-                          <h2 className="truncate text-lg font-semibold">
-                            {property?.caseType}
-                          </h2>
-                        </div>
-                        <div>
-                          <h3 className="mb-1 text-sm font-medium text-gray-500">
-                            Next Hearing
-                          </h3>
-                          <h2 className="truncate text-lg font-semibold">
-                            {property?.nextHearing}
-                          </h2>
-                        </div>
+                        {['legalParties', 'caseNumber', 'caseType', 'nextHearing'].map(field => (
+                          <div key={field}>
+                            <h3 className="mb-1 text-sm font-medium text-gray-500">
+                              {field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                            </h3>
+                            <h2 className="truncate text-lg font-semibold">
+                              {(property as any)?.[field] || '-'}
+                            </h2>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
-
                   {property?.isDisputed && (
                     <div className="flex pt-4">
                       <Button
                         variant="ghost"
                         size="icon"
                         className="hover:text-primary h-4 w-4 cursor-pointer rounded-full bg-[#CDCDCE] text-white"
-                        onClick={() => setOpenItems((prev) => !prev)}
+                        onClick={() => setOpenItems(prev => !prev)}
                       >
                         <ChevronDown
-                          className={`h-4 w-4 font-bold ${
-                            openItems ? 'rotate-180' : ''
-                          }`}
+                          className={`h-4 w-4 font-bold ${openItems ? 'rotate-180' : ''}`}
                         />
                       </Button>
                     </div>
@@ -638,25 +569,18 @@ const PropertiesDetailsModel = ({
                 </div>
 
                 <div className="w-full rounded-md bg-[#F2F2F2] px-3 py-2">
-                  <h3 className="mb-2 text-sm font-medium text-gray-500">
-                    Total Property Value
-                  </h3>
+                  <h3 className="mb-2 text-sm font-medium text-gray-500">Total Property Value</h3>
                   <h2 className="truncate text-lg font-semibold">
                     ₹ {formatCurrency(property?.value)}
                   </h2>
                 </div>
               </div>
 
+              {/* Map + Property Info */}
               <div className="flex justify-between gap-3">
-                <PlanAccessWrapper
-                  featureId="MAP_VIEW_PROPERTY_LEVEL"
-                  className="w-full"
-                >
+                <PlanAccessWrapper featureId="MAP_VIEW_PROPERTY_LEVEL" className="w-full">
                   <div className="w-full rounded-md bg-[#F2F2F2] p-3">
-                    <h3 className="mb-2 text-sm font-medium text-gray-500">
-                      Mini Map View
-                    </h3>
-
+                    <h3 className="mb-2 text-sm font-medium text-gray-500">Mini Map View</h3>
                     <div className="h-40">
                       <MiniMap
                         coordinates={getCoordinatesForMap()}
@@ -668,111 +592,47 @@ const PropertiesDetailsModel = ({
                 </PlanAccessWrapper>
 
                 <div className="flex w-full flex-col space-y-5 rounded-md bg-[#F2F2F2] px-3 py-2">
-                  <div>
-                    <h3 className="mb-1 text-sm font-medium text-gray-500">
-                      Property Name
-                    </h3>
-                    <h2 className="truncate text-lg font-semibold">
-                      {property?.name}
-                    </h2>
-                  </div>
-
-                  <div>
-                    <h3 className="mb-1 text-sm font-medium text-gray-500">
-                      Property Type
-                    </h3>
-                    <h2 className="truncate text-lg font-semibold">
-                      {property?.type}
-                    </h2>
-                  </div>
-
-                  <div>
-                    <h3 className="mb-1 text-sm font-medium text-gray-500">
-                      Owner
-                    </h3>
-                    <h2 className="truncate text-lg font-semibold">
-                      {property?.owner}
-                    </h2>
-                  </div>
+                  {['name', 'type', 'owner'].map(field => (
+                    <div key={field}>
+                      <h3 className="mb-1 text-sm font-medium text-gray-500">
+                        {field.charAt(0).toUpperCase() + field.slice(1)}
+                      </h3>
+                      <h2 className="truncate text-lg font-semibold">
+                        {(property as any)?.[field] || '-'}
+                      </h2>
+                    </div>
+                  ))}
                 </div>
               </div>
 
+              {/* Address Fields */}
               <div className="flex w-full flex-col space-y-5 rounded-md bg-[#F2F2F2] px-3 py-2">
+                {['address', 'location', 'state', 'city', 'country', 'zipcode'].map(field => (
+                  <div key={field}>
+                    <h3 className="mb-1 text-sm font-medium text-gray-500">
+                      {field.charAt(0).toUpperCase() + field.slice(1)}
+                    </h3>
+                    <h2 className="text-lg font-semibold">
+                      {(property as any)?.[field] || '-'}
+                    </h2>
+                  </div>
+                ))}
                 <div>
-                  <h3 className="mb-1 text-sm font-medium text-gray-500">
-                    Address
-                  </h3>
-                  <h2 className="text-lg font-semibold">{property?.address}</h2>
-                </div>
-
-                <div>
-                  <h3 className="mb-1 text-sm font-medium text-gray-500">
-                    Location
-                  </h3>
-                  <h2 className="text-lg font-semibold">
-                    {property?.location}
-                  </h2>
-                </div>
-
-                <div>
-                  <h3 className="mb-1 text-sm font-medium text-gray-500">
-                    State
-                  </h3>
-                  <h2 className="text-lg font-semibold">{property?.state}</h2>
-                </div>
-
-                <div>
-                  <h3 className="mb-1 text-sm font-medium text-gray-500">
-                    City
-                  </h3>
-                  <h2 className="text-lg font-semibold">{property?.city}</h2>
-                </div>
-
-                <div>
-                  <h3 className="mb-1 text-sm font-medium text-gray-500">
-                    Country
-                  </h3>
-                  <h2 className="text-lg font-semibold">{property?.country}</h2>
-                </div>
-
-                <div>
-                  <h3 className="mb-1 text-sm font-medium text-gray-500">
-                    Zipcode
-                  </h3>
-                  <h2 className="text-lg font-semibold">{property?.zipcode}</h2>
-                </div>
-
-                <div>
-                  <h3 className="mb-1 text-sm font-medium text-gray-500">
-                    Co-ordinates
-                  </h3>
+                  <h3 className="mb-1 text-sm font-medium text-gray-500">Co-ordinates</h3>
                   <h2 className="truncate text-lg font-semibold">
-                    {property?.latitude === '0.00000000'
-                      ? '-'
-                      : property?.latitude}
-                    {property?.latitude === '0.00000000' &&
-                    property.longitude === '0.00000000'
-                      ? ' '
-                      : ','}
-                    {property?.longitude === '0.00000000'
-                      ? '-'
-                      : property?.longitude}
+                    {property?.latitude === '0.00000000' ? '-' : property?.latitude}
+                    {property?.latitude !== '0.00000000' && property?.longitude !== '0.00000000' ? ',' : ''}
+                    {property?.longitude === '0.00000000' ? '-' : property?.longitude}
                   </h2>
                 </div>
               </div>
 
+              {/* Extent & Value per Unit */}
               <div className="flex w-full flex-col space-y-5 rounded-md bg-[#F2F2F2] px-3 py-2">
                 <div>
-                  <h3 className="mb-1 text-sm font-medium text-gray-500">
-                    Extent
-                  </h3>
-                  <div className="flex justify-between">
-                    <h2 className="truncate text-lg font-semibold">
-                      {property?.extent}
-                    </h2>
-                  </div>
+                  <h3 className="mb-1 text-sm font-medium text-gray-500">Extent</h3>
+                  <h2 className="truncate text-lg font-semibold">{property?.extent}</h2>
                 </div>
-
                 <div>
                   <h3 className="mb-1 text-sm font-medium text-gray-500">
                     Value per {getUnitFromExtent()}
@@ -788,45 +648,30 @@ const PropertiesDetailsModel = ({
                 </div>
               </div>
 
+              {/* Custom Fields */}
               {customFields.length > 0 && (
                 <div className="flex w-full flex-col space-y-5 rounded-md bg-[#F2F2F2] px-3 py-2">
-                  {customFields.map((field) => (
+                  {customFields.map(field => (
                     <div key={field.id}>
-                      <h3 className="mb-1 text-sm font-medium text-gray-500">
-                        {field.label}
-                      </h3>
-                      <h2 className="truncate text-lg font-semibold">
-                        {field.value}
-                      </h2>
+                      <h3 className="mb-1 text-sm font-medium text-gray-500">{field.label}</h3>
+                      <h2 className="truncate text-lg font-semibold">{field.value}</h2>
                     </div>
                   ))}
                 </div>
               )}
 
-              {uploadedDocuments && uploadedDocuments?.length > 0 && (
-                <div className="flex max-h-1/2 w-full flex-col space-y-5 overflow-y-auto rounded-md bg-[#F2F2F2] px-3 py-2">
-                  <h3 className="mb-2 text-sm font-medium text-gray-500">
-                    Documents Uploaded
-                  </h3>
-
+              {/* Documents */}
+              {uploadedDocuments && uploadedDocuments.length > 0 && (
+                <div className="flex max-h-1/2 w-full flex-col space-y-5 overflow-y-auto rounded-md bg-[#F2F2F state management2] px-3 py-2">
+                  <h3 className="mb-2 text-sm font-medium text-gray-500">Documents Uploaded</h3>
                   <div className="flex flex-col space-y-3">
-                    {uploadedDocuments?.map((uploadedDocument) => (
-                      <div
-                        key={uploadedDocument.doc_id}
-                        className="w-ful flex justify-between rounded-md bg-white p-2.5"
-                      >
+                    {uploadedDocuments.map(doc => (
+                      <div key={doc.doc_id} className="flex w-full justify-between rounded-md bg-white p-2.5">
                         <div className="flex items-center gap-2">
-                          <FileIcon
-                            type={uploadedDocument.fileType as string}
-                          />
-                          <h2 className="truncate text-sm font-extralight">
-                            {uploadedDocument.name}
-                          </h2>
+                          <FileIcon type={doc.fileType as string} />
+                          <h2 className="truncate text-sm font-extralight">{doc.name}</h2>
                         </div>
-
-                        <h3 className="mb-1 text-sm font-medium text-gray-400">
-                          {uploadedDocument.size} KB
-                        </h3>
+                        <h3 className="mb-1 text-sm font-medium text-gray-400">{doc.size} KB</h3>
                       </div>
                     ))}
                   </div>
@@ -834,71 +679,53 @@ const PropertiesDetailsModel = ({
               )}
 
               {/* Comments Section */}
-              <PlanAccessWrapper
-                featureId="ASSET_COMMENTING"
-                className="w-full"
-              >
+              <PlanAccessWrapper featureId="ASSET_COMMENTING" className="w-full">
                 <div className="flex w-full flex-col space-y-4 rounded-md bg-[#F2F2F2] px-3 py-2">
-                  <h3 className="text-sm font-medium text-gray-500">
-                    Comments
-                  </h3>
+                  <h3 className="text-sm font-medium text-gray-500">Comments</h3>
 
-                  {/* Comments List */}
                   <div className="space-y-3">
                     {loadingComments ? (
                       <div className="flex items-center justify-center py-4">
                         <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
-                        <span className="ml-2 text-sm text-gray-500">
-                          Loading comments...
-                        </span>
+                        <span className="ml-2 text-sm text-gray-500">Loading comments...</span>
                       </div>
                     ) : comments.length > 0 ? (
-                      [...comments].reverse().map((comment) => renderComment(comment))
+                      [...comments].reverse().map(comment => renderComment(comment))
                     ) : (
                       <div className="py-6 text-center text-gray-500">
                         <p className="text-sm">No comments yet</p>
-                        <p className="mt-1 text-xs">
-                          Be the first to add a comment!
-                        </p>
+                        <p className="mt-1 text-xs">Be the first to add a comment!</p>
                       </div>
                     )}
                   </div>
 
-                  {/* Add Comment Input */}
+                  {/* Add Comment */}
                   <div className="relative space-y-2">
                     <textarea
                       value={newComment}
-                      onChange={(e) =>
-                        handleCommentChange(e.target.value, 'main')
-                      }
+                      onChange={e => handleCommentChange(e.target.value, 'main')}
                       className="w-full resize-none rounded-md border p-3"
                       rows={3}
                       placeholder="Add a comment... You can use @mentions"
                     />
-
-                    {/* Mention dropdown */}
-                    {showMentions['main'] &&
-                      filteredUsers['main']?.length > 0 && (
-                        <div className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
-                          {filteredUsers['main'].map((user) => (
-                            <div
-                              key={user.id}
-                              onClick={() => selectMention(user, 'main')}
-                              className="cursor-pointer px-3 py-2 hover:bg-gray-100"
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className="text-secondary font-medium">
-                                  @{extractUsername(user.email)}
-                                </span>
-                                <span className="text-sm text-gray-500">
-                                  ({user.email})
-                                </span>
-                              </div>
+                    {showMentions['main'] && filteredUsers['main']?.length > 0 && (
+                      <div className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                        {filteredUsers['main'].map(user => (
+                          <div
+                            key={user.id}
+                            onClick={() => selectMention(user, 'main')}
+                            className="cursor-pointer px-3 py-2 hover:bg-gray-100"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-secondary font-medium">
+                                @{extractUsername(user.email)}
+                              </span>
+                              <span className="text-sm text-gray-500">({user.email})</span>
                             </div>
-                          ))}
-                        </div>
-                      )}
-
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex justify-end">
                       <Button
                         onClick={handleAddComment}
@@ -922,14 +749,12 @@ const PropertiesDetailsModel = ({
                 </div>
               </PlanAccessWrapper>
 
+              {/* Shared Users */}
               {sharedUsers.length > 0 && (
                 <div className="flex w-full flex-col space-y-4 rounded-md bg-[#F2F2F2] px-3 py-2">
-                  <h3 className="text-sm font-medium text-gray-500">
-                    Shared with
-                  </h3>
-
+                  <h3 className="text-sm font-medium text-gray-500">Shared with</h3>
                   <div className="max-h-96 space-y-3 overflow-y-auto">
-                    {sharedUsers.map((user) => (
+                    {sharedUsers.map(user => (
                       <div key={user.id} className="flex">
                         {user.email}
                       </div>
@@ -939,28 +764,24 @@ const PropertiesDetailsModel = ({
               )}
             </div>
 
+            {/* Footer */}
             <div className="bg-[#F2F2F2] shadow-md">
               <div className="flex items-center justify-end p-5">
-                <div className="flex flex-shrink-0 items-center gap-5">
-                  <Button
-                    className="bg-primary hover:bg-secondary h-11 w-[200px] cursor-pointer px-6"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (onEditClick && property) {
-                        onEditClick(property)
-                      }
-                    }}
-                  >
-                    <Pencil /> Edit Property
-                  </Button>
-                </div>
+                <Button
+                  className="bg-primary hover:bg-secondary h-11 w-[200px] cursor-pointer px-6"
+                  onClick={e => {
+                    e.stopPropagation()
+                    if (onEditClick && property) onEditClick(property)
+                  }}
+                >
+                  <Pencil /> Edit Property
+                </Button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Full Map Modal */}
       <FullMapModal
         isOpen={isMapModalOpen}
         onClose={handleMapModalClose}
@@ -970,22 +791,18 @@ const PropertiesDetailsModel = ({
         documents={property?.documents}
       />
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Comment</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this comment? This action cannot
-              be undone.
+              Are you sure you want to delete this comment? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() =>
-                commentToDelete && handleDeleteComment(commentToDelete)
-              }
+              onClick={() => commentToDelete && handleDeleteComment(commentToDelete)}
               className="bg-primary"
             >
               Delete
