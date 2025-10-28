@@ -6,6 +6,8 @@ import { createContext, useContext, useState } from 'react'
 export interface GlobalContextType {
   analyticsState: string
   setAnalyticsState: (state: string) => void
+  trashState: string
+  setTrashState: (state: string) => void
   accessControlState: string
   setAccessControlState: (state: string) => void
   planAccessValues: string[]
@@ -26,6 +28,7 @@ export const GlobalContextProvider = ({
   const [planAccessValues, setPlanAccessValues] = useState<string[]>([])
   const [accountDetails, setAccountDetails] = useState()
   const [userType, setUserType] = useState('')
+  const [trashState, setTrashState] = useState<string>('docs')
   
   return (
     <GlobalContext.Provider
@@ -39,7 +42,9 @@ export const GlobalContextProvider = ({
         accountDetails,
         setAccountDetails,
         userType,
-        setUserType
+        setUserType,
+        trashState,
+        setTrashState
       }}
     >
       {children}

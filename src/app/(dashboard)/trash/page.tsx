@@ -1,30 +1,56 @@
 'use client'
 
+import { useGlobalContextProvider } from '@/providers/global-context'
 import { apiClient } from '@/utils/api'
 import { Loader2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { TrashDocumentViewer } from './_components/trash-document-viewer'
+import { useCallback, useEffect, useState } from 'react'
+import { toast } from 'sonner'
+import { TrashDocumentViewer } from './_components/trash-doc-components/trash-document-viewer'
+import TrashPropertiesViewer from './_components/trash-prop-components/trash-properties-viewer'
 
 const TrashPage = () => {
   const [fetchedDocuments, setFetchedDocuments] = useState(null)
+  const [fetchedProperties, setFetchedProperties] = useState([])
+  const { trashState } = useGlobalContextProvider()
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchDocuments = async () => {
-      setIsLoading(true)
-      try {
-        const response = await apiClient.get('/dashboard/bin/list/documents')
-        setFetchedDocuments(response.data)
-        console.log('Fetched documents:', response.data)
-      } catch (error) {
-        console.error('Error fetching documents:', error)
-      } finally {
-        setIsLoading(false)
-      }
+  const fetchProperties = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const response = await apiClient.get('/dashboard/bin/list/properties')
+      setFetchedProperties(response.data.properties)
+    } catch (error) {
+      toast.error('Failed to fetch properties')
+      console.error('Error fetching properties:', error)
+    } finally {
+      setIsLoading(false)
     }
-
-    fetchDocuments()
   }, [])
+
+  useEffect(() => {
+    fetchProperties()
+  }, [fetchProperties])
+
+  const handlePropertyCreated = useCallback(() => {
+    fetchProperties()
+  }, [fetchProperties])
+
+  const fetchDocuments = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const response = await apiClient.get('/dashboard/bin/list/documents')
+      setFetchedDocuments(response.data)
+      console.log('Fetched documents:', response.data)
+    } catch (error) {
+      console.error('Error fetching documents:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchDocuments()
+  }, [fetchDocuments])
 
   const transformApiResponse = (apiData: any) => {
     if (!apiData || !apiData.documents) return []
@@ -80,16 +106,25 @@ const TrashPage = () => {
       {isLoading ? (
         <div className="flex h-[70vh] items-center justify-center">
           <div className="flex flex-col items-center gap-2 text-gray-600">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="text-sm">Loading trashed documents...</span>
+            <Loader2 className="text-primary h-8 w-8 animate-spin" />
+            <span className="text-sm">Loading trash...</span>
           </div>
         </div>
-      ) : (
+      ) : trashState === 'docs' ? (
         <TrashDocumentViewer
           allFiles={transformedDocuments}
           apiClient={apiClient}
           transformApiResponse={transformApiResponse}
         />
+      ) : trashState === 'props' ? (
+        <TrashPropertiesViewer
+          allProperties={fetchedProperties}
+          onPropertyCreated={handlePropertyCreated}
+        />
+      ) : (
+        <div className="flex h-[70vh] items-center justify-center text-gray-500">
+          Invalid state: nothing to show
+        </div>
       )}
     </div>
   )

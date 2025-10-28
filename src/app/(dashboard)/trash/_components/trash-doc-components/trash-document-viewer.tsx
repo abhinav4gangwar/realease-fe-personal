@@ -10,13 +10,14 @@ import {
 } from '@/types/document.types'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { BreadcrumbNavigation } from '../../documents/_components/breadcrumb-navigation'
-import ScrollToTop from '../../documents/_components/scroll-to-top'
+import { BreadcrumbNavigation } from '../../../documents/_components/breadcrumb-navigation'
+import ScrollToTop from '../../../documents/_components/scroll-to-top'
 import {
   findFolderById,
   getFileCounts,
   getFolderCounts,
-} from '../../documents/doc_utils'
+} from '../../../documents/doc_utils'
+import TrashStateToggleButton from '../trsah-state-toggle'
 import {
   BulkDocumentPermanentDeleteModal,
   DocumentPermanentDeleteModal,
@@ -501,6 +502,7 @@ export function TrashDocumentViewer({
           Trash
         </div>
         <div className="flex items-center gap-4">
+          <TrashStateToggleButton />
           <ViewModeToggle
             viewMode={viewMode}
             onViewModeChange={handleViewModeChange}
