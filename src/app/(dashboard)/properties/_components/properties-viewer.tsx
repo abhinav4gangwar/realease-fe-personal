@@ -1,4 +1,5 @@
 'use client'
+import { useEscapeKey } from '@/hooks/useEscHook'
 import {
   FilterState,
   Properties,
@@ -189,41 +190,52 @@ const PropertiesViewer = ({
   }, [allProperties, activeFilters])
 
   // sorting logic - memoized to prevent infinite re-renders
-  const sortProperties = useCallback((properties: Properties[]) => {
-    return properties.sort((a, b) => {
-      let comparison = 0
-      switch (sortField) {
-        case 'dateAdded':
-          if (a.dateAdded && b.dateAdded) {
-            const dateA = new Date(a.dateAdded)
-            const dateB = new Date(b.dateAdded)
-            comparison = dateA.getTime() - dateB.getTime()
-          } else {
-            comparison = a.dateAdded ? -1 : b.dateAdded ? 1 : 0
-          }
-          break
-        case 'value':
-          const extentA = parseFloat(a.extent?.replace(/[^0-9.-]+/g, '') || '0')
-          const extentB = parseFloat(b.extent?.replace(/[^0-9.-]+/g, '') || '0')
-          const valuePerSQA = parseFloat(a.valuePerSQ?.replace(/[^0-9.-]+/g, '') || '0')
-          const valuePerSQB = parseFloat(b.valuePerSQ?.replace(/[^0-9.-]+/g, '') || '0')
-          
-          const totalValueA = extentA * valuePerSQA
-          const totalValueB = extentB * valuePerSQB
-          comparison = totalValueA - totalValueB
-          break
-        case 'name':
-        case 'owner':
-          const aValue = a[sortField] || ''
-          const bValue = b[sortField] || ''
-          comparison = aValue.localeCompare(bValue)
-          break
-        default:
-          comparison = 0
-      }
-      return sortOrder === 'asc' ? comparison : -comparison
-    })
-  }, [sortField, sortOrder])
+  const sortProperties = useCallback(
+    (properties: Properties[]) => {
+      return properties.sort((a, b) => {
+        let comparison = 0
+        switch (sortField) {
+          case 'dateAdded':
+            if (a.dateAdded && b.dateAdded) {
+              const dateA = new Date(a.dateAdded)
+              const dateB = new Date(b.dateAdded)
+              comparison = dateA.getTime() - dateB.getTime()
+            } else {
+              comparison = a.dateAdded ? -1 : b.dateAdded ? 1 : 0
+            }
+            break
+          case 'value':
+            const extentA = parseFloat(
+              a.extent?.replace(/[^0-9.-]+/g, '') || '0'
+            )
+            const extentB = parseFloat(
+              b.extent?.replace(/[^0-9.-]+/g, '') || '0'
+            )
+            const valuePerSQA = parseFloat(
+              a.valuePerSQ?.replace(/[^0-9.-]+/g, '') || '0'
+            )
+            const valuePerSQB = parseFloat(
+              b.valuePerSQ?.replace(/[^0-9.-]+/g, '') || '0'
+            )
+
+            const totalValueA = extentA * valuePerSQA
+            const totalValueB = extentB * valuePerSQB
+            comparison = totalValueA - totalValueB
+            break
+          case 'name':
+          case 'owner':
+            const aValue = a[sortField] || ''
+            const bValue = b[sortField] || ''
+            comparison = aValue.localeCompare(bValue)
+            break
+          default:
+            comparison = 0
+        }
+        return sortOrder === 'asc' ? comparison : -comparison
+      })
+    },
+    [sortField, sortOrder]
+  )
 
   const sortedAndFilteredProperties = useMemo(() => {
     return sortProperties([...filteredProperties])
@@ -370,6 +382,29 @@ const PropertiesViewer = ({
     }
   }
 
+  useEscapeKey(() => {
+    setIsModalOpen(false)
+    setSelectedProperty(null)
+  }, isModalOpen)
+
+  useEscapeKey(() => setIsDeleteModalOpen(false), isDeleteModalOpen)
+
+  useEscapeKey(() => setIsBulkDeleteModalOpen(false), isBulkDeleteModalOpen)
+
+  useEscapeKey(() => handleCreatePropertyClose(), isCreatePropertyModalOpen)
+
+  useEscapeKey(() => {
+    handleEditPropertyClose()
+  }, isEditPropertyModalOpen)
+
+  useEscapeKey(() => setIsFilterModalOpen(false), isFilterModalOpen)
+
+  useEscapeKey(() => setOpenBulkArchiveModal(false), OpenBulkArchiveModal)
+
+  useEscapeKey(() => setIsArchiveModalOpen(false), isArchiveModalOpen)
+
+  useEscapeKey(() => handleShareModalClose(), isSharePropertyModalOpen)
+
   if (allProperties.length === 0) {
     return (
       <div className="flex items-center justify-center rounded-lg border border-gray-300 bg-white p-20">
@@ -401,15 +436,15 @@ const PropertiesViewer = ({
 
         <div className="flex items-center gap-4">
           <ArchiveToggle />
-         
-            <PropertiesFilterButton onFilterSelect={handleFilterSelect} />
-         
+
+          <PropertiesFilterButton onFilterSelect={handleFilterSelect} />
+
           <PropertiesSortButton onSortChange={handleSortChange} />
-          
-            <PropertiesActionsButton
-              onActionSelect={handleActionSelect}
-              selectedCount={selectedProperties.length}
-            />
+
+          <PropertiesActionsButton
+            onActionSelect={handleActionSelect}
+            selectedCount={selectedProperties.length}
+          />
 
           <PropertiesAddButton onAddSelect={handleAddSelect} />
         </div>

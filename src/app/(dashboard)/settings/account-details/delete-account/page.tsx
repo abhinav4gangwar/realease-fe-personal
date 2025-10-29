@@ -1,6 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
+import { useEscapeKey } from '@/hooks/useEscHook'
 import { ArrowRight, Trash2 } from 'lucide-react'
 import Image from 'next/image'
 import { useState } from 'react'
@@ -10,6 +11,13 @@ const DeleteAccountPage = () => {
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false)
   const [isDeletePasswordModelOpen, setIsDeletePasswordModelOpen] =
     useState(false)
+
+  useEscapeKey(() => setIsConfirmDeleteOpen(false), isConfirmDeleteOpen)
+  useEscapeKey(
+    () => setIsDeletePasswordModelOpen(false),
+    isDeletePasswordModelOpen
+  )
+
   return (
     <div className="border border-gray-300 shadow-md">
       {/* header */}

@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import ScrollToTop from '@/app/(dashboard)/documents/_components/scroll-to-top'
+import { useEscapeKey } from '@/hooks/useEscHook'
 import ArchiveToggle from '../../_components/archive-toggle'
 import { PropertiesFilterButton } from '../../_components/properties-filter-button'
 import PropertiesFilterModel from '../../_components/properties-filter-model'
@@ -295,6 +296,25 @@ const ArchivedPropertiesViewer = ({
       toast.error(errorMessage)
     }
   }
+
+  useEscapeKey(() => setIsFilterModalOpen(false), isFilterModalOpen)
+
+  useEscapeKey(() => {
+    setIsunarchiveModalOpen(false)
+    setSelectedProperty(null)
+  }, isunarchiveModalOpen)
+
+  useEscapeKey(
+    () => setIsBulkunarchiveModalOpen(false),
+    isBulkunarchiveModalOpen
+  )
+
+  useEscapeKey(() => {
+    setIsDeleteModalOpen(false)
+    setSelectedProperty(null)
+  }, isDeleteModalOpen)
+
+  useEscapeKey(() => setIsBulkDeleteModalOpen(false), isBulkDeleteModalOpen)
 
   return (
     <div>

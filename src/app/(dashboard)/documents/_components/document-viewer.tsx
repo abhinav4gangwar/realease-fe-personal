@@ -1,6 +1,7 @@
 'use client'
 import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import { Button } from '@/components/ui/button'
+import { useEscapeKey } from '@/hooks/useEscHook'
 import type {
   BreadcrumbItem,
   Document,
@@ -815,6 +816,42 @@ export function DocumentViewer({
     }
   }
 
+  useEscapeKey(() => {
+    if (isModalOpen) {
+      setIsModalOpen(false)
+      setOpenModalInEditMode(false)
+      setSelectedDocument(null)
+    }
+  }, isModalOpen)
+
+  useEscapeKey(() => {
+    if (isPdfPreviewOpen) {
+      setIsPdfPreviewOpen(false)
+      if (!isModalOpen) {
+        setSelectedDocument(null)
+      }
+    }
+  }, isPdfPreviewOpen)
+
+  useEscapeKey(() => setIsFilterModalOpen(false), isFilterModalOpen)
+
+  useEscapeKey(() => setUploadModalOpen(false), isUploadModalOpen)
+
+  useEscapeKey(() => handleModalClose(), isShareEmailModalOpen)
+
+  useEscapeKey(() => setIsCancelShareModalOpen(false), isCancelShareModalOpen)
+
+  useEscapeKey(() => setOpenDeleteModal(false), openDeleteModal)
+
+  useEscapeKey(() => handleModalClose(), isSelectedDocsModalOpen)
+
+  useEscapeKey(() => {
+    setIsMoveModalOpen(false)
+    setDocumentToMove(null)
+  }, isMoveModalOpen)
+
+  useEscapeKey(() => setOpenBulkDeleteModal(false), openBulkDeleteModal)
+
   return (
     <div
       className={`transition-all duration-300 ${isModalOpen ? 'mr-[343px]' : ''}`}
@@ -851,8 +888,11 @@ export function DocumentViewer({
 
       {currentFolder && (
         <div className="mb-6 flex gap-2">
-          <Button className='bg-transparent text-secondary pt-3 hover:bg-transparent cursor-pointer w-1 h-1' onClick={() => handleBreadcrumbNavigate(0)}>
-            <ArrowLeft className='size-4' />
+          <Button
+            className="text-secondary h-1 w-1 cursor-pointer bg-transparent pt-3 hover:bg-transparent"
+            onClick={() => handleBreadcrumbNavigate(0)}
+          >
+            <ArrowLeft className="size-4" />
           </Button>
           <BreadcrumbNavigation
             items={breadcrumbs}

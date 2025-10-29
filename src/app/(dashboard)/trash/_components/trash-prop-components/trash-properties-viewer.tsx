@@ -12,6 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { useEscapeKey } from '@/hooks/useEscHook'
 import {
   FilterState,
   Properties,
@@ -318,6 +319,20 @@ const TrashPropertiesViewer = ({
       toast.error(errorMessage)
     }
   }
+
+  useEscapeKey(() => {
+    setIsDeleteModalOpen(false)
+    setSelectedProperty(null)
+  }, isDeleteModalOpen)
+
+  useEscapeKey(() => setIsBulkDeleteModalOpen(false), isBulkDeleteModalOpen)
+
+  useEscapeKey(() => {
+    setIsRestoreModalOpen(false)
+    setSelectedProperty(null)
+  }, isRestoreModalOpen)
+
+  useEscapeKey(() => setIsBulkRestoreModalOpen(false), isBulkRestoreModalOpen)
 
   return (
     <div>

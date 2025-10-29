@@ -1,5 +1,7 @@
 import { Button } from '@/components/ui/button'
+import { useEscapeKey } from '@/hooks/useEscHook'
 import Image from 'next/image'
+
 
 const LogoutModel = ({
   isOpen,
@@ -10,6 +12,8 @@ const LogoutModel = ({
   onClose: () => void
   logout : any
 }) => {
+  // ESC key handler for logout modal
+  useEscapeKey(() => onClose(), isOpen)
 
   if (!isOpen) return
   return (

@@ -1,5 +1,6 @@
 'use client'
 import { Button } from '@/components/ui/button'
+import { useEscapeKey } from '@/hooks/useEscHook'
 import { useGlobalContextProvider } from '@/providers/global-context'
 import { ArrowRight, SquareUser } from 'lucide-react'
 import { useState } from 'react'
@@ -14,6 +15,11 @@ const AccountDetailsPage = () => {
   const [isAddressModelOpen, setIsAddressModelOpen] = useState(false)
   const [isPhoneModelOpen, setIsPhoneModelOpen] = useState(false)
   const [isEmailModelOpen, setIsEmailModelOpen] = useState(false)
+
+  useEscapeKey(() => setIsNameModelOpen(false), isNameModelOpen)
+  useEscapeKey(() => setIsAddressModelOpen(false), isAddressModelOpen)
+  useEscapeKey(() => setIsPhoneModelOpen(false), isPhoneModelOpen)
+  useEscapeKey(() => setIsEmailModelOpen(false), isEmailModelOpen)
 
   if (!accountDetails) {
     return (

@@ -1,5 +1,6 @@
 'use client'
 
+import { useEscapeKey } from '@/hooks/useEscHook'
 import {
   BreadcrumbItem,
   Document,
@@ -492,6 +493,20 @@ export function TrashDocumentViewer({
       toast.error(errorMessage)
     }
   }
+
+  useEscapeKey(() => {
+    setOpenRestoreModal(false)
+    setSelectedDocument(null)
+  }, openRestoreModal)
+
+  useEscapeKey(() => setOpenBulkRestoreModal(false), openBulkRestoreModal)
+
+  useEscapeKey(() => {
+    setOpenDeleteModal(false)
+    setSelectedDocument(null)
+  }, openDeleteModal)
+
+  useEscapeKey(() => setOpenBulkDeleteModal(false), openBulkDeleteModal)
 
   return (
     <div
