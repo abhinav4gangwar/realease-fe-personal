@@ -618,16 +618,43 @@ export class LocationService {
    * Perform the actual lookup with all services
    */
   private async performLookup(countryCode: string, zipcode: string, cacheKey: string): Promise<LocationServiceResponse> {
-    // For Indian pincodes, prioritize GeoJSON service
-    let servicesToTry = this.services
+    // For Indian pincodes, ONLY use local GeoJSON service - DO NOT call external APIs
     if (countryCode.toLowerCase() === 'in') {
-      // Reorder services to put GeoJSON first for India
-      servicesToTry = [
-        ...this.services.filter(s => s.name === 'GeoJSON Indian Pincode'),
-        ...this.services.filter(s => s.name !== 'GeoJSON Indian Pincode')
-      ]
-      console.log(`🇮🇳 Using prioritized service order for Indian pincode: ${zipcode}`)
+      console.log(`🇮🇳 Using ONLY local GeoJSON service for Indian pincode: ${zipcode}`)
+      const geoJsonService = this.services.find(s => s.name === 'GeoJSON Indian Pincode')
+
+      if (geoJsonService) {
+        try {
+          console.log(`📍 Looking up Indian pincode ${zipcode} in local GeoJSON data`)
+          const result = await geoJsonService.service.lookup(countryCode, zipcode)
+
+          if (result.success) {
+            console.log(`✅ GeoJSON service succeeded for ${zipcode}:`, result.data)
+            return result
+          } else {
+            console.log(`❌ GeoJSON service failed for ${zipcode}:`, result.error)
+            return {
+              success: false,
+              error: `Pincode ${zipcode} not found in local Indian pincode database`
+            }
+          }
+        } catch (error) {
+          console.error(`💥 GeoJSON service error for ${zipcode}:`, error)
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to lookup Indian pincode'
+          }
+        }
+      }
+
+      return {
+        success: false,
+        error: 'GeoJSON Indian Pincode service not available'
+      }
     }
+
+    // For non-Indian countries, use all services with fallback
+    const servicesToTry = this.services.filter(s => s.name !== 'GeoJSON Indian Pincode')
 
     // Try each service in order until one succeeds
     for (const { name, service } of servicesToTry) {

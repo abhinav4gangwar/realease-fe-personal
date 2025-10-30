@@ -314,7 +314,7 @@ const PropertiesEditModel = ({
   // Stable callback for location found to prevent infinite re-renders
   const handleLocationFound = useCallback((location) => {
     // Prevent infinite loops by checking if we're already auto-filling
-    if (isAutoFilling || lastAutoFilledZipcode === formData.zipcode) {
+    if (isAutoFilling) {
       return
     }
 
@@ -355,7 +355,7 @@ const PropertiesEditModel = ({
     setTimeout(() => {
       setIsAutoFilling(false)
     }, 100)
-  }, [isAutoFilling, lastAutoFilledZipcode, formData.zipcode, selectedCountry, countries])
+  }, [isAutoFilling, selectedCountry, countries])
 
   // Location auto-fill functionality (city and state only, no coordinates)
   const {
