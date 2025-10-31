@@ -12,7 +12,6 @@ const LogoutModel = ({
   onClose: () => void
   logout : any
 }) => {
-  // ESC key handler for logout modal
   useEscapeKey(() => onClose(), isOpen)
 
   if (!isOpen) return

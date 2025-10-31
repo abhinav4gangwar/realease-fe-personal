@@ -3,9 +3,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { apiClient } from '@/utils/api'
+import { useLogout } from '@/utils/logout'
 import { useState } from 'react'
 import { toast } from 'sonner'
-
 
 const OldPasswordModel = ({
   isOpen,
@@ -17,6 +17,7 @@ const OldPasswordModel = ({
   const [oldPassword, setOldPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const logout = useLogout()
 
   if (!isOpen) return null
 
@@ -32,7 +33,6 @@ const OldPasswordModel = ({
     const hasLowercase = /[a-z]/.test(password)
     const hasNumber = /\d/.test(password)
     const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password)
-
     return minLength && hasUppercase && hasLowercase && hasNumber && hasSpecialChar
   }
 
@@ -50,10 +50,14 @@ const OldPasswordModel = ({
       })
 
       if (response.data.success) {
-        toast.success('Password updated successfully')
+        toast.success('Password updated successfully. Logging out...')
         setOldPassword('')
         setNewPassword('')
         onClose()
+
+        setTimeout(() => {
+          logout()
+        }, 2000)
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Failed to update password'
@@ -63,7 +67,8 @@ const OldPasswordModel = ({
     }
   }
 
-  const isConfirmEnabled = oldPassword.trim() !== '' && newPassword.trim() !== '' && !isLoading
+  const isConfirmEnabled =
+    oldPassword.trim() !== '' && newPassword.trim() !== '' && !isLoading
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
