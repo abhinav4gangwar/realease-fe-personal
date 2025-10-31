@@ -1,39 +1,55 @@
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { apiClient } from '@/utils/api'
+
 import { useState } from 'react'
+import { toast } from 'sonner'
 
 const DeleteUserModal = ({
   isOpen,
   onClose,
   user,
+  onUserDeleted
 }: {
   isOpen: boolean
   onClose: () => void
   user: {
-    id?: string
-    role: string
+    id?: number
+    role: {
+      name: string
+      roleId: string
+    }
     name: string
     email: string
   } | null
+  onUserDeleted?: () => void
 }) => {
-  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
 
   if (!isOpen || !user) return null
 
   const handleCancel = () => {
-    setPassword('')
     onClose()
   }
 
-  const handleDelete = () => {
-    console.log('Entered Password:', password)
-    console.log('User to Delete:', user)
-    // TODO: Replace with actual delete API call
-    onClose()
-  }
+  const handleDelete = async () => {
+    try {
+      setLoading(true)
+      const response = await apiClient.delete(`/users/${user.id}`)
 
-  const isDeleteEnabled = password.trim() !== ''
+      if (response.data.success) {
+        toast.success('User deleted successfully')
+        onClose()
+        if (onUserDeleted) {
+          onUserDeleted()
+        }
+      }
+    } catch (error) {
+      console.error('Failed to delete user:', error)
+      toast.error(error.response?.data?.message || 'Failed to delete user')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -45,17 +61,11 @@ const DeleteUserModal = ({
 
         {/* Content */}
         <div className="flex flex-col gap-6 px-4 py-8">
-          {/* Password Field */}
-          <div className="flex flex-col gap-2">
-            <Label className="text-md font-normal text-[#757575]">
-              Enter Password to perform this action
-            </Label>
-            <Input
-              type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+          <div className="text-secondary">
+            <p className="text-lg">
+              Are you sure you want to delete this user?
+            </p>
+            
           </div>
         </div>
 
@@ -66,20 +76,17 @@ const DeleteUserModal = ({
               <Button
                 className="text-secondary hover:bg-secondary h-11 w-[150px] cursor-pointer border border-gray-400 bg-white px-6 hover:text-white"
                 onClick={handleCancel}
+                disabled={loading}
               >
                 Cancel
               </Button>
 
               <Button
-                className={`h-11 w-[150px] cursor-pointer border px-6 ${
-                  isDeleteEnabled
-                    ? 'bg-secondary text-white hover:bg-white hover:text-red-600'
-                    : 'cursor-not-allowed bg-gray-300 text-gray-500'
-                }`}
-                disabled={!isDeleteEnabled}
+                className="h-11 w-[150px] cursor-pointer bg-primary"
                 onClick={handleDelete}
+                disabled={loading}
               >
-                Delete
+                {loading ? 'Deleting...' : 'Delete'}
               </Button>
             </div>
           </div>

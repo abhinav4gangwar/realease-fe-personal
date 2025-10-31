@@ -1,44 +1,84 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useState } from 'react'
+import { apiClient } from '@/utils/api'
+
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
 const CreateUserModal = ({
   isOpen,
-  onClose
+  onClose,
+  onUserCreated
 }: {
   isOpen: boolean
   onClose: () => void
+  onUserCreated?: () => void
 }) => {
-  const [role, setRole] = useState('')
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
+  const [roles, setRoles] = useState([])
+  const [roleId, setRoleId] = useState('')
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const response = await apiClient.get('/roles')
+        if (response.data.success && response.data.data) {
+          // Filter out Super Admin role
+          const availableRoles = response.data.data.customRoles.filter(
+            role => role.roleId !== 'super-admin'
+          )
+          setRoles(availableRoles)
+        }
+      } catch (error) {
+        console.error('Failed to fetch roles:', error)
+        toast.error('Failed to load roles')
+      }
+    }
+
+    if (isOpen) {
+      fetchRoles()
+    }
+  }, [isOpen])
 
   if (!isOpen) return null
 
   const handleCancel = () => {
-    setRole('')
-    setFirstName('')
-    setLastName('')
+    setRoleId('')
+    setName('')
     setEmail('')
     onClose()
   }
 
-  const handleSave = () => {
-    const newUser = {
-      role,
-      firstName,
-      lastName,
-      email
+  const handleSave = async () => {
+    try {
+      setLoading(true)
+      const response = await apiClient.post('/users/invite', {
+        name: name.trim(),
+        email: email.trim(),
+        roleId: roleId
+      })
+
+      if (response.data.success) {
+        toast.success('User invited successfully! Credentials sent via email.')
+        handleCancel()
+        // Trigger refresh of user list
+        if (onUserCreated) {
+          onUserCreated()
+        }
+      }
+    } catch (error) {
+      console.error('Failed to create user:', error)
+      toast.error(error.response?.data?.message || 'Failed to invite user')
+    } finally {
+      setLoading(false)
     }
-    console.log('New User:', newUser)
-    // TODO: add save logic (API call, etc.)
-    handleCancel()
   }
 
   const isSaveEnabled =
-    role.trim() !== '' && firstName.trim() !== '' && lastName.trim() !== '' && email.trim() !== ''
+    roleId.trim() !== '' && name.trim() !== '' && email.trim() !== '' && !loading
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -55,32 +95,28 @@ const CreateUserModal = ({
             <Label className="text-md font-normal text-[#757575]">Select Role</Label>
             <select
               className="h-11 w-full rounded-md border border-gray-300 px-3 text-secondary"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
+              value={roleId}
+              onChange={(e) => setRoleId(e.target.value)}
+              disabled={loading}
             >
               <option value="">Select a role</option>
-              <option value="Admin">Admin</option>
-              <option value="Super Admin">Super Admin</option>
-              <option value="Manager">Manager</option>
-              <option value="User">User</option>
+              {roles.map((role) => (
+                <option key={role.id} value={role.roleId}>
+                  {role.name}
+                </option>
+              ))}
             </select>
           </div>
 
-          {/* Name Fields */}
+          {/* Name Field */}
           <div className="flex flex-col gap-2">
             <Label className="text-md font-normal text-[#757575]">User Name</Label>
-            <div className="flex gap-4">
-              <Input
-                placeholder="First Name"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-              />
-              <Input
-                placeholder="Last Name"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-              />
-            </div>
+            <Input
+              placeholder="Enter Full Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={loading}
+            />
           </div>
 
           {/* Email */}
@@ -91,6 +127,7 @@ const CreateUserModal = ({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               type="email"
+              disabled={loading}
             />
           </div>
         </div>
@@ -102,6 +139,7 @@ const CreateUserModal = ({
               <Button
                 className="text-secondary hover:bg-secondary h-11 w-[150px] cursor-pointer border border-gray-400 bg-white px-6 hover:text-white"
                 onClick={handleCancel}
+                disabled={loading}
               >
                 Cancel
               </Button>
@@ -115,7 +153,7 @@ const CreateUserModal = ({
                 disabled={!isSaveEnabled}
                 onClick={handleSave}
               >
-                Save
+                {loading ? 'Inviting...' : 'Save'}
               </Button>
             </div>
           </div>

@@ -1,8 +1,9 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { usersData } from '@/lib/access-control.dummy'
+
+import { apiClient } from '@/utils/api'
 import { EllipsisVertical, Pencil, Trash2, UserPlus } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import AccessControlStateToggle from './access-control-state-toggle'
 import ChangeSuperAdminModel from './change-superadmin-model'
 import CreateUserModal from './create-user-model'
@@ -10,6 +11,9 @@ import DeleteUserModal from './delete-user-model'
 import EditUserModal from './update-user-model'
 
 const UsersList = () => {
+  const [users, setUsers] = useState([])
+  const [roles, setRoles] = useState(['All'])
+  const [loading, setLoading] = useState(true)
   const [selectedUser, setSelectedUser] = useState()
   const [selectedRole, setSelectedRole] = useState('All')
   const [searchQuery, setSearchQuery] = useState('')
@@ -19,21 +23,35 @@ const UsersList = () => {
   const [isUpdateUserModelOpen, setIsUpdateUserModelOpen] = useState(false)
   const [isDeleteUserModelOpen, setIsDeleteUserModelOpen] = useState(false)
 
-  const roles = [
-    'All',
-    'Super Admin',
-    'Admin',
-    'Manager',
-    'Team Member',
-    'Intern',
-  ]
+  const fetchUsers = async () => {
+    try {
+      setLoading(true)
+      const response = await apiClient.get('/users')
+      if (response.data.success && response.data.data) {
+        setUsers(response.data.data)
+        
+        // Extract unique roles from users data
+        const uniqueRoles = [...new Set(response.data.data.map(user => user.role.name))]
+        setRoles(['All', ...uniqueRoles])
+      }
+    } catch (error) {
+      console.error('Failed to fetch users:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  const filteredUsers = usersData.filter((user) => {
-    const matchesRole = selectedRole === 'All' || user.role === selectedRole
+  useEffect(() => {
+    fetchUsers()
+  }, [])
+
+  const filteredUsers = users.filter((user) => {
+    const userRole = user.role.name
+    const matchesRole = selectedRole === 'All' || userRole === selectedRole
     const matchesSearch =
       user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.role.toLowerCase().includes(searchQuery.toLowerCase())
+      userRole.toLowerCase().includes(searchQuery.toLowerCase())
 
     return matchesRole && matchesSearch
   })
@@ -64,7 +82,7 @@ const UsersList = () => {
           <div className="flex border-b border-gray-300 px-5 py-13 text-xl font-semibold text-[#4E4F54]">
             User Roles
           </div>
-          <div className="flex flex-col gap-10 p-5">
+          <div className="flex flex-col gap-6 p-5">
             {roles.map((role) => (
               <p
                 key={role}
@@ -99,7 +117,11 @@ const UsersList = () => {
           </div>
 
           <div className="h-screen">
-            {filteredUsers.length > 0 ? (
+            {loading ? (
+              <div className="p-8 text-center text-gray-500">
+                Loading users...
+              </div>
+            ) : filteredUsers.length > 0 ? (
               filteredUsers.map((user) => (
                 <div
                   key={user.id}
@@ -112,9 +134,9 @@ const UsersList = () => {
                     {user.email}
                   </div>
                   <div className="col-span-4 text-left font-semibold">
-                    {user.role}
+                    {user.role.name}
                   </div>
-                  {user.role === 'Super Admin' ? (
+                  {user.isSuperAdmin ? (
                     <div className="col-span-2 flex pl-5 text-gray-400">
                       <EllipsisVertical
                         className="hover:text-primary cursor-pointer"
@@ -174,6 +196,7 @@ const UsersList = () => {
       <CreateUserModal
         isOpen={isCreateUserModelOpen}
         onClose={() => setIsCreateUserModelOpen(false)}
+        onUserCreated={fetchUsers}
       />
 
       <EditUserModal
@@ -183,6 +206,7 @@ const UsersList = () => {
           setSelectedUser(undefined)
         }}
         user={selectedUser}
+        onUserUpdated={fetchUsers}
       />
 
       <DeleteUserModal
@@ -192,6 +216,7 @@ const UsersList = () => {
           setIsDeleteUserModelOpen(false)
           setSelectedUser(undefined)
         }}
+        onUserDeleted={fetchUsers}
       />
     </div>
   )
