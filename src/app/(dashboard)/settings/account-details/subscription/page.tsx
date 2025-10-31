@@ -9,7 +9,6 @@ import { toast } from 'sonner'
 import { PaymentHistoryCard } from '../../_components/subscription-control-components/payment-history-card'
 import { UpgradePlanModal } from '../../_components/subscription-control-components/upgrade-plan-model'
 
-
 const SubscriptionPage = () => {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(
     null
@@ -135,6 +134,11 @@ const SubscriptionPage = () => {
     )
   }
 
+  const isBestPlan =
+    subscription.currentPlan?.category === 'company' &&
+    subscription.currentPlan?.tier === 'premium' &&
+    subscription.subscription.billingCycle === 'yearly'
+
   return (
     <div>
       <div className="border border-gray-300 shadow-md">
@@ -183,11 +187,22 @@ const SubscriptionPage = () => {
             )}
           </div>
 
-          <Button 
-            onClick={() => setShowUpgradeModal(true)}
-            className="bg-primary h-11 cursor-pointer hover:bg-secondary"
+          <Button
+            onClick={() => {
+              if (isBestPlan) {
+                toast.info('🎉 You already have the best plan!')
+                return
+              }
+              setShowUpgradeModal(true)
+            }}
+            disabled={isBestPlan}
+            className={`h-11 cursor-pointer ${
+              isBestPlan
+                ? 'cursor-not-allowed bg-gray-300 text-gray-600'
+                : 'bg-primary hover:bg-secondary text-white'
+            }`}
           >
-            Upgrade <ArrowRight />
+            {isBestPlan ? 'Best Plan Activated' : 'Upgrade'} <ArrowRight />
           </Button>
         </div>
       </div>

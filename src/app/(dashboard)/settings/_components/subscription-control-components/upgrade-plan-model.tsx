@@ -34,41 +34,97 @@ export const UpgradePlanModal = ({
 
   const { currentPlan, subscription: subDetails } = subscription
 
-  // Initialize billing cycle based on current plan
-  const initialBillingCycle =
-    currentPlan?.tier === 'premium' && subDetails.billingCycle === 'monthly'
-      ? 'yearly'
-      : 'monthly'
-
-  const [selectedBillingCycle, setSelectedBillingCycle] = useState<
-    'monthly' | 'yearly'
-  >(initialBillingCycle)
-
-  // Determine the recommended upgrade plan
+  // Determine the recommended upgrade plan based on new logic
   const getRecommendedPlan = () => {
     if (!currentPlan) return null
 
-    // If user has standard, recommend premium
-    if (currentPlan.tier === 'standard') {
+    const currentCategory = currentPlan.category
+    const currentTier = currentPlan.tier
+    const currentBillingCycle = subDetails.billingCycle
+
+    // Individual Standard Monthly -> Individual Premium Monthly
+    if (currentCategory === 'individual' && currentTier === 'standard' && currentBillingCycle === 'monthly') {
       return plans.find(
-        (plan) =>
-          plan.category === currentPlan.category && plan.tier === 'premium'
+        (plan) => plan.category === 'individual' && plan.tier === 'premium'
       )
     }
 
-    // If user has premium monthly, recommend yearly of same plan
-    if (
-      currentPlan.tier === 'premium' &&
-      subDetails.billingCycle === 'monthly'
-    ) {
-      return currentPlan
+    // Individual Standard Yearly -> Individual Premium Yearly
+    if (currentCategory === 'individual' && currentTier === 'standard' && currentBillingCycle === 'yearly') {
+      return plans.find(
+        (plan) => plan.category === 'individual' && plan.tier === 'premium'
+      )
     }
 
-    // If user already has premium yearly, show the same plan
-    return currentPlan
+    // Individual Premium Monthly -> Individual Premium Yearly
+    if (currentCategory === 'individual' && currentTier === 'premium' && currentBillingCycle === 'monthly') {
+      return currentPlan // Same plan but will recommend yearly
+    }
+
+    // Individual Premium Yearly -> Any Company Plan (recommend Company Standard Monthly)
+    if (currentCategory === 'individual' && currentTier === 'premium' && currentBillingCycle === 'yearly') {
+      return plans.find(
+        (plan) => plan.category === 'company' && plan.tier === 'standard'
+      )
+    }
+
+    // Company Standard Monthly -> Company Premium Monthly
+    if (currentCategory === 'company' && currentTier === 'standard' && currentBillingCycle === 'monthly') {
+      return plans.find(
+        (plan) => plan.category === 'company' && plan.tier === 'premium'
+      )
+    }
+
+    // Company Standard Yearly -> Company Premium Yearly
+    if (currentCategory === 'company' && currentTier === 'standard' && currentBillingCycle === 'yearly') {
+      return plans.find(
+        (plan) => plan.category === 'company' && plan.tier === 'premium'
+      )
+    }
+
+    // Company Premium Monthly -> Company Premium Yearly
+    if (currentCategory === 'company' && currentTier === 'premium' && currentBillingCycle === 'monthly') {
+      return currentPlan // Same plan but will recommend yearly
+    }
+
+    // Company Premium Yearly -> No upgrade available
+    if (currentCategory === 'company' && currentTier === 'premium' && currentBillingCycle === 'yearly') {
+      return null
+    }
+
+    return null
   }
 
   const recommendedPlan = getRecommendedPlan()
+
+  // Determine the recommended billing cycle
+  const getRecommendedBillingCycle = (): 'monthly' | 'yearly' => {
+    if (!currentPlan) return 'monthly'
+
+    const currentCategory = currentPlan.category
+    const currentTier = currentPlan.tier
+    const currentBillingCycle = subDetails.billingCycle
+
+    // Individual Premium Monthly -> Yearly
+    if (currentCategory === 'individual' && currentTier === 'premium' && currentBillingCycle === 'monthly') {
+      return 'yearly'
+    }
+
+    // Company Premium Monthly -> Yearly
+    if (currentCategory === 'company' && currentTier === 'premium' && currentBillingCycle === 'monthly') {
+      return 'yearly'
+    }
+
+    // Individual Premium Yearly -> Company Plan -> Monthly
+    if (currentCategory === 'individual' && currentTier === 'premium' && currentBillingCycle === 'yearly') {
+      return 'monthly'
+    }
+
+    // For all other cases, maintain the same billing cycle
+    return currentBillingCycle as 'monthly' | 'yearly'
+  }
+
+  const recommendedBillingCycle = getRecommendedBillingCycle()
 
   const getPrice = (plan: Plan, cycle: 'monthly' | 'yearly') => {
     return cycle === 'monthly'
@@ -76,20 +132,30 @@ export const UpgradePlanModal = ({
       : parseFloat(plan.yearlyAmount)
   }
 
+  const isMaxPlan = currentPlan?.category === 'company' && 
+                     currentPlan?.tier === 'premium' && 
+                     subDetails.billingCycle === 'yearly'
+
   const handleUpgrade = async (plan: Plan) => {
+    // Check if user has the best plan
+    if (isMaxPlan) {
+      toast.success('You have the best plan!')
+      return
+    }
+
     try {
       setProcessingPlanId(plan.id)
       console.log('Initiating upgrade:', {
         planId: plan.id,
         planName: plan.displayName,
-        billingCycle: selectedBillingCycle,
-        amount: getPrice(plan, selectedBillingCycle),
+        billingCycle: recommendedBillingCycle,
+        amount: getPrice(plan, recommendedBillingCycle),
       })
 
       // Create subscription order
       const orderResponse = await apiClient.post('/payments/create-order', {
         planId: plan.id,
-        billingCycle: selectedBillingCycle,
+        billingCycle: recommendedBillingCycle,
       })
 
       console.log('Order response:', orderResponse.data)
@@ -217,7 +283,7 @@ export const UpgradePlanModal = ({
             <ArrowLeft className="size-6" />
           </Button>
           <h1 className="text-secondary text-2xl font-semibold">
-            Choose Another Plan
+            {isMaxPlan ? 'Your Current Plan' : 'Upgrade Your Plan'}
           </h1>
         </div>
         <Button
@@ -229,35 +295,6 @@ export const UpgradePlanModal = ({
           <ExternalLink className="h-4 w-4" />
         </Button>
       </div>
-
-      {/* Billing Cycle Toggle (only show if recommending yearly) */}
-      {currentPlan?.tier === 'premium' &&
-        subDetails.billingCycle === 'monthly' && (
-          <div className="flex justify-center">
-            <div className="flex h-12 rounded-lg border border-gray-300 bg-white p-1">
-              <button
-                onClick={() => setSelectedBillingCycle('monthly')}
-                className={`cursor-pointer rounded-md px-6 py-2 text-sm font-medium transition-colors ${
-                  selectedBillingCycle === 'monthly'
-                    ? 'bg-gray-900 text-white'
-                    : 'text-gray-500'
-                }`}
-              >
-                Monthly
-              </button>
-              <button
-                onClick={() => setSelectedBillingCycle('yearly')}
-                className={`cursor-pointer rounded-md px-6 py-2 text-sm font-medium transition-colors ${
-                  selectedBillingCycle === 'yearly'
-                    ? 'bg-gray-900 text-white'
-                    : 'text-gray-500'
-                }`}
-              >
-                Yearly
-              </button>
-            </div>
-          </div>
-        )}
 
       {/* Plan Cards */}
       <div className="grid gap-6 md:grid-cols-2">
@@ -307,9 +344,9 @@ export const UpgradePlanModal = ({
         )}
 
         {/* Recommended/Upgrade Plan Card */}
-        {recommendedPlan && (
+        {recommendedPlan ? (
           <Card className="border-primary relative border-2 bg-white shadow-lg">
-            {currentPlan?.tier === 'standard' && (
+            {!isMaxPlan && (
               <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                 <span className="bg-primary rounded-full px-4 py-1 text-sm font-medium text-white">
                   Recommended
@@ -330,15 +367,15 @@ export const UpgradePlanModal = ({
                   ₹
                   {getPrice(
                     recommendedPlan,
-                    selectedBillingCycle
+                    recommendedBillingCycle
                   ).toLocaleString('en-IN')}
                 </span>
                 <span className="text-sm text-gray-500">
-                  /{selectedBillingCycle === 'monthly' ? 'month' : 'year'}
+                  /{recommendedBillingCycle === 'monthly' ? 'month' : 'year'}
                 </span>
               </div>
 
-              {selectedBillingCycle === 'yearly' && recommendedPlan.savings && (
+              {recommendedBillingCycle === 'yearly' && recommendedPlan.savings && (
                 <div className="text-sm font-medium text-green-600">
                   Save {recommendedPlan.savings.percentage}% (₹
                   {recommendedPlan.savings.amount.toLocaleString('en-IN')})
@@ -348,7 +385,7 @@ export const UpgradePlanModal = ({
               <Button
                 onClick={() => handleUpgrade(recommendedPlan)}
                 disabled={processingPlanId === recommendedPlan.id}
-                className="bg-primary hover:bg-secondary h-12 w-full cursor-pointer font-semibold text-white"
+                className="bg-primary hover:bg-secondary h-12 w-full cursor-pointer font-semibold text-white disabled:opacity-50"
               >
                 {processingPlanId === recommendedPlan.id ? (
                   'Processing...'
@@ -373,7 +410,9 @@ export const UpgradePlanModal = ({
               </div>
             </CardContent>
           </Card>
-        )}
+        ) : isMaxPlan ? (
+          <></>
+        ) : null}
       </div>
     </div>
   )

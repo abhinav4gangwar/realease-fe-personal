@@ -77,6 +77,7 @@ export default function PermissionsList() {
   const dirty = useMemo(() => !isEqual(roles, savedRoles), [roles, savedRoles])
 
   // Fetch roles from API
+  // Fetch roles from API
   useEffect(() => {
     const fetchRoles = async () => {
       try {
@@ -86,11 +87,7 @@ export default function PermissionsList() {
         if (response.data.success && response.data.data) {
           const { defaultRoles, customRoles } = response.data.data
 
-          const sortedDefaultRoles = [...defaultRoles].sort(
-            (a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0)
-          )
-
-          const allApiRoles = [...sortedDefaultRoles, ...customRoles]
+          const allApiRoles = [...defaultRoles, ...customRoles]
 
           const transformedRoles: Role[] = allApiRoles.map((role: any) => {
             const permissionMap: Record<string, boolean> = {}
@@ -118,8 +115,25 @@ export default function PermissionsList() {
             }
           })
 
-          setSavedRoles(transformedRoles)
-          setRoles(deepClone(transformedRoles))
+          const roleOrder = ['super-admin', 'admin', 'team-member', 'intern']
+
+          const defaultRolesList = transformedRoles.filter((role) =>
+            roleOrder.includes(role.id)
+          )
+          const customRolesList = transformedRoles.filter(
+            (role) => !roleOrder.includes(role.id)
+          )
+
+          defaultRolesList.sort((a, b) => {
+            const indexA = roleOrder.indexOf(a.id)
+            const indexB = roleOrder.indexOf(b.id)
+            return indexA - indexB
+          })
+
+          const sortedRoles = [...defaultRolesList, ...customRolesList]
+
+          setSavedRoles(sortedRoles)
+          setRoles(deepClone(sortedRoles))
         }
       } catch (error) {
         console.error('Failed to fetch roles:', error)
@@ -317,7 +331,7 @@ export default function PermissionsList() {
                   {role.id !== 'super-admin' && (
                     <Button
                       aria-label={`Delete ${role.name}`}
-                      className="text-gray-400 bg-transparent h-5 w-5 cursor-pointer opacity-0 transition-opacity group-hover:opacity-100 hover:bg-transparent"
+                      className="h-5 w-5 cursor-pointer bg-transparent text-gray-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-transparent"
                       onClick={() => handleDeleteClick(role)}
                       title={`Delete ${role.name}`}
                     >
@@ -421,7 +435,7 @@ export default function PermissionsList() {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className='border border-gray-400'>
+        <AlertDialogContent className="border border-gray-400">
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -431,10 +445,7 @@ export default function PermissionsList() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={cancelDelete}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className=""
-            >
+            <AlertDialogAction onClick={confirmDelete} className="">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
