@@ -1,4 +1,7 @@
 'use client'
+import ChangePasswordModal, {
+  useDefaultPasswordCheck,
+} from '@/components/permission-control/change-password-model'
 import { IncompletePersonalDetailsModal } from '@/components/permission-control/incomplete-personal-details-model'
 import { useAuth } from '@/hooks/useAuth'
 import { useGlobalContextProvider } from '@/providers/global-context'
@@ -18,7 +21,9 @@ export default function DashboardLayout({
   const pathname = usePathname()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const { isAuthenticated } = useAuth()
-  const { setPlanAccessValues, setAccountDetails, setUserType } = useGlobalContextProvider()
+  const { setPlanAccessValues, setAccountDetails, setUserType } =
+    useGlobalContextProvider()
+  const { showModal, setShowModal } = useDefaultPasswordCheck()
 
   useEffect(() => {
     const fetchFeatures = async () => {
@@ -70,6 +75,10 @@ export default function DashboardLayout({
     <div className="flex h-screen bg-gray-100">
       {!isPricingPage && <SubscriptionPopup />}
       <IncompletePersonalDetailsModal />
+      <ChangePasswordModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+      />
 
       <Sidebar
         collapsed={sidebarCollapsed}
