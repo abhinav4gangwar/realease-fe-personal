@@ -2,13 +2,17 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import { NOTIFICATION_DUMMY_API_RESPONSE } from "@/lib/notification-dummy"
 import { useEffect, useState } from "react"
 import { PropertySection } from "../_components/notification-control-components/property-section"
 
+import { apiClient } from "@/utils/api"
+import { toast } from "sonner"
+
 const NotificationControlsPage = () => {
-  const [initialData, setInitialData] = useState(NOTIFICATION_DUMMY_API_RESPONSE)
+  const [initialData, setInitialData] = useState<any>(null)
   const [hasChanges, setHasChanges] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isInitialized, setIsInitialized] = useState(false)
 
   const [allNotification, setAllNotification] = useState(false)
   const [scheduleSummary, setScheduleSummary] = useState(false)
@@ -37,20 +41,35 @@ const NotificationControlsPage = () => {
   const [collaborationComments, setCollaborationComments] = useState(false)
   const [assetLevelComment, setAssetLevelComment] = useState(false)
   const [documentLevelComment, setDocumentLevelComment] = useState(false)
-
-  const [systemDataIntegrity, setSystemDataIntegrity] = useState(false)
+  const [mentionNotifications, setMentionNotifications] = useState(false)
 
   const [legalStatusCompliance, setLegalStatusCompliance] = useState(false)
   const [legalStatusChange, setLegalStatusChange] = useState(false)
   const [caseStatusChange, setCaseStatusChange] = useState(false)
   const [hearingNotifyDays, setHearingNotifyDays] = useState('')
 
-  // Load initial data
+  // Fetch notification settings from API
   useEffect(() => {
-    loadData(NOTIFICATION_DUMMY_API_RESPONSE)
+    const fetchNotificationSettings = async () => {
+      try {
+        setIsLoading(true)
+        const response = await apiClient.get('/notifications/settings')
+
+        if (response.data.success && response.data.data) {
+          loadData(response.data.data)
+          setIsInitialized(true)
+        }
+      } catch (error) {
+        console.error('Failed to fetch notification settings:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchNotificationSettings()
   }, [])
 
-  const loadData = (data: typeof NOTIFICATION_DUMMY_API_RESPONSE) => {
+  const loadData = (data: any) => {
     setAllNotification(data.allNotification)
     setScheduleSummary(data.scheduleSummary.enabled)
     setScheduleFrequency(data.scheduleSummary.frequency)
@@ -60,20 +79,20 @@ const NotificationControlsPage = () => {
     setPropertyAdded(data.propertyLifecycleEvents.propertyAdded.enabled)
     setPropertyAddedOwnerEnabled(data.propertyLifecycleEvents.propertyAdded.ownerEnabled)
     setPropertyAddedLocationEnabled(data.propertyLifecycleEvents.propertyAdded.locationEnabled)
-    setPropertyAddedOwners(data.propertyLifecycleEvents.propertyAdded.owners)
-    setPropertyAddedLocations(data.propertyLifecycleEvents.propertyAdded.locations)
+    setPropertyAddedOwners(data.propertyLifecycleEvents.propertyAdded.ownerExclusions || [])
+    setPropertyAddedLocations(data.propertyLifecycleEvents.propertyAdded.locationExclusions || [])
 
     setPropertyDeleted(data.propertyLifecycleEvents.propertyDeleted.enabled)
     setPropertyDeletedOwnerEnabled(data.propertyLifecycleEvents.propertyDeleted.ownerEnabled)
     setPropertyDeletedLocationEnabled(data.propertyLifecycleEvents.propertyDeleted.locationEnabled)
-    setPropertyDeletedOwners(data.propertyLifecycleEvents.propertyDeleted.owners)
-    setPropertyDeletedLocations(data.propertyLifecycleEvents.propertyDeleted.locations)
+    setPropertyDeletedOwners(data.propertyLifecycleEvents.propertyDeleted.ownerExclusions || [])
+    setPropertyDeletedLocations(data.propertyLifecycleEvents.propertyDeleted.locationExclusions || [])
 
     setPropertyArchived(data.propertyLifecycleEvents.propertyArchived.enabled)
     setPropertyArchivedOwnerEnabled(data.propertyLifecycleEvents.propertyArchived.ownerEnabled)
     setPropertyArchivedLocationEnabled(data.propertyLifecycleEvents.propertyArchived.locationEnabled)
-    setPropertyArchivedOwners(data.propertyLifecycleEvents.propertyArchived.owners)
-    setPropertyArchivedLocations(data.propertyLifecycleEvents.propertyArchived.locations)
+    setPropertyArchivedOwners(data.propertyLifecycleEvents.propertyArchived.ownerExclusions || [])
+    setPropertyArchivedLocations(data.propertyLifecycleEvents.propertyArchived.locationExclusions || [])
 
     setLegalStatusCompliance(data.legalStatusCompliance.enabled)
     setLegalStatusChange(data.legalStatusCompliance.legalStatusChange)
@@ -83,13 +102,15 @@ const NotificationControlsPage = () => {
     setCollaborationComments(data.collaborationComments.enabled)
     setAssetLevelComment(data.collaborationComments.assetLevelComment)
     setDocumentLevelComment(data.collaborationComments.documentLevelComment)
+    setMentionNotifications(data.collaborationComments.mentionNotifications)
 
-    setSystemDataIntegrity(data.systemDataIntegrity.enabled)
     setInitialData(data)
   }
 
-  // Check for changes
+  // Check for changes - only after initial data is loaded
   useEffect(() => {
+    if (!initialData || !isInitialized) return
+
     const currentData = {
       allNotification,
       scheduleSummary: {
@@ -102,23 +123,23 @@ const NotificationControlsPage = () => {
         propertyAdded: {
           enabled: propertyAdded,
           ownerEnabled: propertyAddedOwnerEnabled,
-          owners: propertyAddedOwners,
+          ownerExclusions: propertyAddedOwners,
           locationEnabled: propertyAddedLocationEnabled,
-          locations: propertyAddedLocations
+          locationExclusions: propertyAddedLocations
         },
         propertyDeleted: {
           enabled: propertyDeleted,
           ownerEnabled: propertyDeletedOwnerEnabled,
-          owners: propertyDeletedOwners,
+          ownerExclusions: propertyDeletedOwners,
           locationEnabled: propertyDeletedLocationEnabled,
-          locations: propertyDeletedLocations
+          locationExclusions: propertyDeletedLocations
         },
         propertyArchived: {
           enabled: propertyArchived,
           ownerEnabled: propertyArchivedOwnerEnabled,
-          owners: propertyArchivedOwners,
+          ownerExclusions: propertyArchivedOwners,
           locationEnabled: propertyArchivedLocationEnabled,
-          locations: propertyArchivedLocations
+          locationExclusions: propertyArchivedLocations
         }
       },
       legalStatusCompliance: {
@@ -130,10 +151,8 @@ const NotificationControlsPage = () => {
       collaborationComments: {
         enabled: collaborationComments,
         assetLevelComment,
-        documentLevelComment
-      },
-      systemDataIntegrity: {
-        enabled: systemDataIntegrity
+        documentLevelComment,
+        mentionNotifications
       }
     }
 
@@ -167,29 +186,45 @@ const NotificationControlsPage = () => {
     collaborationComments,
     assetLevelComment,
     documentLevelComment,
-    systemDataIntegrity,
-    initialData
+    mentionNotifications,
+    initialData,
+    isInitialized
   ])
 
   // All Notifications toggle effect
   useEffect(() => {
+    if (!isInitialized) return
+
     if (allNotification) {
       setScheduleSummary(true)
       setPropertyLifecycleEvents(true)
       setCollaborationComments(true)
-      setSystemDataIntegrity(true)
       setLegalStatusCompliance(true)
       setPropertyAdded(true)
       setPropertyDeleted(true)
       setPropertyArchived(true)
       setAssetLevelComment(true)
       setDocumentLevelComment(true)
+      setMentionNotifications(true)
       setLegalStatusChange(true)
       setCaseStatusChange(true)
+    } else {
+      setScheduleSummary(false)
+      setPropertyLifecycleEvents(false)
+      setCollaborationComments(false)
+      setLegalStatusCompliance(false)
+      setPropertyAdded(false)
+      setPropertyDeleted(false)
+      setPropertyArchived(false)
+      setAssetLevelComment(false)
+      setDocumentLevelComment(false)
+      setMentionNotifications(false)
+      setLegalStatusChange(false)
+      setCaseStatusChange(false)
     }
-  }, [allNotification])
+  }, [allNotification, isInitialized])
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const updatedData = {
       allNotification,
       scheduleSummary: {
@@ -202,23 +237,23 @@ const NotificationControlsPage = () => {
         propertyAdded: {
           enabled: propertyAdded,
           ownerEnabled: propertyAddedOwnerEnabled,
-          owners: propertyAddedOwners,
+          ownerExclusions: propertyAddedOwners,
           locationEnabled: propertyAddedLocationEnabled,
-          locations: propertyAddedLocations
+          locationExclusions: propertyAddedLocations
         },
         propertyDeleted: {
           enabled: propertyDeleted,
           ownerEnabled: propertyDeletedOwnerEnabled,
-          owners: propertyDeletedOwners,
+          ownerExclusions: propertyDeletedOwners,
           locationEnabled: propertyDeletedLocationEnabled,
-          locations: propertyDeletedLocations
+          locationExclusions: propertyDeletedLocations
         },
         propertyArchived: {
           enabled: propertyArchived,
           ownerEnabled: propertyArchivedOwnerEnabled,
-          owners: propertyArchivedOwners,
+          ownerExclusions: propertyArchivedOwners,
           locationEnabled: propertyArchivedLocationEnabled,
-          locations: propertyArchivedLocations
+          locationExclusions: propertyArchivedLocations
         }
       },
       legalStatusCompliance: {
@@ -230,21 +265,38 @@ const NotificationControlsPage = () => {
       collaborationComments: {
         enabled: collaborationComments,
         assetLevelComment,
-        documentLevelComment
-      },
-      systemDataIntegrity: {
-        enabled: systemDataIntegrity
+        documentLevelComment,
+        mentionNotifications
       }
     }
 
-    console.log('PUT Request - Updated Notification Settings:', updatedData)
-    setInitialData(updatedData)
-    setHasChanges(false)
+    try {
+      const response = await apiClient.put('/notifications/settings', updatedData)
+      
+      if (response.data.success) {
+        toast.success('Notification settings updated successfully')
+        setInitialData(updatedData)
+        setHasChanges(false)
+      }
+    } catch (error) {
+      console.error('Failed to update notification settings:', error)
+      toast.error('Failed to update notification settings')
+    }
   }
 
   const handleCancel = () => {
-    loadData(initialData)
-    setHasChanges(false)
+    if (initialData) {
+      loadData(initialData)
+      setHasChanges(false)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <p className="text-gray-500">Loading notification settings...</p>
+      </div>
+    )
   }
 
   return (
@@ -464,26 +516,15 @@ const NotificationControlsPage = () => {
                     className="cursor-pointer"
                   />
                 </div>
-              </div>
-            )}
-          </div>
 
-          {/* System Data & Integrity */}
-          <div
-            className={`${systemDataIntegrity ? 'rounded-xl' : 'rounded-full'} border border-gray-300 bg-white p-5 shadow-md`}
-          >
-            <div className="flex items-center justify-between pb-2">
-              <h1 className="text-lg">System Data & Integrity</h1>
-              <Switch
-                checked={systemDataIntegrity}
-                onCheckedChange={setSystemDataIntegrity}
-                className="cursor-pointer"
-              />
-            </div>
-
-            {systemDataIntegrity && (
-              <div className="border-t border-gray-300 py-6">
-                <h1>Bulk Upload Complete/Failed</h1>
+                <div className="flex items-center justify-between">
+                  <h1>Mention Notifications</h1>
+                  <Switch
+                    checked={mentionNotifications}
+                    onCheckedChange={setMentionNotifications}
+                    className="cursor-pointer"
+                  />
+                </div>
               </div>
             )}
           </div>
