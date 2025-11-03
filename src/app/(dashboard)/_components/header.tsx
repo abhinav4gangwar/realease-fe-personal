@@ -1,5 +1,6 @@
 'use client'
 
+import NotificationButton from '@/components/notification-compoents/notification-button'
 import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import DocumentSearch from '@/components/searchbars/document-search'
 import GlobalSearch from '@/components/searchbars/global-search'
@@ -13,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useGlobalContextProvider } from '@/providers/global-context'
 import { useLogout } from '@/utils/logout'
-import { Bell, CircleUser } from 'lucide-react'
+import { CircleUser } from 'lucide-react'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -29,7 +30,11 @@ export function Header() {
   return (
     <header className="z-40 hidden bg-white px-6 py-4 shadow-sm lg:block">
       <div className="flex items-center justify-between">
-        <PlanAccessWrapper featureId="SEARCH_KEYWORD" className='w-full' crownPosition='top-left'>
+        <PlanAccessWrapper
+          featureId="SEARCH_KEYWORD"
+          className="w-full"
+          crownPosition="top-left"
+        >
           <div className="hidden w-full lg:block">
             {pathname === '/properties' ? (
               <PropertySearch />
@@ -54,7 +59,7 @@ export function Header() {
 
         {/* Header Actions */}
         <div className="flex items-center space-x-6 lg:pr-8">
-          <Bell className="h-7 w-7" />
+          <NotificationButton />
 
           <DropdownMenu open={open} onOpenChange={setOpen}>
             <DropdownMenuTrigger asChild>
@@ -73,7 +78,6 @@ export function Header() {
                   {accountDetails && (
                     <h1>{accountDetails.name || 'Not Provided'}</h1>
                   )}
-                  {userType && <p>{userType || 'Not Provided'}</p>}
                 </div>
               </DropdownMenuItem>
 
