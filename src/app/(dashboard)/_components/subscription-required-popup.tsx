@@ -1,7 +1,7 @@
 "use client"
 import { Button } from '@/components/ui/button'
 import { apiClient } from '@/utils/api'
-import { Lock, X } from 'lucide-react'
+import { Lock } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
@@ -70,26 +70,26 @@ export const SubscriptionPopup = ({ onClose }: SubscriptionPopupProps) => {
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
-              <Lock className="h-5 w-5 text-red-600" />
+              <Lock className="h-5 w-5 text-primary" />
             </div>
             <h2 className="text-xl text-secondary font-semibold">
               Subscription Required
             </h2>
           </div>
-          <Button 
+          {/* <Button 
             variant="ghost" 
             size="icon" 
             onClick={handleClose} 
             className="h-8 w-8"
           >
             <X className="w-4 h-4 text-gray-500" />
-          </Button>
+          </Button> */}
         </div>
 
         {/* Content */}
         <div className="px-6 py-6">
           <div className="mb-6">
-            <p className="text-base font-semibold text-gray-900 mb-2">
+            <p className="text-base font-semibold text-secondary mb-2">
               No Active Subscription Found
             </p>
             <p className="text-sm text-gray-600 leading-relaxed">
@@ -101,13 +101,6 @@ export const SubscriptionPopup = ({ onClose }: SubscriptionPopupProps) => {
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-gray-200">
-          <Button 
-            variant="outline" 
-            onClick={handleClose} 
-            className="px-6 bg-transparent h-11 hover:bg-secondary hover:text-white cursor-pointer"
-          >
-            Close
-          </Button>
           <Button 
             onClick={handleViewPlans} 
             className="bg-primary hover:bg-secondary cursor-pointer h-11 px-6"
