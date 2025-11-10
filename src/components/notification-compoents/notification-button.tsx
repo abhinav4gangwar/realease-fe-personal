@@ -1,22 +1,21 @@
 import { apiClient } from '@/utils/api'
 import { Bell, Check, Trash2 } from 'lucide-react'
-import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from '../ui/alert-dialog'
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuTrigger
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger
 } from '../ui/dropdown-menu'
 
 
@@ -233,17 +232,11 @@ const NotificationButton = () => {
                   onMouseLeave={() => setHoveredNotification(null)}
                 >
                   <div className="flex items-start gap-3">
-                    {notification.actor.picture ? (
-                      <Image
-                        src={notification.actor.picture}
-                        alt={notification.actorName}
-                        className="w-10 h-10 rounded-full"
-                      />
-                    ) : (
+                    
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
-                        {notification.actorName.charAt(0)}
+                      {notification?.actorName?.charAt(0) || "U"}
                       </div>
-                    )}
+                    
                     
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900">
