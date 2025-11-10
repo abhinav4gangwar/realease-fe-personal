@@ -9,7 +9,7 @@ The previous implementation required users to:
 3. Click the comment button to open the modal
 
 This created an unnecessary extra step for click-to-annotate functionality.
-
+.
 ### New Streamlined Behavior
 
 #### 🎯 **Click-to-Annotate (No Text Selection)**
