@@ -14,8 +14,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { useLocationAutoFill } from '@/hooks/useLocationAutoFill'
 import { useAddressGeocoding } from '@/hooks/useAddressGeocoding'
+import { useLocationAutoFill } from '@/hooks/useLocationAutoFill'
 import { cn } from '@/lib/utils'
 import { CountryType, Properties } from '@/types/property.types'
 import { apiClient } from '@/utils/api'
@@ -38,7 +38,7 @@ import {
   X,
 } from 'lucide-react'
 import Image from 'next/image'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { FileItem, PropertyUploadDropzone } from './document-upload'
 
@@ -160,16 +160,16 @@ const PropertiesEditModel = ({
     (field: 'latitude' | 'longitude') =>
     (e: React.ChangeEvent<HTMLInputElement>) => {
       let val = e.target.value
-      // Allow only one sign at the beginning
+
       if (val.startsWith('+') || val.startsWith('-')) {
         val = val[0] + val.slice(1).replace(/[^0-9.]/g, '')
       } else {
         val = val.replace(/[^0-9.]/g, '')
       }
-      // Ensure only one decimal point
+
       val = val.replace(/(\..*?)\./g, '$1')
       updateFormData(field, val)
-      // Update coordinates field for backward compatibility
+
       if (field === 'latitude' && val && formData.longitude) {
         const coordinateString = formatCoordinates(val, formData.longitude)
         updateFormData('coordinates', coordinateString)
@@ -184,7 +184,6 @@ const PropertiesEditModel = ({
   }
 
   useEffect(() => {
-    // Set default unit based on property type
     let defaultUnit = 'acres'
     switch (formData.type) {
       case 'Plot':
@@ -201,9 +200,7 @@ const PropertiesEditModel = ({
     setSelectedUnit(defaultUnit)
   }, [formData.type])
 
-  // Auto-calculate total value
   useEffect(() => {
-    // Extract numeric value from extent (remove unit text)
     const extentString = formData.extent || ''
     const extentMatch = extentString.match(/^[\d.]+/)
     const extentNum = extentMatch ? parseFloat(extentMatch[0]) : NaN
@@ -219,26 +216,21 @@ const PropertiesEditModel = ({
   }, [formData.extent, formData.valuePerSQ])
 
   useEffect(() => {
-    // Load all countries on component mount
     const allCountries = Country.getAllCountries()
     setCountries(allCountries)
   }, [])
 
   useEffect(() => {
     if (property && isOpen) {
-      // Handle coordinate format conversion from backend
       let coordinates = property.coordinates || ''
       let latitude = (property as any).latitude?.toString() || ''
       let longitude = (property as any).longitude?.toString() || ''
 
-      // If we have separate latitude/longitude from backend, use them
       if ((property as any).latitude && (property as any).longitude) {
         latitude = (property as any).latitude.toString()
         longitude = (property as any).longitude.toString()
         coordinates = formatCoordinates(latitude, longitude)
-      }
-      // If we only have coordinates string, parse it to get separate values
-      else if (coordinates) {
+      } else if (coordinates) {
         const parsed = parseCoordinates(coordinates)
         if (parsed) {
           latitude = parsed.latitude
@@ -246,7 +238,6 @@ const PropertiesEditModel = ({
         }
       }
 
-      // Parse legal parties if they exist
       if (property.legalParties) {
         const parties = property.legalParties.split(' vs ')
         if (parties.length === 2) {
@@ -258,25 +249,23 @@ const PropertiesEditModel = ({
         }
       }
 
-      // Parse extent to extract numeric value and unit
       let extentValue = property.extent || ''
       if (extentValue) {
         const match = extentValue.match(/^([\d.]+)\s*(.*)$/)
         if (match) {
-          extentValue = match[1] // Just the numeric part
+          extentValue = match[1]
         }
       }
 
       setFormData({
         ...property,
         extent: extentValue,
-        coordinates, // Use the formatted coordinates for backward compatibility
-        latitude, // Set separate latitude
-        longitude, // Set separate longitude
+        coordinates,
+        latitude,
+        longitude,
       })
       setIsDisputed(property.isDisputed || false)
 
-      // Extract custom fields from additionalDetails if they exist
       if (property.additionalDetails) {
         const customFieldsFromProperty = Object.entries(
           property.additionalDetails
@@ -307,103 +296,114 @@ const PropertiesEditModel = ({
     }
   }, [selectedCountry])
 
-  // Track if we're currently auto-filling to prevent infinite loops
   const [isAutoFilling, setIsAutoFilling] = useState(false)
   const [lastAutoFilledZipcode, setLastAutoFilledZipcode] = useState('')
 
-  // Stable callback for location found to prevent infinite re-renders
-  const handleLocationFound = useCallback((location) => {
-    // Prevent infinite loops by checking if we're already auto-filling
-    if (isAutoFilling) {
-      return
-    }
+  const handleLocationFound = useCallback(
+    (location) => {
+      if (isAutoFilling || lastAutoFilledZipcode === formData.zipcode) return
 
-    setIsAutoFilling(true)
-    setLastAutoFilledZipcode(formData.zipcode || '')
+      setIsAutoFilling(true)
+      setLastAutoFilledZipcode(formData.zipcode || '')
 
-    // Only auto-select country if none is selected or if it matches the current selection
-    if (!selectedCountry) {
-      const foundCountry = countries.find(
-        (c) =>
-          c.name.toLowerCase().includes(location.country.toLowerCase()) ||
-          c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
-      )
-
-      if (foundCountry) {
-        console.log('🌍 Auto-selecting country:', foundCountry.name)
-        setSelectedCountry(foundCountry)
+      if (!selectedCountry) {
+        const foundCountry = countries.find(
+          (c) =>
+            c.name.toLowerCase().includes(location.country.toLowerCase()) ||
+            c.isoCode.toLowerCase() === location.countryCode.toLowerCase()
+        )
+        if (foundCountry) {
+          setSelectedCountry(foundCountry)
+        }
       }
-    } else {
-      // Verify the current country matches the location result
-      const currentCountryMatches =
-        selectedCountry.name.toLowerCase().includes(location.country.toLowerCase()) ||
-        selectedCountry.isoCode.toLowerCase() === location.countryCode.toLowerCase()
 
-      if (!currentCountryMatches) {
-        console.log('⚠️ Country mismatch - keeping user selection:', selectedCountry.name)
-      }
-    }
+      if (formData.state !== location.state)
+        updateFormData('state', location.state)
+      if (formData.city !== location.city) updateFormData('city', location.city)
 
-    // Auto-fill state and city from location data (NO COORDINATES)
-    console.log('🏛️ Auto-filling state:', location.state)
-    updateFormData('state', location.state)
+      setTimeout(() => {
+        setIsAutoFilling(false)
+      }, 300)
+    },
+    [
+      isAutoFilling,
+      lastAutoFilledZipcode,
+      formData.zipcode,
+      formData.state,
+      formData.city,
+      selectedCountry,
+      countries,
+    ]
+  )
 
-    console.log('🏙️ Auto-filling city:', location.city)
-    updateFormData('city', location.city)
+  const locationParams = useMemo(
+    () => ({
+      country: selectedCountry?.name || '',
+      zipcode: formData.zipcode || '',
+    }),
+    [selectedCountry?.name, formData.zipcode]
+  )
 
-    // Reset auto-filling flag after a short delay
-    setTimeout(() => {
-      setIsAutoFilling(false)
-    }, 100)
-  }, [isAutoFilling, selectedCountry, countries])
-
-  // Location auto-fill functionality (city and state only, no coordinates)
   const {
     isLoading: isLocationLoading,
     error: locationError,
     isValidZipcode,
   } = useLocationAutoFill({
-    country: selectedCountry?.name || '',
-    zipcode: formData.zipcode || '',
+    ...locationParams,
     onLocationFound: handleLocationFound,
-    autoTrigger: !isAutoFilling, // Only auto-trigger when not already auto-filling
+    autoTrigger: !isAutoFilling,
     debounceMs: 1000,
   })
 
-  // Stable callback for coordinates found to prevent infinite re-renders
-  const handleCoordinatesFound = useCallback((result) => {
-    // Auto-fill coordinates if they're not already set or if they're different
-    const currentLat = parseFloat(formData.latitude || '0')
-    const currentLng = parseFloat(formData.longitude || '0')
+  const [lastAutoFilledAddress, setLastAutoFilledAddress] = useState('')
 
-    const latDiff = Math.abs(currentLat - result.latitude)
-    const lngDiff = Math.abs(currentLng - result.longitude)
+  const handleCoordinatesFound = useCallback(
+    (result) => {
+      const fullAddressKey = `${formData.address}|${formData.city}|${formData.state}|${formData.zipcode}`
+      if (lastAutoFilledAddress === fullAddressKey) return
 
-    // Only update if coordinates are significantly different (more than ~100m)
-    if (latDiff > 0.001 || lngDiff > 0.001 || (!formData.latitude && !formData.longitude)) {
-      console.log('📍 Auto-filling coordinates:', result.latitude, result.longitude)
-      updateFormData('latitude', result.latitude.toString())
-      updateFormData('longitude', result.longitude.toString())
+      const currentLat = parseFloat(formData.latitude || '0')
+      const currentLng = parseFloat(formData.longitude || '0')
 
-      // Update the combined coordinates field
-      updateFormData('coordinates', `${result.latitude}, ${result.longitude}`)
+      const latDiff = Math.abs(currentLat - result.latitude)
+      const lngDiff = Math.abs(currentLng - result.longitude)
 
-      toast.success('Coordinates auto-filled from address')
-    }
-  }, [formData.latitude, formData.longitude])
+      if (
+        isNaN(currentLat) ||
+        isNaN(currentLng) ||
+        latDiff > 0.001 ||
+        lngDiff > 0.001
+      ) {
+        console.log(
+          '📍 Auto-filling coordinates:',
+          result.latitude,
+          result.longitude
+        )
+        updateFormData('latitude', result.latitude.toString())
+        updateFormData('longitude', result.longitude.toString())
+        updateFormData('coordinates', `${result.latitude}, ${result.longitude}`)
 
-  // Stable callback for geocoding errors
+        setLastAutoFilledAddress(fullAddressKey)
+        toast.success('Coordinates auto-filled from address')
+      }
+    },
+    [
+      formData.address,
+      formData.city,
+      formData.state,
+      formData.zipcode,
+      formData.latitude,
+      formData.longitude,
+      lastAutoFilledAddress,
+    ]
+  )
+
   const handleGeocodingError = useCallback((error) => {
     console.warn('Geocoding error:', error)
-    // Don't show error toast for geocoding failures as it's not critical
   }, [])
 
-  // Address geocoding functionality for coordinates
-  const {
-    isLoading: isGeocodingLoading,
-    coordinates,
-  } = useAddressGeocoding({
-    addressComponents: {
+  const addressComponents = useMemo(
+    () => ({
       addressLine1: formData.address,
       locality: formData.location,
       district: formData.district,
@@ -411,15 +411,27 @@ const PropertiesEditModel = ({
       state: formData.state,
       country: selectedCountry?.name,
       zipcode: formData.zipcode,
-    },
+    }),
+    [
+      formData.address,
+      formData.location,
+      formData.district,
+      formData.city,
+      formData.state,
+      selectedCountry?.name,
+      formData.zipcode,
+    ]
+  )
+
+  const { isLoading: isGeocodingLoading, coordinates } = useAddressGeocoding({
+    addressComponents,
     onCoordinatesFound: handleCoordinatesFound,
     onError: handleGeocodingError,
     autoTrigger: true,
     enabled: true,
-    debounceMs: 2000, // Wait 2 seconds after user stops typing
+    debounceMs: 2000,
   })
 
-  // Reset auto-fill tracking when zipcode changes manually
   useEffect(() => {
     if (formData.zipcode !== lastAutoFilledZipcode) {
       setLastAutoFilledZipcode('')
@@ -522,19 +534,15 @@ const PropertiesEditModel = ({
 
   const resetForm = () => {
     if (property) {
-      // Handle coordinate format conversion from backend
       let coordinates = property.coordinates || ''
       let latitude = (property as any).latitude?.toString() || ''
       let longitude = (property as any).longitude?.toString() || ''
 
-      // If we have separate latitude/longitude from backend, use them
       if ((property as any).latitude && (property as any).longitude) {
         latitude = (property as any).latitude.toString()
         longitude = (property as any).longitude.toString()
         coordinates = formatCoordinates(latitude, longitude)
-      }
-      // If we only have coordinates string, parse it to get separate values
-      else if (coordinates) {
+      } else if (coordinates) {
         const parsed = parseCoordinates(coordinates)
         if (parsed) {
           latitude = parsed.latitude
@@ -542,7 +550,6 @@ const PropertiesEditModel = ({
         }
       }
 
-      // Parse extent to extract numeric value
       let extentValue = property.extent || ''
       if (extentValue) {
         const match = extentValue.match(/^([\d.]+)\s*(.*)$/)
@@ -554,9 +561,9 @@ const PropertiesEditModel = ({
       setFormData({
         ...property,
         extent: extentValue,
-        coordinates, // Use the formatted coordinates for backward compatibility
-        latitude, // Set separate latitude
-        longitude, // Set separate longitude
+        coordinates,
+        latitude,
+        longitude,
       })
       setIsDisputed(property.isDisputed || false)
 
@@ -637,10 +644,10 @@ const PropertiesEditModel = ({
         district: formData.district,
         city: formData.city,
         state: formData.state,
-        // Send coordinates as decimal numbers expected by backend
+
         latitude: formData.latitude ? parseFloat(formData.latitude) : null,
         longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-        // Keep the original coordinates field for backward compatibility
+
         coordinates: formData.coordinates,
         isDisputed: isDisputed,
         legalStatus: formData.legalStatus,
@@ -777,10 +784,10 @@ const PropertiesEditModel = ({
         district: formData.district,
         city: formData.city,
         state: formData.state,
-        // Send coordinates as decimal numbers expected by backend
+
         latitude: formData.latitude ? parseFloat(formData.latitude) : null,
         longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-        // Keep the original coordinates field for backward compatibility
+
         coordinates: formData.coordinates,
         isDisputed: isDisputed,
         legalStatus: formData.legalStatus,
@@ -1145,7 +1152,7 @@ const PropertiesEditModel = ({
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {/* Latitude */}
                 <div className="flex flex-col space-y-1">
                   <label className="text-sm text-gray-600">Latitude</label>
