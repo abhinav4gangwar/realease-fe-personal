@@ -2,14 +2,16 @@
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { dummyAnalytics } from "@/lib/analytics.dummy"
-import { ChartType, PositionedBlock, ReportBlock, ReportJSON } from "@/types/report-types"
+
+import { AnalyticsCard, ChartType, PositionedBlock, ReportBlock, ReportJSON } from "@/types/report-types"
 import { SparkleIcon, X } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
+import { toast } from "sonner"
 import ReportCanvas from "./report-canvas"
 import ReportSidebar from "./report-sidebar"
+import { fetchAnalytics, updateReport } from "./report_utils/report.services"
 
-
+// Helper to convert positioned blocks to regular blocks
 export function toBlocks(positioned: PositionedBlock[]): ReportBlock[] {
   return positioned.map(({ position, ...rest }) => rest as ReportBlock)
 }
@@ -18,25 +20,51 @@ export default function ReportEditModal({
   isOpen,
   onClose,
   initial,
+  onSuccess,
 }: {
   isOpen: boolean
   onClose: () => void
   initial: any
+  onSuccess?: () => void
 }) {
   const [name, setName] = useState<string>(initial?.data?.name || "Untitled report")
   const [blocks, setBlocks] = useState<ReportBlock[]>(() => 
     initial?.data?.blocks ? toBlocks(initial.data.blocks) : []
   )
   const [collapsed, setCollapsed] = useState(false)
+  const [updating, setUpdating] = useState(false)
+  const [analytics, setAnalytics] = useState<AnalyticsCard[]>([])
+  const [loadingAnalytics, setLoadingAnalytics] = useState(true)
 
+  // Fetch analytics when modal opens
+  useEffect(() => {
+    const loadAnalytics = async () => {
+      try {
+        setLoadingAnalytics(true)
+        const response = await fetchAnalytics()
+        if (response.cards) {
+          setAnalytics(response.cards)
+        }
+      } catch (error) {
+        console.error('Failed to fetch analytics:', error)
+        toast.error('Failed to load analytics')
+      } finally {
+        setLoadingAnalytics(false)
+      }
+    }
+    
+    if (isOpen) {
+      loadAnalytics()
+    }
+  }, [isOpen])
+
+  // Update state when initial data changes
   useEffect(() => {
     if (initial?.data) {
       setName(initial.data.name || "Untitled report")
       setBlocks(initial.data.blocks ? toBlocks(initial.data.blocks) : [])
     }
   }, [initial])
-
- 
 
   const selectedIds = useMemo(
     () => blocks.filter((b) => b.kind === "analytics").map((b) => (b as any).analyticsId),
@@ -56,12 +84,15 @@ export default function ReportEditModal({
 
   const toggleAnalytic = (id: string) => {
     const existsIndex = blocks.findIndex((b) => b.kind === "analytics" && (b as any).analyticsId === id)
+    
     if (existsIndex >= 0) {
       setBlocks((prev) => prev.filter((_, i) => i !== existsIndex))
       return
     }
-    const card = dummyAnalytics.cards.find((c) => c.id === id)
+    
+    const card = analytics.find((c) => c.id === id)
     if (!card) return
+    
     setBlocks((prev) => [
       ...prev,
       {
@@ -69,8 +100,8 @@ export default function ReportEditModal({
         kind: "analytics",
         analyticsId: id,
         title: card.title,
-        analyticsType: card.type as any,
-        chartType: (card as any).chartType,
+        analyticsType: card.analyticsType,
+        chartType: card.type === 'chart' ? card.chartType : undefined,
       },
     ])
   }
@@ -137,9 +168,45 @@ export default function ReportEditModal({
     }
   }
 
-  const handleGenerate = () => {
-    const json = computeJSON()
-    console.log("[Report Updated]", JSON.stringify(json, null, 2))
+  const handleGenerate = async () => {
+    // Validation
+    if (!name.trim()) {
+      toast.error('Please enter a report name')
+      return
+    }
+
+    if (blocks.length === 0) {
+      toast.error('Please add at least one block to the report')
+      return
+    }
+
+    if (!initial?.id) {
+      toast.error('Report ID not found')
+      return
+    }
+
+    try {
+      setUpdating(true)
+      const json = computeJSON()
+      
+      await updateReport(initial.id, {
+        name: json.name,
+        grid: json.grid,
+        blocks: json.blocks,
+      })
+
+      toast.success('Report updated successfully')
+      
+      // Call success callback and close
+      onSuccess?.()
+      onClose()
+    } catch (error: any) {
+      console.error('Failed to update report:', error)
+      const errorMessage = error?.response?.data?.error || error?.response?.data?.message || 'Failed to update report'
+      toast.error(errorMessage)
+    } finally {
+      setUpdating(false)
+    }
   }
 
   if (!isOpen) return null
@@ -157,6 +224,7 @@ export default function ReportEditModal({
               aria-label="Report name"
               className="h-10 max-w-[340px]"
               placeholder="Untitled report"
+              disabled={updating}
             />
             </div>
             <div className="flex flex-shrink-0 items-center gap-3">
@@ -166,6 +234,7 @@ export default function ReportEditModal({
                 size="icon"
                 className="hover:text-primary h-6 w-6 cursor-pointer rounded-full bg-[#CDCDCE] text-white"
                 onClick={onClose}
+                disabled={updating}
               >
                 <X className="h-4 w-4 font-bold" />
               </Button>
@@ -181,6 +250,8 @@ export default function ReportEditModal({
             onToggleAnalytic={toggleAnalytic}
             onAddTextBlock={addTextBlock}
             onSetChartType={setChartTypeForAnalyticId}
+            analytics={analytics}
+            loadingAnalytics={loadingAnalytics}
           />
 
           <div className="flex flex-1 flex-col">
@@ -203,15 +274,17 @@ export default function ReportEditModal({
               <Button
                 className="hover:bg-secondary text-secondary h-11 w-[200px] cursor-pointer border border-gray-400 bg-white px-6 font-semibold hover:text-white"
                 onClick={onClose}
+                disabled={updating}
               >
                 Back To Reports
               </Button>
 
               <Button
-                className="hover:bg-secondary bg-primary h-11 w-[200px] cursor-pointer border border-gray-400 px-6 font-semibold text-white hover:text-white"
+                className="hover:bg-secondary bg-primary h-11 w-[200px] cursor-pointer border border-gray-400 px-6 font-semibold text-white hover:text-white disabled:opacity-50"
                 onClick={handleGenerate}
+                disabled={updating}
               >
-                Generate Report <SparkleIcon />
+                {updating ? 'Updating...' : 'Update Report'} <SparkleIcon />
               </Button>
             </div>
           </div>
