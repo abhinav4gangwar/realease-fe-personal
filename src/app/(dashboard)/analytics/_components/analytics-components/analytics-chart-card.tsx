@@ -14,11 +14,13 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import {
+  ArrowLeft,
+  ArrowRight,
   ChartColumnIncreasing,
   ChartPie,
   Circle,
   EllipsisVertical,
-  Info,
+  Info
 } from 'lucide-react'
 import { useState } from 'react'
 import {
@@ -45,6 +47,23 @@ export const AnalyticsChartCard = ({
   insight: string | undefined
 }) => {
   const [chartType, setChartType] = useState(defaultChart)
+  const [legendPage, setLegendPage] = useState(0)
+
+  const itemsPerPage = 5
+  const totalPages = Math.ceil(data.length / itemsPerPage)
+
+  const paginatedLegends = data.slice(
+    legendPage * itemsPerPage,
+    legendPage * itemsPerPage + itemsPerPage
+  )
+
+  const nextPage = () => {
+    if (legendPage < totalPages - 1) setLegendPage((p) => p + 1)
+  }
+
+  const prevPage = () => {
+    if (legendPage > 0) setLegendPage((p) => p - 1)
+  }
 
   return (
     <Card className="w-full border-none">
@@ -72,17 +91,19 @@ export const AnalyticsChartCard = ({
               <p className="pt-1">{insight}</p>
             </TooltipContent>
           </Toltip>
-          {/* 3-dot Dropdown */}
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="cursor-pointer rounded-full p-2 transition hover:bg-gray-100">
                 <EllipsisVertical className="h-5 w-5 text-gray-600" />
               </button>
             </DropdownMenuTrigger>
+
             <DropdownMenuContent align="end" className="border-gray-300 px-4">
               <div className="border-b border-gray-400 p-2 font-semibold">
                 Chart Type
               </div>
+
               <DropdownMenuItem
                 onClick={() => setChartType('donut')}
                 className={`hover:bg-primary/30 my-1 cursor-pointer text-base ${
@@ -115,11 +136,10 @@ export const AnalyticsChartCard = ({
       </CardHeader>
 
       <CardContent>
-        <div className="flex flex-col items-center justify-between gap-6 lg:flex-row lg:gap-10">
-          {/* Chart Section */}
+        <div className="flex flex-col items-center justify-between gap-10 lg:flex-row">
+          {/* CHART SECTION */}
           <div className="w-full lg:flex-2">
-            {/* Mobile: smaller height, Desktop: original height */}
-            <div className="h-[240px] w-full sm:h-[287px]">
+            <div className="h-[300px] w-full sm:h-[340px]"> {/* Increased height */}
               <ResponsiveContainer width="100%" height="100%">
                 {chartType === 'donut' && (
                   <PieChart>
@@ -127,8 +147,8 @@ export const AnalyticsChartCard = ({
                       data={data}
                       cx="50%"
                       cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
+                      innerRadius={70}
+                      outerRadius={95}
                       dataKey="value"
                     >
                       {data.map((entry, index) => (
@@ -144,7 +164,7 @@ export const AnalyticsChartCard = ({
                       data={data}
                       cx="50%"
                       cy="50%"
-                      outerRadius={80}
+                      outerRadius={95}
                       paddingAngle={2}
                       dataKey="value"
                     >
@@ -157,8 +177,8 @@ export const AnalyticsChartCard = ({
 
                 {chartType === 'bar' && (
                   <BarChart data={data} margin={{ left: -20, right: 10 }}>
-                    <XAxis 
-                      dataKey="label" 
+                    <XAxis
+                      dataKey="label"
                       tick={{ fontSize: 12 }}
                       angle={-45}
                       textAnchor="end"
@@ -177,22 +197,49 @@ export const AnalyticsChartCard = ({
             </div>
           </div>
 
-          {/* Legend Section */}
-          <div className="w-full space-y-3 lg:flex-1 lg:space-y-4">
-            {data.map((item, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <div
-                  className="h-3 w-3 flex-shrink-0 rounded-full"
-                  style={{ backgroundColor: item.color }}
-                />
-                <div className="flex flex-1 items-center justify-between gap-2">
-                  <span className="text-secondary text-xs">{item.label}</span>
-                  <span className="text-xs font-medium text-gray-600">
-                    {item.percentage}%
-                  </span>
+          {/* LEGEND SECTION */}
+          <div className="w-full lg:flex-1">
+            <div className="space-y-3 min-h-[160px]">
+              {paginatedLegends.map((item, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <div
+                    className="h-3 w-3 flex-shrink-0 rounded-full"
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <div className="flex flex-1 items-center justify-between">
+                    <span className="text-secondary text-xs">{item.label}</span>
+                    <span className="text-xs font-medium text-gray-600">
+                      {item.percentage}%
+                    </span>
+                  </div>
                 </div>
+              ))}
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="mt-3 flex items-center justify-between">
+                <button
+                  disabled={legendPage === 0}
+                  onClick={prevPage}
+                  
+                >
+                  <ArrowLeft className='size-5 cursor-pointer'/>
+                </button>
+
+                <span className="text-xs secondary">
+                  {legendPage + 1} / {totalPages}
+                </span>
+
+                <button
+                  disabled={legendPage === totalPages - 1}
+                  onClick={nextPage}
+                  
+                >
+                  <ArrowRight className='size-5 cursor-pointer'/>
+                </button>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </CardContent>

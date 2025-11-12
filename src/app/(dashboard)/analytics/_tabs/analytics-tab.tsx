@@ -81,7 +81,7 @@ export const AnalyticsRenderer = ({
 
       {/* Chart Cards */}
       {chartCards.length > 0 && (
-        <div className="grid lg:grid-cols-3 gap-4">
+        <div className="grid lg:grid-cols-2 gap-4">
           {chartCards.map((card) => (
             <AnalyticsChartCard
               key={card.id}
