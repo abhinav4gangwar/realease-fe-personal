@@ -4,10 +4,127 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Sparkles, X } from 'lucide-react'
-import { useState } from 'react'
+import { Check, Sparkles, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import {
+  analyticsHelpers,
+  Tag,
+} from './analytics-helper/analytics-helper-service'
+
+interface AutocompleteInputProps {
+  placeholder: string
+  value: string
+  onChange: (value: string) => void
+  onSelect: (value: string) => void
+  suggestions: string[]
+  loading?: boolean
+}
+
+const AutocompleteInput = ({
+  placeholder,
+  value,
+  onChange,
+  onSelect,
+  suggestions,
+  loading = false,
+}: AutocompleteInputProps) => {
+  const [isOpen, setIsOpen] = useState(false)
+  const [highlightedIndex, setHighlightedIndex] = useState(-1)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+
+  const filteredSuggestions = suggestions.filter((item) =>
+    item.toLowerCase().includes(value.toLowerCase())
+  )
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        wrapperRef.current &&
+        !wrapperRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setHighlightedIndex((prev) =>
+        prev < filteredSuggestions.length - 1 ? prev + 1 : prev
+      )
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : 0))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      if (highlightedIndex >= 0 && filteredSuggestions[highlightedIndex]) {
+        onSelect(filteredSuggestions[highlightedIndex])
+        setIsOpen(false)
+        setHighlightedIndex(-1)
+      } else if (value.trim()) {
+        onSelect(value.trim())
+        setIsOpen(false)
+      }
+    } else if (e.key === 'Escape') {
+      setIsOpen(false)
+      setHighlightedIndex(-1)
+    }
+  }
+
+  return (
+    <div ref={wrapperRef} className="relative w-[70%]">
+      <Input
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value)
+          setIsOpen(true)
+          setHighlightedIndex(-1)
+        }}
+        onFocus={() => setIsOpen(true)}
+        onKeyDown={handleKeyDown}
+        className="h-10 rounded-full"
+      />
+      {isOpen && value && (
+        <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
+          {loading ? (
+            <div className="p-3 text-center text-sm text-gray-500">
+              Loading...
+            </div>
+          ) : filteredSuggestions.length > 0 ? (
+            filteredSuggestions.map((suggestion, index) => (
+              <div
+                key={suggestion}
+                className={`cursor-pointer p-3 text-sm hover:bg-gray-100 ${
+                  index === highlightedIndex ? 'bg-gray-100' : ''
+                }`}
+                onClick={() => {
+                  onSelect(suggestion)
+                  setIsOpen(false)
+                  setHighlightedIndex(-1)
+                }}
+              >
+                {suggestion}
+                {index === highlightedIndex && (
+                  <Check className="ml-2 inline h-4 w-4" />
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="p-3 text-center text-sm text-gray-500">
+              No results found.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 const StandAloneForm = ({
   isOpen,
@@ -17,14 +134,14 @@ const StandAloneForm = ({
   onClose: () => void
 }) => {
   const [numAssets, setNumAssets] = useState<number | null>(null)
-
-  // Checkboxes
   const [selectedFilters, setSelectedFilters] = useState<string[]>([])
 
   // Location filters
   const [locationType, setLocationType] = useState<string | null>(null)
   const [locations, setLocations] = useState<string[]>([])
   const [locationInput, setLocationInput] = useState('')
+  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([])
+  const [loadingLocations, setLoadingLocations] = useState(false)
 
   // Property type
   const [propertyTypes, setPropertyTypes] = useState<string[]>([])
@@ -32,23 +149,100 @@ const StandAloneForm = ({
   // Litigation
   const [litigation, setLitigation] = useState<string | null>(null)
 
-  // Owner + Tag
+  // Owner
   const [owners, setOwners] = useState<string[]>([])
-  const [tags, setTags] = useState<string[]>([])
   const [ownerInput, setOwnerInput] = useState('')
-  const [tagInput, setTagInput] = useState('')
+  const [ownerSuggestions, setOwnerSuggestions] = useState<string[]>([])
+  const [loadingOwners, setLoadingOwners] = useState(false)
 
-  const handleAddItem = (type: string) => {
-    if (type === 'location' && locationInput.trim()) {
-      setLocations([...locations, locationInput.trim()])
+  // Tag
+  const [tags, setTags] = useState<string[]>([])
+  const [tagInput, setTagInput] = useState('')
+  const [tagSuggestions, setTagSuggestions] = useState<Tag[]>([])
+  const [loadingTags, setLoadingTags] = useState(false)
+
+  // Fetch location data based on type
+  useEffect(() => {
+    const fetchLocationData = async () => {
+      if (!locationType) return
+
+      setLoadingLocations(true)
+      try {
+        let data: string[] = []
+        switch (locationType) {
+          case 'Localities':
+            data = await analyticsHelpers.fetchLocalities()
+            break
+          case 'Cities':
+            data = await analyticsHelpers.fetchCities()
+            break
+          case 'States':
+            data = await analyticsHelpers.fetchStates()
+            break
+          case 'Countries':
+            data = await analyticsHelpers.fetchCountries()
+            break
+        }
+        setLocationSuggestions(data)
+      } finally {
+        setLoadingLocations(false)
+      }
+    }
+
+    fetchLocationData()
+  }, [locationType])
+
+  // Fetch owners
+  useEffect(() => {
+    const fetchOwnerData = async () => {
+      if (!selectedFilters.includes('Owner')) return
+
+      setLoadingOwners(true)
+      try {
+        const data = await analyticsHelpers.fetchOwners()
+        setOwnerSuggestions(data)
+      } finally {
+        setLoadingOwners(false)
+      }
+    }
+
+    fetchOwnerData()
+  }, [selectedFilters])
+
+  // Fetch tags
+  useEffect(() => {
+    const fetchTagData = async () => {
+      if (!selectedFilters.includes('Tag')) return
+
+      setLoadingTags(true)
+      try {
+        const data = await analyticsHelpers.fetchTags()
+        setTagSuggestions(data)
+      } finally {
+        setLoadingTags(false)
+      }
+    }
+
+    fetchTagData()
+  }, [selectedFilters])
+
+  const handleAddLocation = (value: string) => {
+    if (value.trim() && !locations.includes(value.trim())) {
+      setLocations([...locations, value.trim()])
       setLocationInput('')
     }
-    if (type === 'owner' && ownerInput.trim()) {
-      setOwners([...owners, ownerInput.trim()])
+  }
+
+  const handleAddOwner = (value: string) => {
+    if (value.trim() && !owners.includes(value.trim())) {
+      setOwners([...owners, value.trim()])
       setOwnerInput('')
     }
-    if (type === 'tag' && tagInput.trim()) {
-      setTags([...tags, tagInput.trim()])
+  }
+
+  const handleAddTag = (value: string) => {
+    if (value.trim() && !tags.includes(value.trim())) {
+      setTags([...tags, value.trim()])
       setTagInput('')
     }
   }
@@ -148,7 +342,11 @@ const StandAloneForm = ({
                         <div className="p-6">
                           <RadioGroup
                             value={locationType ?? ''}
-                            onValueChange={(val) => setLocationType(val)}
+                            onValueChange={(val) => {
+                              setLocationType(val)
+                              setLocationInput('')
+                              setLocations([])
+                            }}
                             className="flex gap-10"
                           >
                             {[
@@ -171,16 +369,13 @@ const StandAloneForm = ({
 
                           {locationType && (
                             <div className="mt-8">
-                              <Input
+                              <AutocompleteInput
                                 placeholder={`Type here to enter the selections of ${locationType}`}
                                 value={locationInput}
-                                onChange={(e) =>
-                                  setLocationInput(e.target.value)
-                                }
-                                onKeyDown={(e) =>
-                                  e.key === 'Enter' && handleAddItem('location')
-                                }
-                                className="h-10 w-[70%] rounded-full"
+                                onChange={setLocationInput}
+                                onSelect={handleAddLocation}
+                                suggestions={locationSuggestions}
+                                loading={loadingLocations}
                               />
                               <div className="mt-2 flex flex-wrap gap-2">
                                 {locations.map((loc) => (
@@ -256,14 +451,13 @@ const StandAloneForm = ({
                     {filter === 'Owner' &&
                       selectedFilters.includes('Owner') && (
                         <div className="pl-6">
-                          <Input
+                          <AutocompleteInput
                             placeholder="Enter Owner"
                             value={ownerInput}
-                            onChange={(e) => setOwnerInput(e.target.value)}
-                            onKeyDown={(e) =>
-                              e.key === 'Enter' && handleAddItem('owner')
-                            }
-                            className="h-10 w-[70%] rounded-full"
+                            onChange={setOwnerInput}
+                            onSelect={handleAddOwner}
+                            suggestions={ownerSuggestions}
+                            loading={loadingOwners}
                           />
                           <div className="mt-2 flex flex-wrap gap-2">
                             {owners.map((owner) => (
@@ -286,14 +480,13 @@ const StandAloneForm = ({
 
                     {filter === 'Tag' && selectedFilters.includes('Tag') && (
                       <div className="pl-6">
-                        <Input
+                        <AutocompleteInput
                           placeholder="Enter Tag"
                           value={tagInput}
-                          onChange={(e) => setTagInput(e.target.value)}
-                          onKeyDown={(e) =>
-                            e.key === 'Enter' && handleAddItem('tag')
-                          }
-                          className="h-10 w-[70%] rounded-full"
+                          onChange={setTagInput}
+                          onSelect={handleAddTag}
+                          suggestions={tagSuggestions.map((tag) => tag.name)}
+                          loading={loadingTags}
                         />
                         <div className="mt-2 flex flex-wrap gap-2">
                           {tags.map((tag) => (

@@ -5,8 +5,126 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Plus, Sparkles, X } from 'lucide-react'
-import { useState } from 'react'
+import { Check, Plus, Sparkles, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import {
+  analyticsHelpers,
+  Tag,
+} from './analytics-helper/analytics-helper-service'
+
+interface AutocompleteInputProps {
+  placeholder: string
+  value: string
+  onChange: (value: string) => void
+  onSelect: (value: string) => void
+  suggestions: string[]
+  loading?: boolean
+}
+
+const AutocompleteInput = ({
+  placeholder,
+  value,
+  onChange,
+  onSelect,
+  suggestions,
+  loading = false,
+}: AutocompleteInputProps) => {
+  const [isOpen, setIsOpen] = useState(false)
+  const [highlightedIndex, setHighlightedIndex] = useState(-1)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+
+  const filteredSuggestions = suggestions.filter((item) =>
+    item.toLowerCase().includes(value.toLowerCase())
+  )
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        wrapperRef.current &&
+        !wrapperRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setHighlightedIndex((prev) =>
+        prev < filteredSuggestions.length - 1 ? prev + 1 : prev
+      )
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : 0))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      if (highlightedIndex >= 0 && filteredSuggestions[highlightedIndex]) {
+        onSelect(filteredSuggestions[highlightedIndex])
+        setIsOpen(false)
+        setHighlightedIndex(-1)
+      } else if (value.trim()) {
+        onSelect(value.trim())
+        setIsOpen(false)
+      }
+    } else if (e.key === 'Escape') {
+      setIsOpen(false)
+      setHighlightedIndex(-1)
+    }
+  }
+
+  return (
+    <div ref={wrapperRef} className="relative w-full">
+      <Input
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value)
+          setIsOpen(true)
+          setHighlightedIndex(-1)
+        }}
+        onFocus={() => setIsOpen(true)}
+        onKeyDown={handleKeyDown}
+        className="h-10 rounded-full"
+      />
+      {isOpen && value && (
+        <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
+          {loading ? (
+            <div className="p-3 text-center text-sm text-gray-500">
+              Loading...
+            </div>
+          ) : filteredSuggestions.length > 0 ? (
+            filteredSuggestions.map((suggestion, index) => (
+              <div
+                key={suggestion}
+                className={`cursor-pointer p-3 text-sm hover:bg-gray-100 ${
+                  index === highlightedIndex ? 'bg-gray-100' : ''
+                }`}
+                onClick={() => {
+                  onSelect(suggestion)
+                  setIsOpen(false)
+                  setHighlightedIndex(-1)
+                }}
+              >
+                {suggestion}
+                {index === highlightedIndex && (
+                  <Check className="ml-2 inline h-4 w-4" />
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="p-3 text-center text-sm text-gray-500">
+              No results found.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 const ComparativeStatForm = ({
   isOpen,
@@ -18,13 +136,23 @@ const ComparativeStatForm = ({
   const [numAssets, setNumAssets] = useState<number | null>(null)
   const [acrossType, setAcrossType] = useState<string>('')
   const [considerType, setConsiderType] = useState<string>('')
-  
-  // Customizations array to hold multiple customization blocks
+
+  // Global suggestions data
+  const [localitiesSuggestions, setLocalitiesSuggestions] = useState<string[]>(
+    []
+  )
+  const [citiesSuggestions, setCitiesSuggestions] = useState<string[]>([])
+  const [statesSuggestions, setStatesSuggestions] = useState<string[]>([])
+  const [countriesSuggestions, setCountriesSuggestions] = useState<string[]>([])
+  const [ownerSuggestions, setOwnerSuggestions] = useState<string[]>([])
+  const [tagSuggestions, setTagSuggestions] = useState<Tag[]>([])
+  const [loadingData, setLoadingData] = useState<Record<string, boolean>>({})
+
+  // Customizations array
   const [customizations, setCustomizations] = useState<any[]>([
     {
       id: Date.now(),
       selectedOption: '',
-      locationType: null,
       locations: [],
       locationInput: '',
       propertyTypes: [],
@@ -33,33 +161,108 @@ const ComparativeStatForm = ({
       ownerInput: '',
       tags: [],
       tagInput: '',
-    }
+    },
   ])
 
-  const handleAddItem = (customizationId: number, type: string) => {
-    setCustomizations(prevCustomizations =>
-      prevCustomizations.map(custom => {
+  // Fetch all data on mount
+  useEffect(() => {
+    const fetchAllData = async () => {
+      setLoadingData({
+        localities: true,
+        cities: true,
+        states: true,
+        countries: true,
+        owners: true,
+        tags: true,
+      })
+
+      try {
+        const [localities, cities, states, countries, owners, tags] =
+          await Promise.all([
+            analyticsHelpers.fetchLocalities(),
+            analyticsHelpers.fetchCities(),
+            analyticsHelpers.fetchStates(),
+            analyticsHelpers.fetchCountries(),
+            analyticsHelpers.fetchOwners(),
+            analyticsHelpers.fetchTags(),
+          ])
+
+        setLocalitiesSuggestions(localities)
+        setCitiesSuggestions(cities)
+        setStatesSuggestions(states)
+        setCountriesSuggestions(countries)
+        setOwnerSuggestions(owners)
+        setTagSuggestions(tags)
+      } catch (error) {
+        console.error('Error fetching data:', error)
+      } finally {
+        setLoadingData({})
+      }
+    }
+
+    if (isOpen) {
+      fetchAllData()
+    }
+  }, [isOpen])
+
+  const getSuggestionsForOption = (option: string): string[] => {
+    switch (option) {
+      case 'Localities':
+        return localitiesSuggestions
+      case 'Cities':
+        return citiesSuggestions
+      case 'States':
+        return statesSuggestions
+      case 'Countries':
+        return countriesSuggestions
+      case 'Owner':
+        return ownerSuggestions
+      case 'Tag':
+        return tagSuggestions.map((tag) => tag.name)
+      default:
+        return []
+    }
+  }
+
+  const isLoadingForOption = (option: string): boolean => {
+    const key = option.toLowerCase()
+    return loadingData[key] || false
+  }
+
+  const handleAddItem = (
+    customizationId: number,
+    type: string,
+    value: string
+  ) => {
+    setCustomizations((prevCustomizations) =>
+      prevCustomizations.map((custom) => {
         if (custom.id !== customizationId) return custom
 
-        if (type === 'location' && custom.locationInput.trim()) {
-          return {
-            ...custom,
-            locations: [...custom.locations, custom.locationInput.trim()],
-            locationInput: ''
+        if (type === 'location' && value.trim()) {
+          if (!custom.locations.includes(value.trim())) {
+            return {
+              ...custom,
+              locations: [...custom.locations, value.trim()],
+              locationInput: '',
+            }
           }
         }
-        if (type === 'owner' && custom.ownerInput.trim()) {
-          return {
-            ...custom,
-            owners: [...custom.owners, custom.ownerInput.trim()],
-            ownerInput: ''
+        if (type === 'owner' && value.trim()) {
+          if (!custom.owners.includes(value.trim())) {
+            return {
+              ...custom,
+              owners: [...custom.owners, value.trim()],
+              ownerInput: '',
+            }
           }
         }
-        if (type === 'tag' && custom.tagInput.trim()) {
-          return {
-            ...custom,
-            tags: [...custom.tags, custom.tagInput.trim()],
-            tagInput: ''
+        if (type === 'tag' && value.trim()) {
+          if (!custom.tags.includes(value.trim())) {
+            return {
+              ...custom,
+              tags: [...custom.tags, value.trim()],
+              tagInput: '',
+            }
           }
         }
         return custom
@@ -67,28 +270,45 @@ const ComparativeStatForm = ({
     )
   }
 
-  const handleRemoveItem = (customizationId: number, type: string, value: string) => {
-    setCustomizations(prevCustomizations =>
-      prevCustomizations.map(custom => {
+  const handleRemoveItem = (
+    customizationId: number,
+    type: string,
+    value: string
+  ) => {
+    setCustomizations((prevCustomizations) =>
+      prevCustomizations.map((custom) => {
         if (custom.id !== customizationId) return custom
 
         if (type === 'location') {
-          return { ...custom, locations: custom.locations.filter((i: string) => i !== value) }
+          return {
+            ...custom,
+            locations: custom.locations.filter((i: string) => i !== value),
+          }
         }
         if (type === 'owner') {
-          return { ...custom, owners: custom.owners.filter((i: string) => i !== value) }
+          return {
+            ...custom,
+            owners: custom.owners.filter((i: string) => i !== value),
+          }
         }
         if (type === 'tag') {
-          return { ...custom, tags: custom.tags.filter((i: string) => i !== value) }
+          return {
+            ...custom,
+            tags: custom.tags.filter((i: string) => i !== value),
+          }
         }
         return custom
       })
     )
   }
 
-  const updateCustomization = (customizationId: number, field: string, value: any) => {
-    setCustomizations(prevCustomizations =>
-      prevCustomizations.map(custom =>
+  const updateCustomization = (
+    customizationId: number,
+    field: string,
+    value: any
+  ) => {
+    setCustomizations((prevCustomizations) =>
+      prevCustomizations.map((custom) =>
         custom.id === customizationId ? { ...custom, [field]: value } : custom
       )
     )
@@ -100,7 +320,6 @@ const ComparativeStatForm = ({
       {
         id: Date.now(),
         selectedOption: '',
-        locationType: null,
         locations: [],
         locationInput: '',
         propertyTypes: [],
@@ -109,13 +328,15 @@ const ComparativeStatForm = ({
         ownerInput: '',
         tags: [],
         tagInput: '',
-      }
+      },
     ])
   }
 
   const removeCustomization = (customizationId: number) => {
     if (customizations.length > 1) {
-      setCustomizations(customizations.filter(custom => custom.id !== customizationId))
+      setCustomizations(
+        customizations.filter((custom) => custom.id !== customizationId)
+      )
     }
   }
 
@@ -124,7 +345,7 @@ const ComparativeStatForm = ({
       numAssets,
       acrossType,
       considerType,
-      customizations: considerType === 'Specific' ? customizations : []
+      customizations: considerType === 'Specific' ? customizations : [],
     }
 
     console.log('Form Data:', JSON.stringify(formData, null, 2))
@@ -205,7 +426,10 @@ const ComparativeStatForm = ({
               {showCustomizations && (
                 <div className="space-y-6">
                   {customizations.map((customization, index) => (
-                    <div key={customization.id} className="rounded-lg border border-gray-300 p-4">
+                    <div
+                      key={customization.id}
+                      className="rounded-lg border border-gray-300 p-4"
+                    >
                       <div className="mb-4 flex items-center justify-between">
                         <Label className="text-lg font-semibold">
                           Customization {index + 1}
@@ -215,7 +439,9 @@ const ComparativeStatForm = ({
                             variant="ghost"
                             size="icon"
                             className="h-6 w-6 text-gray-500"
-                            onClick={() => removeCustomization(customization.id)}
+                            onClick={() =>
+                              removeCustomization(customization.id)
+                            }
                           >
                             <X className="h-4 w-4" />
                           </Button>
@@ -244,7 +470,9 @@ const ComparativeStatForm = ({
                           <option value="States">States</option>
                           <option value="Countries">Countries</option>
                           <option value="Property Types">Property Types</option>
-                          <option value="Litigation Status">Litigation Status</option>
+                          <option value="Litigation Status">
+                            Litigation Status
+                          </option>
                           <option value="Owner">Owner</option>
                           <option value="Tag">Tag</option>
                         </select>
@@ -255,21 +483,25 @@ const ComparativeStatForm = ({
                         customization.selectedOption
                       ) && (
                         <div className="mt-4">
-                          <Input
+                          <AutocompleteInput
                             placeholder={`Enter ${customization.selectedOption}`}
                             value={customization.locationInput}
-                            onChange={(e) =>
+                            onChange={(value) =>
                               updateCustomization(
                                 customization.id,
                                 'locationInput',
-                                e.target.value
+                                value
                               )
                             }
-                            onKeyDown={(e) =>
-                              e.key === 'Enter' &&
-                              handleAddItem(customization.id, 'location')
+                            onSelect={(value) =>
+                              handleAddItem(customization.id, 'location', value)
                             }
-                            className="h-10 w-full rounded-full"
+                            suggestions={getSuggestionsForOption(
+                              customization.selectedOption
+                            )}
+                            loading={isLoadingForOption(
+                              customization.selectedOption
+                            )}
                           />
                           <div className="mt-2 flex flex-wrap gap-2">
                             {customization.locations.map((loc: string) => (
@@ -297,26 +529,33 @@ const ComparativeStatForm = ({
                       {/* Property Types */}
                       {customization.selectedOption === 'Property Types' && (
                         <div className="mt-4 space-y-3">
-                          {['Residential', 'Commercial', 'Land', 'Plot'].map((type) => (
-                            <div key={type} className="flex items-center gap-2">
-                              <Checkbox
-                                checked={customization.propertyTypes.includes(type)}
-                                onCheckedChange={(checked) => {
-                                  const newTypes = checked
-                                    ? [...customization.propertyTypes, type]
-                                    : customization.propertyTypes.filter(
-                                        (p: string) => p !== type
-                                      )
-                                  updateCustomization(
-                                    customization.id,
-                                    'propertyTypes',
-                                    newTypes
-                                  )
-                                }}
-                              />
-                              <Label className="text-[16px]">{type}</Label>
-                            </div>
-                          ))}
+                          {['Residential', 'Commercial', 'Land', 'Plot'].map(
+                            (type) => (
+                              <div
+                                key={type}
+                                className="flex items-center gap-2"
+                              >
+                                <Checkbox
+                                  checked={customization.propertyTypes.includes(
+                                    type
+                                  )}
+                                  onCheckedChange={(checked) => {
+                                    const newTypes = checked
+                                      ? [...customization.propertyTypes, type]
+                                      : customization.propertyTypes.filter(
+                                          (p: string) => p !== type
+                                        )
+                                    updateCustomization(
+                                      customization.id,
+                                      'propertyTypes',
+                                      newTypes
+                                    )
+                                  }}
+                                />
+                                <Label className="text-[16px]">{type}</Label>
+                              </div>
+                            )
+                          )}
                         </div>
                       )}
 
@@ -326,14 +565,27 @@ const ComparativeStatForm = ({
                           <RadioGroup
                             value={customization.litigation ?? ''}
                             onValueChange={(val) =>
-                              updateCustomization(customization.id, 'litigation', val)
+                              updateCustomization(
+                                customization.id,
+                                'litigation',
+                                val
+                              )
                             }
                             className="flex gap-10"
                           >
                             {['Disputed', 'Non-Disputed'].map((opt) => (
-                              <div key={opt} className="flex items-center gap-3">
-                                <RadioGroupItem value={opt} id={`${customization.id}-${opt}`} />
-                                <Label htmlFor={`${customization.id}-${opt}`} className="text-[16px]">
+                              <div
+                                key={opt}
+                                className="flex items-center gap-3"
+                              >
+                                <RadioGroupItem
+                                  value={opt}
+                                  id={`${customization.id}-${opt}`}
+                                />
+                                <Label
+                                  htmlFor={`${customization.id}-${opt}`}
+                                  className="text-[16px]"
+                                >
                                   {opt}
                                 </Label>
                               </div>
@@ -345,21 +597,21 @@ const ComparativeStatForm = ({
                       {/* Owner */}
                       {customization.selectedOption === 'Owner' && (
                         <div className="mt-4">
-                          <Input
+                          <AutocompleteInput
                             placeholder="Enter Owner"
                             value={customization.ownerInput}
-                            onChange={(e) =>
+                            onChange={(value) =>
                               updateCustomization(
                                 customization.id,
                                 'ownerInput',
-                                e.target.value
+                                value
                               )
                             }
-                            onKeyDown={(e) =>
-                              e.key === 'Enter' &&
-                              handleAddItem(customization.id, 'owner')
+                            onSelect={(value) =>
+                              handleAddItem(customization.id, 'owner', value)
                             }
-                            className="h-10 w-full rounded-full"
+                            suggestions={ownerSuggestions}
+                            loading={loadingData.owners}
                           />
                           <div className="mt-2 flex flex-wrap gap-2">
                             {customization.owners.map((owner: string) => (
@@ -371,7 +623,11 @@ const ComparativeStatForm = ({
                                 <X
                                   className="h-3 w-3 cursor-pointer"
                                   onClick={() =>
-                                    handleRemoveItem(customization.id, 'owner', owner)
+                                    handleRemoveItem(
+                                      customization.id,
+                                      'owner',
+                                      owner
+                                    )
                                   }
                                 />
                               </span>
@@ -383,20 +639,21 @@ const ComparativeStatForm = ({
                       {/* Tag */}
                       {customization.selectedOption === 'Tag' && (
                         <div className="mt-4">
-                          <Input
+                          <AutocompleteInput
                             placeholder="Enter Tag"
                             value={customization.tagInput}
-                            onChange={(e) =>
+                            onChange={(value) =>
                               updateCustomization(
                                 customization.id,
                                 'tagInput',
-                                e.target.value
+                                value
                               )
                             }
-                            onKeyDown={(e) =>
-                              e.key === 'Enter' && handleAddItem(customization.id, 'tag')
+                            onSelect={(value) =>
+                              handleAddItem(customization.id, 'tag', value)
                             }
-                            className="h-10 w-full rounded-full"
+                            suggestions={tagSuggestions.map((tag) => tag.name)}
+                            loading={loadingData.tags}
                           />
                           <div className="mt-2 flex flex-wrap gap-2">
                             {customization.tags.map((tag: string) => (
@@ -408,7 +665,11 @@ const ComparativeStatForm = ({
                                 <X
                                   className="h-3 w-3 cursor-pointer"
                                   onClick={() =>
-                                    handleRemoveItem(customization.id, 'tag', tag)
+                                    handleRemoveItem(
+                                      customization.id,
+                                      'tag',
+                                      tag
+                                    )
                                   }
                                 />
                               </span>
