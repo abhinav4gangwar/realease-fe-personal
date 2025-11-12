@@ -1,6 +1,8 @@
 import { Button } from '@/components/ui/button'
+import { apiClient } from '@/utils/api'
 import { Plus, X } from 'lucide-react'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import ComparativeStatForm from './comparative-stat-form'
 import StandAloneForm from './stand-alone-form'
 
@@ -8,20 +10,50 @@ export interface AnalyticsSidebarProps {
   isOpen: boolean
   onClose: () => void
   analytics: any
+  onAnalyticsCreated: () => void
+  onAnalyticsDeleted: () => void
 }
+
 const AnalyticsSidebar = ({
   isOpen,
   onClose,
   analytics,
+  onAnalyticsCreated,
+  onAnalyticsDeleted,
 }: AnalyticsSidebarProps) => {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
-  const [currentAnalytic, setCurrentAnalytic] = useState()
+  const [currentAnalytic, setCurrentAnalytic] = useState<any>()
   const [isStandAloneOpen, setIsStandAloneOpen] = useState(false)
   const [isComparativeOpen, setIsComparativeOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
-  const handleDeleteClick = () => {
-    console.log(`Delete ${currentAnalytic?.id}`)
-    setIsDeleteOpen(false)
+  const handleDeleteClick = async () => {
+    if (!currentAnalytic?.id) return
+
+    setIsDeleting(true)
+    try {
+      await apiClient.delete(`/analytics/${currentAnalytic.id}`)
+      console.log(`Deleted analytics card ${currentAnalytic.id}`)
+      toast.error('Deleted Analytics>')
+      setIsDeleteOpen(false)
+      setCurrentAnalytic(undefined)
+      onAnalyticsDeleted()
+    } catch (error: any) {
+      console.error('Failed to delete analytics card:', error)
+      toast.message('Failed to Delete Analytics.')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const handleStandAloneSuccess = () => {
+    setIsStandAloneOpen(false)
+    onAnalyticsCreated()
+  }
+
+  const handleComparativeSuccess = () => {
+    setIsComparativeOpen(false)
+    onAnalyticsCreated()
   }
 
   return (
@@ -52,7 +84,7 @@ const AnalyticsSidebar = ({
 
             {/* Content */}
             <div className="flex-1 space-y-4 overflow-y-auto p-5">
-              {analytics.cards.map((card) => (
+              {analytics?.cards?.map((card: any) => (
                 <div
                   key={card.id}
                   className="rounded-md bg-white p-4 shadow-md"
@@ -83,14 +115,14 @@ const AnalyticsSidebar = ({
                     className="hover:bg-secondary text-secondary h-11 w-[200px] cursor-pointer border border-gray-400 bg-white px-6 font-semibold hover:text-white"
                     onClick={() => setIsStandAloneOpen(true)}
                   >
-                    Standalone Stat <Plus className="text-primary" />
+                    Standalone Stat <Plus className="text-primary ml-2" />
                   </Button>
 
                   <Button
                     className="hover:bg-secondary text-secondary h-11 w-[200px] cursor-pointer border border-gray-400 bg-white px-6 font-semibold hover:text-white"
                     onClick={() => setIsComparativeOpen(true)}
                   >
-                    Comparative Stat <Plus className="text-primary" />
+                    Comparative Stat <Plus className="text-primary ml-2" />
                   </Button>
                 </div>
               </div>
@@ -105,15 +137,16 @@ const AnalyticsSidebar = ({
             <div className="p-6">
               <h2 className="mb-2 text-xl font-semibold">Delete Analytic</h2>
               <p className="mb-6 text-gray-600">
-                Are you sure you want to Delete this Analytic?
+                Are you sure you want to delete {currentAnalytic.title} ?
               </p>
 
               <div className="flex gap-3">
                 <Button
                   className="bg-primary hover:bg-secondary h-11 w-28 cursor-pointer px-6"
                   onClick={handleDeleteClick}
+                  disabled={isDeleting}
                 >
-                  Yes
+                  {isDeleting ? 'Deleting...' : 'Yes'}
                 </Button>
                 <Button
                   variant="outline"
@@ -122,6 +155,7 @@ const AnalyticsSidebar = ({
                     setCurrentAnalytic(undefined)
                     setIsDeleteOpen(false)
                   }}
+                  disabled={isDeleting}
                 >
                   No
                 </Button>
@@ -134,11 +168,13 @@ const AnalyticsSidebar = ({
       <StandAloneForm
         isOpen={isStandAloneOpen}
         onClose={() => setIsStandAloneOpen(false)}
+        onSuccess={handleStandAloneSuccess}
       />
 
       <ComparativeStatForm
         isOpen={isComparativeOpen}
         onClose={() => setIsComparativeOpen(false)}
+        onSuccess={handleComparativeSuccess}
       />
     </>
   )

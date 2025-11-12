@@ -5,12 +5,15 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { apiClient } from '@/utils/api'
 import { Check, Sparkles, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import {
   analyticsHelpers,
   Tag,
 } from './analytics-helper/analytics-helper-service'
+
 
 interface AutocompleteInputProps {
   placeholder: string
@@ -129,12 +132,17 @@ const AutocompleteInput = ({
 const StandAloneForm = ({
   isOpen,
   onClose,
+  onSuccess,
 }: {
   isOpen: boolean
   onClose: () => void
+  onSuccess?: () => void
 }) => {
-  const [numAssets, setNumAssets] = useState<number | null>(null)
+  const [title, setTitle] = useState('')
+  const [insight, setInsight] = useState('')
+  const [metricType, setMetricType] = useState<'count' | 'value'>('count')
   const [selectedFilters, setSelectedFilters] = useState<string[]>([])
+  const [isGenerating, setIsGenerating] = useState(false)
 
   // Location filters
   const [locationType, setLocationType] = useState<string | null>(null)
@@ -253,20 +261,95 @@ const StandAloneForm = ({
     if (type === 'tag') setTags(tags.filter((i) => i !== value))
   }
 
-  const handleGenerate = () => {
-    const formData = {
-      numAssets,
-      selectedFilters,
-      locationType,
-      locations,
-      propertyTypes,
-      litigation,
-      owners,
-      tags,
+  const buildSecondaryFilters = () => {
+    const filters: Array<{ type: string; value: string }> = []
+
+    // Location filters
+    if (locationType && locations.length > 0) {
+      const locationTypeMap: Record<string, string> = {
+        Localities: 'locality',
+        Cities: 'city',
+        States: 'state',
+        Countries: 'country',
+      }
+      const filterType = locationTypeMap[locationType]
+      locations.forEach((loc) => {
+        filters.push({ type: filterType, value: loc })
+      })
     }
 
-    console.log('Form Data:', JSON.stringify(formData, null, 2))
-    onClose()
+    // Property type filters
+    propertyTypes.forEach((type) => {
+      filters.push({ type: 'propertyType', value: type })
+    })
+
+    // Litigation status
+    if (litigation) {
+      filters.push({
+        type: 'litigationStatus',
+        value: litigation.toLowerCase(),
+      })
+    }
+
+    // Owner filters
+    owners.forEach((owner) => {
+      filters.push({ type: 'owner', value: owner })
+    })
+
+    // Tag filters
+    tags.forEach((tag) => {
+      filters.push({ type: 'tag', value: tag })
+    })
+
+    return filters
+  }
+
+  const handleGenerate = async () => {
+    // Validation
+    if (!title.trim()) {
+      alert('Please enter a title for the analytics card')
+      return
+    }
+
+    setIsGenerating(true)
+
+    try {
+      const requestBody = {
+        type: 'basic',
+        title: title.trim(),
+        insight: insight.trim() || undefined,
+        analyticsType: 'standalone',
+        metricType: metricType,
+        secondaryFilters: buildSecondaryFilters(),
+        displayColor: 'secondary',
+      }
+
+      const response = await apiClient.post('/analytics', requestBody)
+
+      if (response.data) {
+        toast.message("Analytics Created.")
+        console.log('Analytics card created:', response.data)
+        // Reset form
+        setTitle('')
+        setInsight('')
+        setMetricType('count')
+        setSelectedFilters([])
+        setLocationType(null)
+        setLocations([])
+        setPropertyTypes([])
+        setLitigation(null)
+        setOwners([])
+        setTags([])
+        
+        onSuccess?.()
+        onClose()
+      }
+    } catch (error: any) {
+      console.error('Failed to create analytics card:', error)
+      toast.message("Filed to create Analytics.")
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   return (
@@ -291,22 +374,57 @@ const StandAloneForm = ({
 
             {/* Content */}
             <div className="flex-1 space-y-6 overflow-y-auto p-5">
-              {/* Number of Assets */}
-              <div className="flex items-center gap-2">
-                <Label className="text-lg">I want to see</Label>
-                <select
-                  className="mt-2 rounded border border-gray-400 p-2"
-                  value={numAssets ?? ''}
-                  onChange={(e) => setNumAssets(Number(e.target.value))}
+              {/* Title and Insight */}
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-base font-medium">Title *</Label>
+                  <Input
+                    placeholder="E.g., Total Assets in Mumbai"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="mt-2"
+                  />
+                </div>
+                <div>
+                  <Label className="text-base font-medium">
+                    Description (Optional)
+                  </Label>
+                  <Input
+                    placeholder="Brief description of this analytics card"
+                    value={insight}
+                    onChange={(e) => setInsight(e.target.value)}
+                    className="mt-2"
+                  />
+                </div>
+              </div>
+
+              {/* Metric Type */}
+              <div className="space-y-2">
+                <Label className="text-base font-medium">Metric Type</Label>
+                <RadioGroup
+                  value={metricType}
+                  onValueChange={(val) => setMetricType(val as 'count' | 'value')}
+                  className="flex gap-6"
                 >
-                  <option value="">Number</option>
-                  {[10, 20, 50, 100].map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-                <Label className="text-lg">of assets considering:</Label>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="count" id="count" />
+                    <Label htmlFor="count" className="text-[16px]">
+                      Count (Number of assets)
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="value" id="value" />
+                    <Label htmlFor="value" className="text-[16px]">
+                      Value (Total asset value)
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <div className="border-t pt-4">
+                <Label className="text-lg font-medium">
+                  Filters (Optional)
+                </Label>
               </div>
 
               {/* Main checkboxes */}
@@ -330,6 +448,15 @@ const StandAloneForm = ({
                             setSelectedFilters(
                               selectedFilters.filter((f) => f !== filter)
                             )
+                            // Reset related state
+                            if (filter === 'Location') {
+                              setLocationType(null)
+                              setLocations([])
+                            }
+                            if (filter === 'Property Type') setPropertyTypes([])
+                            if (filter === 'Litigation Status') setLitigation(null)
+                            if (filter === 'Owner') setOwners([])
+                            if (filter === 'Tag') setTags([])
                           }
                         }}
                       />
@@ -433,13 +560,13 @@ const StandAloneForm = ({
                             onValueChange={(val) => setLitigation(val)}
                             className="flex gap-10"
                           >
-                            {['Disputed', 'Non-Disputed'].map((opt) => (
+                            {['disputed', 'non-disputed'].map((opt) => (
                               <div
                                 key={opt}
                                 className="flex items-center gap-3"
                               >
                                 <RadioGroupItem value={opt} id={opt} />
-                                <Label htmlFor={opt} className="text-[16px]">
+                                <Label htmlFor={opt} className="text-[16px] capitalize">
                                   {opt}
                                 </Label>
                               </div>
@@ -513,10 +640,12 @@ const StandAloneForm = ({
             <div className="bg-[#F2F2F2] shadow-md">
               <div className="flex items-center justify-end p-5">
                 <Button
-                  className="hover:bg-secondary text-secondary h-11 w-[200px] border border-gray-400 bg-white font-semibold hover:text-white"
+                  className="hover:bg-secondary text-secondary h-11 w-[200px] border border-gray-400 bg-white font-semibold hover:text-white disabled:opacity-50"
                   onClick={handleGenerate}
+                  disabled={isGenerating || !title.trim()}
                 >
-                  Generate <Sparkles className="text-primary ml-2" />
+                  {isGenerating ? 'Creating...' : 'Generate'}{' '}
+                  <Sparkles className="text-primary ml-2" />
                 </Button>
               </div>
             </div>
