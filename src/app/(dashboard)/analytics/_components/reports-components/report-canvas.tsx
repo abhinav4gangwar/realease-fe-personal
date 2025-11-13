@@ -1,13 +1,14 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { dummyAnalytics } from "@/lib/analytics.dummy"
-import { ChartType, ReportBlock } from "@/types/report-types"
-import { ArrowDown, ArrowUp, Trash } from "lucide-react"
 
-import { useId } from "react"
+import { AnalyticsCard, ChartType, ReportBlock } from "@/types/report-types"
+import { ArrowDown, ArrowUp, Trash } from "lucide-react"
+import { useEffect, useId, useState } from "react"
+import { toast } from "sonner"
 import ReportAnalyticsBasicCard from "./report-analytics-basic-card"
 import { ReportAnalyticsChartCard } from "./report-analytics-chart-card"
+import { fetchAnalytics } from "./report_utils/report.services"
 
 export interface ReportCanvasProps {
   blocks: ReportBlock[]
@@ -30,6 +31,28 @@ export default function ReportCanvas({
 }: ReportCanvasProps) {
   const fallbackId = useId()
   const id = containerId || `report-canvas-${fallbackId}`
+  const [analytics, setAnalytics] = useState<AnalyticsCard[]>([])
+  const [loadingAnalytics, setLoadingAnalytics] = useState(true)
+
+  // Fetch analytics data for rendering blocks
+  useEffect(() => {
+    const loadAnalytics = async () => {
+      try {
+        setLoadingAnalytics(true)
+        const response = await fetchAnalytics()
+        if (response.cards) {
+          setAnalytics(response.cards)
+        }
+      } catch (error) {
+        console.error('Failed to fetch analytics:', error)
+        toast.error('Failed to load analytics data')
+      } finally {
+        setLoadingAnalytics(false)
+      }
+    }
+    
+    loadAnalytics()
+  }, [])
 
   return (
     <section className="flex-1 overflow-auto">
@@ -64,7 +87,7 @@ export default function ReportCanvas({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-red-600"
+                className="h-7 w-7 text-red-600 hover:text-red-700"
                 onClick={() => onRemove(index)}
                 aria-label="Remove block"
               >
@@ -73,12 +96,13 @@ export default function ReportCanvas({
             </div>
           )
 
+          // Text block
           if (block.kind === "text") {
             return (
               <div key={block.id} className="rounded-md border border-gray-200 bg-white p-3">
                 <div className="mb-2">{controls}</div>
                 <textarea
-                  className="h-36 w-full resize-vertical rounded border border-gray-300 p-3 text-sm outline-none"
+                  className="h-36 w-full resize-vertical rounded border border-gray-300 p-3 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                   value={block.text}
                   onChange={(e) => onChangeText(index, e.target.value)}
                   placeholder="Type your notes, explanations, or section headings here..."
@@ -88,28 +112,57 @@ export default function ReportCanvas({
             )
           }
 
-          // analytics block
-          const card = dummyAnalytics.cards.find((c) => c.id === block.analyticsId)
-          if (!card) {
+          // Analytics block - loading state
+          if (loadingAnalytics) {
             return (
-              <div key={block.id} className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                Missing analytics card: {block.analyticsId}
+              <div key={block.id} className="rounded-md border border-gray-200 bg-white p-3">
+                <div className="mb-2">{controls}</div>
+                <div className="flex h-48 items-center justify-center text-sm text-gray-500">
+                  <div className="text-center">
+                    <div className="mb-2">Loading analytics...</div>
+                    <div className="text-xs text-gray-400">ID: {block.analyticsId}</div>
+                  </div>
+                </div>
               </div>
             )
           }
 
+          // Analytics block - find card
+          const card = analytics.find((c) => c.id === block.analyticsId)
+          
+          // Analytics block - not found
+          if (!card) {
+            return (
+              <div key={block.id} className="rounded-md border border-red-200 bg-red-50 p-3">
+                <div className="mb-2">{controls}</div>
+                <div className="rounded-md bg-white p-4 text-sm text-red-700">
+                  <div className="font-semibold">Analytics card not found</div>
+                  <div className="mt-1 text-xs">
+                    Card ID: {block.analyticsId} may have been deleted.
+                  </div>
+                </div>
+              </div>
+            )
+          }
+
+          // Analytics block - render
           return (
             <div key={block.id} className="rounded-md border border-gray-200 bg-white p-3">
               <div className="mb-2">{controls}</div>
 
               {card.type === "basic" ? (
-                <ReportAnalyticsBasicCard heading={card.title} value={card.value} insight={card.insight} color={card.color} />
+                <ReportAnalyticsBasicCard 
+                  heading={card.title} 
+                  value={card.value || '0'} 
+                  insight={card.insight} 
+                  color={card.color} 
+                />
               ) : (
                 <ReportAnalyticsChartCard
                   defaultChart={card.chartType}
-                  chartType={block.chartType}
+                  chartType={block.chartType || card.chartType}
                   onChartTypeChange={(t) => onChangeChartType(index, t)}
-                  data={card.data}
+                  data={card.data || []}
                   title={card.title}
                   insight={card.insight}
                 />

@@ -2,15 +2,17 @@
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { dummyAnalytics } from '@/lib/analytics.dummy'
+
 import {
+  AnalyticsCard,
   ChartType,
   PositionedBlock,
   ReportBlock,
   ReportJSON,
 } from '@/types/report-types'
 import { ArrowLeft, FileDown, SparkleIcon, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import ReportCanvas from './report-canvas'
 import ReportPreviewModal from './report-preview-model'
 import ReportSidebar from './report-sidebar'
@@ -18,20 +20,51 @@ import {
   exportReportAsDOCX,
   exportReportAsPDF,
 } from './report_utils/report-export'
+import { createReport, fetchAnalytics } from './report_utils/report.services'
 
 const ReportCreationModel = ({
   isOpen,
   onClose,
+  onSuccess,
 }: {
   isOpen: boolean
   onClose: () => void
+  onSuccess?: () => void
 }) => {
   const [collapsed, setCollapsed] = useState(false)
   const [blocks, setBlocks] = useState<ReportBlock[]>([])
   const [previewOpen, setPreviewOpen] = useState(false)
   const [reportName, setReportName] = useState<string>('Untitled report')
+  const [creating, setCreating] = useState(false)
+  const [analytics, setAnalytics] = useState<AnalyticsCard[]>([])
+  const [loadingAnalytics, setLoadingAnalytics] = useState(true)
 
-  // selected IDs are those present as analytics blocks
+  // Fetch analytics when modal opens
+  useEffect(() => {
+    const loadAnalytics = async () => {
+      try {
+        setLoadingAnalytics(true)
+        const response = await fetchAnalytics()
+        if (response.cards) {
+          setAnalytics(response.cards)
+        }
+      } catch (error) {
+        console.error('Failed to fetch analytics:', error)
+        toast.error('Failed to load analytics')
+      } finally {
+        setLoadingAnalytics(false)
+      }
+    }
+    
+    if (isOpen) {
+      loadAnalytics()
+      // Reset form when opening
+      setBlocks([])
+      setReportName('Untitled report')
+    }
+  }, [isOpen])
+
+  // Selected analytics IDs
   const selectedIds = useMemo(
     () =>
       blocks
@@ -55,12 +88,15 @@ const ReportCreationModel = ({
     const existsIndex = blocks.findIndex(
       (b) => b.kind === 'analytics' && (b as any).analyticsId === id
     )
+    
     if (existsIndex >= 0) {
-      // remove
+      // Remove analytics block
       setBlocks((prev) => prev.filter((_, i) => i !== existsIndex))
     } else {
-      const card = dummyAnalytics.cards.find((c) => c.id === id)
+      // Add analytics block
+      const card = analytics.find((c) => c.id === id)
       if (!card) return
+      
       setBlocks((prev) => [
         ...prev,
         {
@@ -68,9 +104,8 @@ const ReportCreationModel = ({
           kind: 'analytics',
           analyticsId: id,
           title: card.title,
-          analyticsType: card.type,
-          chartType:
-            card.type === 'chart' ? (card.chartType as ChartType) : undefined,
+          analyticsType: card.analyticsType,
+          chartType: card.type === 'chart' ? (card.chartType as ChartType) : undefined,
         },
       ])
     }
@@ -150,17 +185,58 @@ const ReportCreationModel = ({
     }
   }
 
-  const handleGenerate = () => {
-    const json = computeJSON()
-    console.log('[Report JSON]', JSON.stringify(json, null, 2))
+  const handleGenerate = async () => {
+    // Validation
+    if (!reportName.trim()) {
+      toast.error('Please enter a report name')
+      return
+    }
+
+    if (blocks.length === 0) {
+      toast.error('Please add at least one block to the report')
+      return
+    }
+
+    try {
+      setCreating(true)
+      const json = computeJSON()
+      
+      const response = await createReport({
+        name: json.name,
+        grid: json.grid,
+        blocks: json.blocks,
+      })
+
+      toast.success('Report created successfully')
+      
+      // Call success callback and close
+      onSuccess?.()
+      onClose()
+    } catch (error: any) {
+      console.error('Failed to create report:', error)
+      const errorMessage = error?.response?.data?.error || error?.response?.data?.message || 'Failed to create report'
+      toast.error(errorMessage)
+    } finally {
+      setCreating(false)
+    }
   }
 
   const exportPDF = async () => {
-    await exportReportAsPDF('live-report-canvas')
+    try {
+      await exportReportAsPDF('live-report-canvas')
+      toast.success('PDF exported successfully')
+    } catch (error) {
+      toast.error('Failed to export PDF')
+    }
   }
 
   const exportDOCX = async () => {
-    await exportReportAsDOCX('live-report-canvas')
+    try {
+      await exportReportAsDOCX('live-report-canvas')
+      toast.success('DOCX exported successfully')
+    } catch (error) {
+      toast.error('Failed to export DOCX')
+    }
   }
 
   if (!isOpen) return null
@@ -172,11 +248,12 @@ const ReportCreationModel = ({
         <div className="bg-[#F2F2F2] shadow-md">
           <div className="flex items-center justify-between p-5">
             <div className="flex min-w-0 flex-1 items-center gap-3">
-               <Button
+              <Button
                 variant="ghost"
                 size="icon"
                 className="hover:text-primary h-6 w-6 cursor-pointer rounded-full"
                 onClick={onClose}
+                disabled={creating}
               >
                 <ArrowLeft className="size-6 font-bold text-secondary" />
               </Button>
@@ -186,6 +263,7 @@ const ReportCreationModel = ({
                 aria-label="Report name"
                 className="h-12 max-w-[340px] font-semibold"
                 placeholder="Untitled report"
+                disabled={creating}
               />
             </div>
             <div className="flex flex-shrink-0 items-center gap-3">
@@ -194,6 +272,7 @@ const ReportCreationModel = ({
                 className="h-10 bg-transparent"
                 onClick={exportPDF}
                 aria-label="Export report as PDF"
+                disabled={creating}
               >
                 <FileDown className="mr-2 h-4 w-4" /> Export PDF
               </Button>
@@ -202,6 +281,7 @@ const ReportCreationModel = ({
                 className="h-10 bg-transparent"
                 onClick={exportDOCX}
                 aria-label="Export report as DOCX"
+                disabled={creating}
               >
                 <FileDown className="mr-2 h-4 w-4" /> Export DOCX
               </Button>
@@ -210,6 +290,7 @@ const ReportCreationModel = ({
                 size="icon"
                 className="hover:text-primary h-6 w-6 cursor-pointer rounded-full"
                 onClick={onClose}
+                disabled={creating}
               >
                 <X className="h-4 w-4 font-bold text-primary" />
               </Button>
@@ -226,6 +307,8 @@ const ReportCreationModel = ({
             onToggleAnalytic={toggleAnalytic}
             onAddTextBlock={addTextBlock}
             onSetChartType={setChartTypeForAnalyticId}
+            analytics={analytics}
+            loadingAnalytics={loadingAnalytics}
           />
 
           <div className="flex flex-1 flex-col">
@@ -250,15 +333,17 @@ const ReportCreationModel = ({
               <Button
                 className="hover:bg-secondary text-secondary h-11 w-[200px] cursor-pointer border border-gray-400 bg-white px-6 font-semibold hover:text-white"
                 onClick={() => setPreviewOpen(true)}
+                disabled={creating || blocks.length === 0}
               >
                 Preview Report
               </Button>
 
               <Button
-                className="hover:bg-secondary bg-primary h-11 w-[200px] cursor-pointer border border-gray-400 px-6 font-semibold text-white hover:text-white"
+                className="hover:bg-secondary bg-primary h-11 w-[200px] cursor-pointer border border-gray-400 px-6 font-semibold text-white hover:text-white disabled:opacity-50"
                 onClick={handleGenerate}
+                disabled={creating}
               >
-                Generate Report <SparkleIcon />
+                {creating ? 'Creating...' : 'Generate Report'} <SparkleIcon />
               </Button>
             </div>
           </div>

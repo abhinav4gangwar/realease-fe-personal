@@ -5,133 +5,366 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Plus, Sparkles, X } from 'lucide-react'
-import { useState } from 'react'
+
+import { apiClient } from '@/utils/api'
+import { Check, Sparkles, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
+import {
+  analyticsHelpers,
+  Tag,
+} from './analytics-helper/analytics-helper-service'
+
+interface AutocompleteInputProps {
+  placeholder: string
+  value: string
+  onChange: (value: string) => void
+  onSelect: (value: string) => void
+  suggestions: string[]
+  loading?: boolean
+}
+
+const AutocompleteInput = ({
+  placeholder,
+  value,
+  onChange,
+  onSelect,
+  suggestions,
+  loading = false,
+}: AutocompleteInputProps) => {
+  const [isOpen, setIsOpen] = useState(false)
+  const [highlightedIndex, setHighlightedIndex] = useState(-1)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+
+  const filteredSuggestions = suggestions.filter((item) =>
+    item.toLowerCase().includes(value.toLowerCase())
+  )
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        wrapperRef.current &&
+        !wrapperRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setHighlightedIndex((prev) =>
+        prev < filteredSuggestions.length - 1 ? prev + 1 : prev
+      )
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : 0))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      if (highlightedIndex >= 0 && filteredSuggestions[highlightedIndex]) {
+        onSelect(filteredSuggestions[highlightedIndex])
+        setIsOpen(false)
+        setHighlightedIndex(-1)
+      } else if (value.trim()) {
+        onSelect(value.trim())
+        setIsOpen(false)
+      }
+    } else if (e.key === 'Escape') {
+      setIsOpen(false)
+      setHighlightedIndex(-1)
+    }
+  }
+
+  return (
+    <div ref={wrapperRef} className="relative w-full">
+      <Input
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value)
+          setIsOpen(true)
+          setHighlightedIndex(-1)
+        }}
+        onFocus={() => setIsOpen(true)}
+        onKeyDown={handleKeyDown}
+        className="h-10 rounded-full"
+      />
+      {isOpen && value && (
+        <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
+          {loading ? (
+            <div className="p-3 text-center text-sm text-gray-500">
+              Loading...
+            </div>
+          ) : filteredSuggestions.length > 0 ? (
+            filteredSuggestions.map((suggestion, index) => (
+              <div
+                key={suggestion}
+                className={`cursor-pointer p-3 text-sm hover:bg-gray-100 ${
+                  index === highlightedIndex ? 'bg-gray-100' : ''
+                }`}
+                onClick={() => {
+                  onSelect(suggestion)
+                  setIsOpen(false)
+                  setHighlightedIndex(-1)
+                }}
+              >
+                {suggestion}
+                {index === highlightedIndex && (
+                  <Check className="ml-2 inline h-4 w-4" />
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="p-3 text-center text-sm text-gray-500">
+              No results found.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 const ComparativeStatForm = ({
   isOpen,
   onClose,
+  onSuccess,
 }: {
   isOpen: boolean
   onClose: () => void
+  onSuccess?: () => void
 }) => {
-  const [numAssets, setNumAssets] = useState<number | null>(null)
-  const [acrossType, setAcrossType] = useState<string>('')
-  const [considerType, setConsiderType] = useState<string>('')
-  
-  // Customizations array to hold multiple customization blocks
-  const [customizations, setCustomizations] = useState<any[]>([
-    {
-      id: Date.now(),
-      selectedOption: '',
-      locationType: null,
-      locations: [],
-      locationInput: '',
-      propertyTypes: [],
-      litigation: null,
-      owners: [],
-      ownerInput: '',
-      tags: [],
-      tagInput: '',
-    }
-  ])
+  const [title, setTitle] = useState('')
+  const [insight, setInsight] = useState('')
+  const [metricType, setMetricType] = useState<'count' | 'value'>('count')
+  const [chartType, setChartType] = useState<'bar' | 'pie' | 'donut' | 'line' | 'area'>('bar')
+  const [groupBy, setGroupBy] = useState<string>('')
+  const [isGenerating, setIsGenerating] = useState(false)
 
-  const handleAddItem = (customizationId: number, type: string) => {
-    setCustomizations(prevCustomizations =>
-      prevCustomizations.map(custom => {
-        if (custom.id !== customizationId) return custom
+  // Global suggestions data
+  const [localitiesSuggestions, setLocalitiesSuggestions] = useState<string[]>([])
+  const [citiesSuggestions, setCitiesSuggestions] = useState<string[]>([])
+  const [statesSuggestions, setStatesSuggestions] = useState<string[]>([])
+  const [countriesSuggestions, setCountriesSuggestions] = useState<string[]>([])
+  const [ownerSuggestions, setOwnerSuggestions] = useState<string[]>([])
+  const [tagSuggestions, setTagSuggestions] = useState<Tag[]>([])
+  const [loadingData, setLoadingData] = useState<Record<string, boolean>>({})
 
-        if (type === 'location' && custom.locationInput.trim()) {
-          return {
-            ...custom,
-            locations: [...custom.locations, custom.locationInput.trim()],
-            locationInput: ''
-          }
-        }
-        if (type === 'owner' && custom.ownerInput.trim()) {
-          return {
-            ...custom,
-            owners: [...custom.owners, custom.ownerInput.trim()],
-            ownerInput: ''
-          }
-        }
-        if (type === 'tag' && custom.tagInput.trim()) {
-          return {
-            ...custom,
-            tags: [...custom.tags, custom.tagInput.trim()],
-            tagInput: ''
-          }
-        }
-        return custom
+  // Secondary filters
+  const [selectedFilters, setSelectedFilters] = useState<string[]>([])
+  const [locationType, setLocationType] = useState<string | null>(null)
+  const [locations, setLocations] = useState<string[]>([])
+  const [locationInput, setLocationInput] = useState('')
+  const [propertyTypes, setPropertyTypes] = useState<string[]>([])
+  const [litigation, setLitigation] = useState<string | null>(null)
+  const [owners, setOwners] = useState<string[]>([])
+  const [ownerInput, setOwnerInput] = useState('')
+  const [tags, setTags] = useState<string[]>([])
+  const [tagInput, setTagInput] = useState('')
+
+  // Fetch all data on mount
+  useEffect(() => {
+    const fetchAllData = async () => {
+      setLoadingData({
+        localities: true,
+        cities: true,
+        states: true,
+        countries: true,
+        owners: true,
+        tags: true,
       })
-    )
-  }
 
-  const handleRemoveItem = (customizationId: number, type: string, value: string) => {
-    setCustomizations(prevCustomizations =>
-      prevCustomizations.map(custom => {
-        if (custom.id !== customizationId) return custom
+      try {
+        const [localities, cities, states, countries, owners, tags] =
+          await Promise.all([
+            analyticsHelpers.fetchLocalities(),
+            analyticsHelpers.fetchCities(),
+            analyticsHelpers.fetchStates(),
+            analyticsHelpers.fetchCountries(),
+            analyticsHelpers.fetchOwners(),
+            analyticsHelpers.fetchTags(),
+          ])
 
-        if (type === 'location') {
-          return { ...custom, locations: custom.locations.filter((i: string) => i !== value) }
-        }
-        if (type === 'owner') {
-          return { ...custom, owners: custom.owners.filter((i: string) => i !== value) }
-        }
-        if (type === 'tag') {
-          return { ...custom, tags: custom.tags.filter((i: string) => i !== value) }
-        }
-        return custom
-      })
-    )
-  }
-
-  const updateCustomization = (customizationId: number, field: string, value: any) => {
-    setCustomizations(prevCustomizations =>
-      prevCustomizations.map(custom =>
-        custom.id === customizationId ? { ...custom, [field]: value } : custom
-      )
-    )
-  }
-
-  const addMoreCustomization = () => {
-    setCustomizations([
-      ...customizations,
-      {
-        id: Date.now(),
-        selectedOption: '',
-        locationType: null,
-        locations: [],
-        locationInput: '',
-        propertyTypes: [],
-        litigation: null,
-        owners: [],
-        ownerInput: '',
-        tags: [],
-        tagInput: '',
+        setLocalitiesSuggestions(localities)
+        setCitiesSuggestions(cities)
+        setStatesSuggestions(states)
+        setCountriesSuggestions(countries)
+        setOwnerSuggestions(owners)
+        setTagSuggestions(tags)
+      } catch (error) {
+        console.error('Error fetching data:', error)
+      } finally {
+        setLoadingData({})
       }
-    ])
-  }
+    }
 
-  const removeCustomization = (customizationId: number) => {
-    if (customizations.length > 1) {
-      setCustomizations(customizations.filter(custom => custom.id !== customizationId))
+    if (isOpen) {
+      fetchAllData()
+    }
+  }, [isOpen])
+
+  const getLocationSuggestions = () => {
+    switch (locationType) {
+      case 'Localities':
+        return localitiesSuggestions
+      case 'Cities':
+        return citiesSuggestions
+      case 'States':
+        return statesSuggestions
+      case 'Countries':
+        return countriesSuggestions
+      default:
+        return []
     }
   }
 
-  const handleGenerate = () => {
-    const formData = {
-      numAssets,
-      acrossType,
-      considerType,
-      customizations: considerType === 'Specific' ? customizations : []
+  const handleAddLocation = (value: string) => {
+    if (value.trim() && !locations.includes(value.trim())) {
+      setLocations([...locations, value.trim()])
+      setLocationInput('')
     }
-
-    console.log('Form Data:', JSON.stringify(formData, null, 2))
-    onClose()
   }
 
-  const showCustomizations = considerType === 'Specific'
+  const handleAddOwner = (value: string) => {
+    if (value.trim() && !owners.includes(value.trim())) {
+      setOwners([...owners, value.trim()])
+      setOwnerInput('')
+    }
+  }
+
+  const handleAddTag = (value: string) => {
+    if (value.trim() && !tags.includes(value.trim())) {
+      setTags([...tags, value.trim()])
+      setTagInput('')
+    }
+  }
+
+  const handleRemoveItem = (type: string, value: string) => {
+    if (type === 'location') setLocations(locations.filter((i) => i !== value))
+    if (type === 'owner') setOwners(owners.filter((i) => i !== value))
+    if (type === 'tag') setTags(tags.filter((i) => i !== value))
+  }
+
+  const mapGroupByToApi = (groupByValue: string): string => {
+    const mapping: Record<string, string> = {
+      'Localities': 'localities',
+      'Cities': 'cities',
+      'States': 'states',
+      'Countries': 'countries',
+      'Property Type': 'propertyType',
+      'Litigation Status': 'litigationStatus',
+      'Owner': 'owner',
+      'Tag': 'tag',
+    }
+    return mapping[groupByValue] || groupByValue.toLowerCase()
+  }
+
+  const buildSecondaryFilters = () => {
+    const filters: Array<{ type: string; value: string }> = []
+
+    // Location filters
+    if (locationType && locations.length > 0) {
+      const locationTypeMap: Record<string, string> = {
+        Localities: 'locality',
+        Cities: 'city',
+        States: 'state',
+        Countries: 'country',
+      }
+      const filterType = locationTypeMap[locationType]
+      locations.forEach((loc) => {
+        filters.push({ type: filterType, value: loc })
+      })
+    }
+
+    // Property type filters
+    propertyTypes.forEach((type) => {
+      filters.push({ type: 'propertyType', value: type })
+    })
+
+    // Litigation status
+    if (litigation) {
+      filters.push({
+        type: 'litigationStatus',
+        value: litigation.toLowerCase(),
+      })
+    }
+
+    // Owner filters
+    owners.forEach((owner) => {
+      filters.push({ type: 'owner', value: owner })
+    })
+
+    // Tag filters
+    tags.forEach((tag) => {
+      filters.push({ type: 'tag', value: tag })
+    })
+
+    return filters
+  }
+
+  const handleGenerate = async () => {
+    // Validation
+    if (!title.trim()) {
+      alert('Please enter a title for the analytics card')
+      return
+    }
+
+    if (!groupBy) {
+      alert('Please select what to group by')
+      return
+    }
+
+    setIsGenerating(true)
+
+    try {
+      const requestBody = {
+        type: 'chart',
+        title: title.trim(),
+        insight: insight.trim() || undefined,
+        analyticsType: 'comparative',
+        metricType: metricType,
+        groupBy: mapGroupByToApi(groupBy),
+        chartType: chartType,
+        secondaryFilters: buildSecondaryFilters(),
+        displayColor: 'secondary',
+      }
+
+      console.log('Request Body:', JSON.stringify(requestBody, null, 2))
+
+      const response = await apiClient.post('/analytics', requestBody)
+
+      if (response.data) {
+        toast.message("Analytics Created.")
+        console.log('Comparative analytics card created:', response.data)
+        
+        // Reset form
+        setTitle('')
+        setInsight('')
+        setMetricType('count')
+        setChartType('bar')
+        setGroupBy('')
+        setSelectedFilters([])
+        setLocationType(null)
+        setLocations([])
+        setPropertyTypes([])
+        setLitigation(null)
+        setOwners([])
+        setTags([])
+        
+        onSuccess?.()
+        onClose()
+      }
+    } catch (error: any) {
+      console.error('Failed to create comparative analytics card:', error)
+      toast.message("Failed to Create Analytics")
+    } finally {
+      setIsGenerating(false)
+    }
+  }
 
   return (
     <>
@@ -155,29 +388,66 @@ const ComparativeStatForm = ({
 
             {/* Content */}
             <div className="flex-1 space-y-6 overflow-y-auto p-5">
-              {/* First Field - Number and Across Type */}
-              <div className="flex flex-wrap items-center gap-2">
-                <Label className="text-lg">I want to consider</Label>
-                <select
-                  className="rounded border border-gray-400 p-2"
-                  value={numAssets ?? ''}
-                  onChange={(e) => setNumAssets(Number(e.target.value))}
+              {/* Title and Insight */}
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-base font-medium">Title *</Label>
+                  <Input
+                    placeholder="E.g., Assets by City"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="mt-2"
+                  />
+                </div>
+                <div>
+                  <Label className="text-base font-medium">
+                    Description (Optional)
+                  </Label>
+                  <Input
+                    placeholder="Brief description of this analytics card"
+                    value={insight}
+                    onChange={(e) => setInsight(e.target.value)}
+                    className="mt-2"
+                  />
+                </div>
+              </div>
+
+              {/* Metric Type */}
+              <div className="space-y-2">
+                <Label className="text-base font-medium">Metric Type</Label>
+                <RadioGroup
+                  value={metricType}
+                  onValueChange={(val) => setMetricType(val as 'count' | 'value')}
+                  className="flex gap-6"
                 >
-                  <option value="">Number</option>
-                  {[10, 20, 50, 100].map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-                <Label className="text-lg">of assets across</Label>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="count" id="count" />
+                    <Label htmlFor="count" className="text-[16px]">
+                      Count (Number of assets)
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value="value" id="value" />
+                    <Label htmlFor="value" className="text-[16px]">
+                      Value (Total asset value)
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {/* Group By */}
+              <div className="space-y-2">
+                <Label className="text-base font-medium">Group By *</Label>
                 <select
-                  className="rounded border border-gray-400 p-2"
-                  value={acrossType}
-                  onChange={(e) => setAcrossType(e.target.value)}
+                  className="mt-2 w-full rounded border border-gray-400 p-2"
+                  value={groupBy}
+                  onChange={(e) => setGroupBy(e.target.value)}
                 >
-                  <option value="">Select</option>
-                  <option value="Location">Location</option>
+                  <option value="">Select grouping dimension</option>
+                  <option value="Localities">Localities</option>
+                  <option value="Cities">Cities</option>
+                  <option value="States">States</option>
+                  <option value="Countries">Countries</option>
                   <option value="Property Type">Property Type</option>
                   <option value="Litigation Status">Litigation Status</option>
                   <option value="Owner">Owner</option>
@@ -185,155 +455,171 @@ const ComparativeStatForm = ({
                 </select>
               </div>
 
-              {/* Second Field - All or Specific */}
-              {acrossType && (
-                <div className="flex items-center gap-2">
-                  <Label className="text-lg">I want to consider</Label>
-                  <select
-                    className="rounded border border-gray-400 p-2"
-                    value={considerType}
-                    onChange={(e) => setConsiderType(e.target.value)}
-                  >
-                    <option value="">Select</option>
-                    <option value="All">All</option>
-                    <option value="Specific">Specific</option>
-                  </select>
-                </div>
-              )}
+              {/* Chart Type */}
+              <div className="space-y-2">
+                <Label className="text-base font-medium">Chart Type</Label>
+                <select
+                  className="mt-2 w-full rounded border border-gray-400 p-2"
+                  value={chartType}
+                  onChange={(e) => setChartType(e.target.value as any)}
+                >
+                  <option value="bar">Bar Chart</option>
+                  <option value="pie">Pie Chart</option>
+                  <option value="donut">Donut Chart</option>
+                </select>
+              </div>
 
-              {/* Customizations Section */}
-              {showCustomizations && (
-                <div className="space-y-6">
-                  {customizations.map((customization, index) => (
-                    <div key={customization.id} className="rounded-lg border border-gray-300 p-4">
-                      <div className="mb-4 flex items-center justify-between">
-                        <Label className="text-lg font-semibold">
-                          Customization {index + 1}
-                        </Label>
-                        {customizations.length > 1 && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-gray-500"
-                            onClick={() => removeCustomization(customization.id)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
+              <div className="border-t pt-4">
+                <Label className="text-lg font-medium">
+                  Secondary Filters (Optional)
+                </Label>
+                <p className="text-sm text-gray-500 mt-1">
+                  Apply additional filters to narrow down the data
+                </p>
+              </div>
 
-                      {/* Select Option */}
-                      <div className="mb-4">
-                        <Label className="mb-2 text-base">
-                          I want to consider only the following
-                        </Label>
-                        <select
-                          className="mt-2 w-full rounded border border-gray-400 p-2"
-                          value={customization.selectedOption}
-                          onChange={(e) =>
-                            updateCustomization(
-                              customization.id,
-                              'selectedOption',
-                              e.target.value
+              {/* Secondary Filters */}
+              <div className="space-y-5">
+                {[
+                  'Location',
+                  'Property Type',
+                  'Litigation Status',
+                  'Owner',
+                  'Tag',
+                ].map((filter) => (
+                  <div key={filter} className="space-y-3">
+                    {/* Parent filter checkbox */}
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        checked={selectedFilters.includes(filter)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedFilters([...selectedFilters, filter])
+                          } else {
+                            setSelectedFilters(
+                              selectedFilters.filter((f) => f !== filter)
                             )
+                            // Reset related state
+                            if (filter === 'Location') {
+                              setLocationType(null)
+                              setLocations([])
+                            }
+                            if (filter === 'Property Type') setPropertyTypes([])
+                            if (filter === 'Litigation Status') setLitigation(null)
+                            if (filter === 'Owner') setOwners([])
+                            if (filter === 'Tag') setTags([])
                           }
-                        >
-                          <option value="">Select</option>
-                          <option value="Localities">Localities</option>
-                          <option value="Cities">Cities</option>
-                          <option value="States">States</option>
-                          <option value="Countries">Countries</option>
-                          <option value="Property Types">Property Types</option>
-                          <option value="Litigation Status">Litigation Status</option>
-                          <option value="Owner">Owner</option>
-                          <option value="Tag">Tag</option>
-                        </select>
-                      </div>
+                        }}
+                      />
+                      <Label className="text-[16px]">{filter}</Label>
+                    </div>
 
-                      {/* Location Types (Localities, Cities, States, Countries) */}
-                      {['Localities', 'Cities', 'States', 'Countries'].includes(
-                        customization.selectedOption
-                      ) && (
-                        <div className="mt-4">
-                          <Input
-                            placeholder={`Enter ${customization.selectedOption}`}
-                            value={customization.locationInput}
-                            onChange={(e) =>
-                              updateCustomization(
-                                customization.id,
-                                'locationInput',
-                                e.target.value
-                              )
-                            }
-                            onKeyDown={(e) =>
-                              e.key === 'Enter' &&
-                              handleAddItem(customization.id, 'location')
-                            }
-                            className="h-10 w-full rounded-full"
-                          />
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {customization.locations.map((loc: string) => (
-                              <span
-                                key={loc}
-                                className="flex items-center gap-1 rounded-full bg-[#F5F5F5] px-3 py-2 text-sm"
-                              >
-                                {loc}
-                                <X
-                                  className="h-3 w-3 cursor-pointer"
-                                  onClick={() =>
-                                    handleRemoveItem(
-                                      customization.id,
-                                      'location',
-                                      loc
-                                    )
-                                  }
-                                />
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Property Types */}
-                      {customization.selectedOption === 'Property Types' && (
-                        <div className="mt-4 space-y-3">
-                          {['Residential', 'Commercial', 'Land', 'Plot'].map((type) => (
-                            <div key={type} className="flex items-center gap-2">
-                              <Checkbox
-                                checked={customization.propertyTypes.includes(type)}
-                                onCheckedChange={(checked) => {
-                                  const newTypes = checked
-                                    ? [...customization.propertyTypes, type]
-                                    : customization.propertyTypes.filter(
-                                        (p: string) => p !== type
-                                      )
-                                  updateCustomization(
-                                    customization.id,
-                                    'propertyTypes',
-                                    newTypes
-                                  )
-                                }}
-                              />
-                              <Label className="text-[16px]">{type}</Label>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Litigation Status */}
-                      {customization.selectedOption === 'Litigation Status' && (
-                        <div className="mt-4">
+                    {/* Location */}
+                    {filter === 'Location' &&
+                      selectedFilters.includes('Location') && (
+                        <div className="p-6">
                           <RadioGroup
-                            value={customization.litigation ?? ''}
-                            onValueChange={(val) =>
-                              updateCustomization(customization.id, 'litigation', val)
-                            }
+                            value={locationType ?? ''}
+                            onValueChange={(val) => {
+                              setLocationType(val)
+                              setLocationInput('')
+                              setLocations([])
+                            }}
                             className="flex gap-10"
                           >
-                            {['Disputed', 'Non-Disputed'].map((opt) => (
-                              <div key={opt} className="flex items-center gap-3">
-                                <RadioGroupItem value={opt} id={`${customization.id}-${opt}`} />
-                                <Label htmlFor={`${customization.id}-${opt}`} className="text-[16px]">
+                            {[
+                              'Localities',
+                              'Cities',
+                              'States',
+                              'Countries',
+                            ].map((opt) => (
+                              <div
+                                key={opt}
+                                className="flex items-center gap-3"
+                              >
+                                <RadioGroupItem value={opt} id={opt} />
+                                <Label htmlFor={opt} className="text-[16px]">
+                                  {opt}
+                                </Label>
+                              </div>
+                            ))}
+                          </RadioGroup>
+
+                          {locationType && (
+                            <div className="mt-8">
+                              <AutocompleteInput
+                                placeholder={`Type here to enter the selections of ${locationType}`}
+                                value={locationInput}
+                                onChange={setLocationInput}
+                                onSelect={handleAddLocation}
+                                suggestions={getLocationSuggestions()}
+                                loading={loadingData[locationType.toLowerCase()]}
+                              />
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {locations.map((loc) => (
+                                  <span
+                                    key={loc}
+                                    className="flex items-center gap-1 rounded-full bg-[#F5F5F5] px-3 py-2 text-sm"
+                                  >
+                                    {loc}
+                                    <X
+                                      className="h-3 w-3 cursor-pointer"
+                                      onClick={() =>
+                                        handleRemoveItem('location', loc)
+                                      }
+                                    />
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                    {/* Property Type */}
+                    {filter === 'Property Type' &&
+                      selectedFilters.includes('Property Type') && (
+                        <div className="space-y-5 p-6">
+                          {['Residential', 'Commercial', 'Land', 'Plot'].map(
+                            (type) => (
+                              <div
+                                key={type}
+                                className="flex items-center gap-2"
+                              >
+                                <Checkbox
+                                  checked={propertyTypes.includes(type)}
+                                  onCheckedChange={(checked) => {
+                                    if (checked)
+                                      setPropertyTypes([...propertyTypes, type])
+                                    else
+                                      setPropertyTypes(
+                                        propertyTypes.filter((p) => p !== type)
+                                      )
+                                  }}
+                                />
+                                <Label className="text-[16px]">{type}</Label>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      )}
+
+                    {/* Litigation Status */}
+                    {filter === 'Litigation Status' &&
+                      selectedFilters.includes('Litigation Status') && (
+                        <div className="space-y-2 p-6">
+                          <RadioGroup
+                            value={litigation ?? ''}
+                            onValueChange={(val) => setLitigation(val)}
+                            className="flex gap-10"
+                          >
+                            {['disputed', 'non-disputed'].map((opt) => (
+                              <div
+                                key={opt}
+                                className="flex items-center gap-3"
+                              >
+                                <RadioGroupItem value={opt} id={opt} />
+                                <Label htmlFor={opt} className="text-[16px] capitalize">
                                   {opt}
                                 </Label>
                               </div>
@@ -342,27 +628,20 @@ const ComparativeStatForm = ({
                         </div>
                       )}
 
-                      {/* Owner */}
-                      {customization.selectedOption === 'Owner' && (
-                        <div className="mt-4">
-                          <Input
+                    {/* Owner */}
+                    {filter === 'Owner' &&
+                      selectedFilters.includes('Owner') && (
+                        <div className="pl-6">
+                          <AutocompleteInput
                             placeholder="Enter Owner"
-                            value={customization.ownerInput}
-                            onChange={(e) =>
-                              updateCustomization(
-                                customization.id,
-                                'ownerInput',
-                                e.target.value
-                              )
-                            }
-                            onKeyDown={(e) =>
-                              e.key === 'Enter' &&
-                              handleAddItem(customization.id, 'owner')
-                            }
-                            className="h-10 w-full rounded-full"
+                            value={ownerInput}
+                            onChange={setOwnerInput}
+                            onSelect={handleAddOwner}
+                            suggestions={ownerSuggestions}
+                            loading={loadingData.owners}
                           />
                           <div className="mt-2 flex flex-wrap gap-2">
-                            {customization.owners.map((owner: string) => (
+                            {owners.map((owner) => (
                               <span
                                 key={owner}
                                 className="flex items-center gap-1 rounded-full bg-[#F5F5F5] px-3 py-2 text-sm"
@@ -371,7 +650,7 @@ const ComparativeStatForm = ({
                                 <X
                                   className="h-3 w-3 cursor-pointer"
                                   onClick={() =>
-                                    handleRemoveItem(customization.id, 'owner', owner)
+                                    handleRemoveItem('owner', owner)
                                   }
                                 />
                               </span>
@@ -380,67 +659,48 @@ const ComparativeStatForm = ({
                         </div>
                       )}
 
-                      {/* Tag */}
-                      {customization.selectedOption === 'Tag' && (
-                        <div className="mt-4">
-                          <Input
-                            placeholder="Enter Tag"
-                            value={customization.tagInput}
-                            onChange={(e) =>
-                              updateCustomization(
-                                customization.id,
-                                'tagInput',
-                                e.target.value
-                              )
-                            }
-                            onKeyDown={(e) =>
-                              e.key === 'Enter' && handleAddItem(customization.id, 'tag')
-                            }
-                            className="h-10 w-full rounded-full"
-                          />
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {customization.tags.map((tag: string) => (
-                              <span
-                                key={tag}
-                                className="flex items-center gap-1 rounded-full bg-[#F5F5F5] px-3 py-2 text-sm"
-                              >
-                                {tag}
-                                <X
-                                  className="h-3 w-3 cursor-pointer"
-                                  onClick={() =>
-                                    handleRemoveItem(customization.id, 'tag', tag)
-                                  }
-                                />
-                              </span>
-                            ))}
-                          </div>
+                    {/* Tag */}
+                    {filter === 'Tag' && selectedFilters.includes('Tag') && (
+                      <div className="pl-6">
+                        <AutocompleteInput
+                          placeholder="Enter Tag"
+                          value={tagInput}
+                          onChange={setTagInput}
+                          onSelect={handleAddTag}
+                          suggestions={tagSuggestions.map((tag) => tag.name)}
+                          loading={loadingData.tags}
+                        />
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="flex items-center gap-1 rounded-full bg-[#F5F5F5] px-3 py-2 text-sm"
+                            >
+                              {tag}
+                              <X
+                                className="h-3 w-3 cursor-pointer"
+                                onClick={() => handleRemoveItem('tag', tag)}
+                              />
+                            </span>
+                          ))}
                         </div>
-                      )}
-                    </div>
-                  ))}
-
-                  {/* Add More Customizations Button */}
-                  <Button
-                    variant="outline"
-                    className="w-full border-dashed"
-                    onClick={addMoreCustomization}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add More Customizations
-                  </Button>
-                </div>
-              )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Footer */}
             <div className="bg-[#F2F2F2] shadow-md">
               <div className="flex items-center justify-end p-5">
                 <Button
-                  className="hover:bg-secondary text-secondary h-11 w-[200px] border border-gray-400 bg-white font-semibold hover:text-white"
+                  className="hover:bg-secondary text-secondary h-11 w-[200px] border border-gray-400 bg-white font-semibold hover:text-white disabled:opacity-50"
                   onClick={handleGenerate}
-                  disabled={!numAssets || !acrossType || !considerType}
+                  disabled={isGenerating || !title.trim() || !groupBy}
                 >
-                  Generate <Sparkles className="text-primary ml-2" />
+                  {isGenerating ? 'Creating...' : 'Generate'}{' '}
+                  <Sparkles className="text-primary ml-2" />
                 </Button>
               </div>
             </div>
