@@ -3,6 +3,7 @@ import ChangePasswordModal, {
   useDefaultPasswordCheck,
 } from '@/components/permission-control/change-password-model'
 import { IncompletePersonalDetailsModal } from '@/components/permission-control/incomplete-personal-details-model'
+import Loader from '@/components/shared/Loader'
 import { useAuth } from '@/hooks/useAuth'
 import { useGlobalContextProvider } from '@/providers/global-context'
 import { apiClient } from '@/utils/api'
@@ -63,7 +64,7 @@ export default function DashboardLayout({
   }, [isAuthenticated, setAccountDetails])
 
   if (isAuthenticated == false) {
-    return <div>Loading.....</div>
+    return <Loader />
   }
 
   const isSettingsPage = pathname.startsWith('/settings')

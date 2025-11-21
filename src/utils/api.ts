@@ -2,6 +2,7 @@ import axios from 'axios'
 import { toast } from 'sonner'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
+const API_BASE_URL_LEGAL = process.env.NEXT_PUBLIC_LEGAL_API_URL
 
 const isTokenExpired = (token: string): boolean => {
   try {
@@ -9,7 +10,7 @@ const isTokenExpired = (token: string): boolean => {
     const currentTime = Math.floor(Date.now() / 1000)
     return payload.exp < currentTime
   } catch (error) {
-    console.log(error);
+    console.log(error)
     return true // If we can't decode the token, consider it expired
   }
 }
@@ -43,3 +44,10 @@ apiClient.interceptors.request.use(
     return Promise.reject(error)
   }
 )
+
+export const leaglApiClient = axios.create({
+  baseURL: API_BASE_URL_LEGAL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
