@@ -19,6 +19,7 @@ const filterOptions: { label: string; value: FilterType }[] = [
   { label: 'No Filter', value: 'none' },
   { label: 'By Property', value: 'property' },
   { label: 'By File Type', value: 'type' },
+  { label: 'By File Tags', value: 'tags' },
   { label: 'By Recently Uploaded', value: 'recent' },
 ]
 
@@ -37,12 +38,14 @@ export function FilterButton({ onFilterSelect }: FilterButtonProps) {
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          className={`flex lg:h-11 h-13 cursor-pointer items-center space-x-1 font-semibold ${
-            open ? 'text-primary bg-white border-none' : 'hover:bg-secondary hover:text-white'
+          className={`flex h-13 cursor-pointer items-center space-x-1 font-semibold lg:h-11 ${
+            open
+              ? 'text-primary border-none bg-white'
+              : 'hover:bg-secondary hover:text-white'
           }`}
         >
           <SlidersHorizontal className="h-4 w-4" />
-         <span className='hidden lg:block'>Filter</span> 
+          <span className="hidden lg:block">Filter</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="border-none">

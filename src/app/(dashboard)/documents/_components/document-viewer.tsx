@@ -62,7 +62,6 @@ export interface DocumentViewerProps {
 }
 
 export function DocumentViewer({
-  recentlyAccessed,
   allFiles,
   apiClient,
   transformApiResponse,
@@ -75,12 +74,12 @@ export function DocumentViewer({
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false)
   const [sortField, setSortField] = useState<SortField>('dateAdded')
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
-  const [recentPage, setRecentPage] = useState(1)
   const [allFilesPage, setAllFilesPage] = useState(1)
   const [filterState, setFilterState] = useState<FilterState>({
     type: 'none',
     selectedProperties: [],
     selectedTypes: [],
+    selectedTags: [],
   })
   const [isUploadModalOpen, setUploadModalOpen] = useState(false)
   const [addModalType, setAddModaltype] = useState<
@@ -119,10 +118,8 @@ export function DocumentViewer({
 
   const handleDocumentPreview = (document: Document) => {
     if (document.isFolder) {
-      // For folders, use the existing folder click logic
       handleFolderClick(document)
     } else {
-      // For files, open the PDF preview modal
       setSelectedDocument(document)
       setIsPdfPreviewOpen(true)
     }
@@ -200,8 +197,6 @@ export function DocumentViewer({
         tags: data.tags,
       })
       setOpenModalInEditMode(false)
-
-      // Get the property name from the properties list
       const getPropertyName = (propertyId: string) => {
         if (propertyId === '0') return 'No Property'
         const property = properties.find((p) => p.id === propertyId)
@@ -419,6 +414,21 @@ export function DocumentViewer({
         return filterState.selectedTypes.includes(friendlyType)
       })
     }
+
+    if (filterState.type === 'tags') {
+      return documents.filter((doc) => {
+        const tagArray = Array.isArray(doc.tags)
+          ? doc.tags
+          : typeof doc.tags === 'string'
+            ? doc.tags.split(',').map((t) => t.trim())
+            : []
+
+        return filterState.selectedTags.some((tag) =>
+          tagArray.map((t) => t.toLowerCase()).includes(tag.toLowerCase())
+        )
+      })
+    }
+
     if (filterState.type === 'recent') {
       return documents
         .slice()
@@ -434,6 +444,7 @@ export function DocumentViewer({
     if (filterState.type === 'none') {
       return { [`Files & Folders (${getFileCounts(documents)})`]: documents }
     }
+
     if (filterState.type === 'property') {
       return documents.reduce(
         (groups, doc) => {
@@ -445,10 +456,10 @@ export function DocumentViewer({
         {} as Record<string, Document[]>
       )
     }
+
     if (filterState.type === 'type') {
       return documents.reduce(
         (groups, doc) => {
-          // Use friendly file type for grouping
           const key = doc.isFolder
             ? 'Folder'
             : getFileTypeFromMime(doc.fileType, doc.name)
@@ -460,6 +471,31 @@ export function DocumentViewer({
         {} as Record<string, Document[]>
       )
     }
+    if (filterState.type === 'tags') {
+      return documents.reduce(
+        (groups, doc) => {
+          const tagArray = Array.isArray(doc.tags)
+            ? doc.tags
+            : typeof doc.tags === 'string'
+              ? doc.tags.split(',').map((t) => t.trim())
+              : []
+
+          if (tagArray.length === 0) {
+            if (!groups['No Tags']) groups['No Tags'] = []
+            groups['No Tags'].push(doc)
+          } else {
+            tagArray.forEach((tag) => {
+              if (!groups[tag]) groups[tag] = []
+              groups[tag].push(doc)
+            })
+          }
+
+          return groups
+        },
+        {} as Record<string, Document[]>
+      )
+    }
+
     return { 'Recently Uploaded': documents }
   }
 
@@ -478,7 +514,11 @@ export function DocumentViewer({
   }
 
   const handleFilterSelect = (filterType: FilterType) => {
-    if (filterType === 'property' || filterType === 'type') {
+    if (
+      filterType === 'property' ||
+      filterType === 'type' ||
+      filterType === 'tags'
+    ) {
       setFilterModalType(filterType)
       setIsFilterModalOpen(true)
     } else {
@@ -486,6 +526,7 @@ export function DocumentViewer({
         type: filterType,
         selectedProperties: [],
         selectedTypes: [],
+        selectedTags: [],
       })
       setAllFilesPage(1)
     }
@@ -497,6 +538,7 @@ export function DocumentViewer({
       type: filterModalType,
       selectedProperties: filterModalType === 'property' ? selectedItems : [],
       selectedTypes: filterModalType === 'type' ? selectedItems : [],
+      selectedTags: filterModalType === 'tags' ? selectedItems : [],
     }))
     setAllFilesPage(1)
   }

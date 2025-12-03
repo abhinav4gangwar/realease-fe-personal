@@ -19,12 +19,13 @@ export type ViewMode = "list" | "grid"
 export type SortField = "name" | "dateAdded" | "fileType"
 export type SortOrder = "asc" | "desc"
 
-export type FilterType = "none" | "property" | "type" | "recent"
+export type FilterType = "none" | "property" | "type" | "recent" | "tags"
 
 export interface FilterState {
   type: FilterType
   selectedProperties: string[]
   selectedTypes: string[]
+  selectedTags: any[], 
 }
 
 export interface BreadcrumbItem {
