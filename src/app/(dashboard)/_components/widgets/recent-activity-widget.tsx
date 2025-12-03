@@ -1,11 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { apiClient } from '@/utils/api'
 import { useEffect, useState } from 'react'
-import { toast } from 'sonner'
 import {
   Activity,
   ActivityLogsResponse,
-  DayLog
+  DayLog,
 } from '../../settings/activity-log/page'
 
 const RecentActivityWidget = () => {
@@ -25,7 +24,7 @@ const RecentActivityWidget = () => {
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message || 'Failed to fetch activity logs'
-      toast.error(errorMessage)
+      console.log(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -35,7 +34,9 @@ const RecentActivityWidget = () => {
     fetchActivityLogs()
   }, [])
 
-  const recentActivities: Activity[] = activityLogs.flatMap((log) => log.activities)
+  const recentActivities: Activity[] = activityLogs.flatMap(
+    (log) => log.activities
+  )
 
   return (
     <Card className="w-full border-none">
@@ -45,7 +46,7 @@ const RecentActivityWidget = () => {
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="h-24 space-y-1 overflow-y-auto">
+      <CardContent className="h-28 space-y-1 overflow-y-auto">
         {isLoading && (
           <div className="text-sm text-gray-400">Loading activity...</div>
         )}
@@ -58,7 +59,7 @@ const RecentActivityWidget = () => {
           recentActivities.map((activity) => (
             <div
               key={activity.id}
-              className="py-1 text-sm text-gray-600 flex items-center"
+              className="flex items-center py-1 text-sm text-gray-600"
             >
               <span className="font-medium text-blue-500">{activity.name}</span>
               <span className="px-1">{activity.activity}</span>

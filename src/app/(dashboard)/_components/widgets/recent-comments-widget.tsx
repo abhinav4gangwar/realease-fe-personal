@@ -1,94 +1,100 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus } from 'lucide-react'
+"use client"
 
-const recentComment = [
-  {
-    user: 'User 1',
-    action: 'commented on document',
-    item: 'Lorem ipsum',
-    comment: 'Lorem ipsum dolor sit amet.',
-  },
-  {
-    user: 'User 2',
-    action: 'commented on report',
-    item: 'Lorem ipsum',
-    comment: 'Lorem ipsum dolor sit amet.',
-  },
-  {
-    user: 'User 3',
-    action: 'commented on document',
-    item: 'Lorem ipsum',
-    comment: 'Lorem ipsum dolor sit amet.',
-  },
-  {
-    user: 'User 4',
-    action: 'commented on report',
-    item: 'Lorem ipsum',
-    comment: 'Lorem ipsum dolor sit amet.',
-  },
-  {
-    user: 'User 5',
-    action: 'commented on document',
-    item: 'Lorem ipsum',
-    comment: 'Lorem ipsum dolor sit amet.',
-  },
-  {
-    user: 'User 6',
-    action: 'commented on report',
-    item: 'Lorem ipsum',
-    comment: 'Lorem ipsum dolor sit amet.',
-  },
-  {
-    user: 'User 7',
-    action: 'commented on document',
-    item: 'Lorem ipsum',
-    comment: 'Lorem ipsum dolor sit amet.',
-  },
-  {
-    user: 'User 8',
-    action: 'commented on report',
-    item: 'Lorem ipsum',
-    comment: 'Lorem ipsum dolor sit amet.',
-  },
-  {
-    user: 'User 9',
-    action: 'commented on document',
-    item: 'Lorem ipsum',
-    comment: 'Lorem ipsum dolor sit amet.',
-  },
-  {
-    user: 'User 10',
-    action: 'commented on report',
-    item: 'Lorem ipsum',
-    comment: 'Lorem ipsum dolor sit amet.',
-  },
-]
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { apiClient } from "@/utils/api"
+import { Plus } from "lucide-react"
+import { useEffect, useState } from "react"
 
+
+// =========================
+// Types
+// =========================
+interface RecentComment {
+  id: number
+  text: string
+  author: {
+    id: number
+    name: string
+    email: string
+    type: string
+  }
+  resourceType: string
+  resourceId: number
+  resourceName: string
+  parentId: number
+  createdAt: string
+  updatedAt: string
+}
+
+interface RecentCommentsResponse {
+  success: boolean
+  count: number
+  comments: RecentComment[]
+}
+
+// =========================
+// API Function
+// =========================
+const fetchRecentComments = async (count = 10) => {
+  try {
+    const response = await apiClient.get<RecentCommentsResponse>(
+      `/dashboard/comments/recent?count=${count}`
+    )
+
+    if (response.data.success && response.data.comments) {
+      return response.data.comments
+    }
+    return []
+  } catch (error: any) {
+    console.error(error.response?.data?.message || "Failed to fetch comments")
+    return []
+  }
+}
+
+// =========================
+// FULL WIDGET
+// =========================
 export const RecentCommentWidget = () => {
+  const [comments, setComments] = useState<RecentComment[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true)
+      const data = await fetchRecentComments(10)
+      setComments(data)
+      setIsLoading(false)
+    }
+    load()
+  }, [])
+
   return (
     <Card className="w-full border-none">
       <CardHeader>
-        <CardTitle className="text-secondary h-2 text-lg font-semibold">
+        <CardTitle className="text-secondary text-lg font-semibold">
           Recent Comments
         </CardTitle>
       </CardHeader>
-      <CardContent className="h-24 space-y-1 overflow-y-auto">
-        {recentComment.map((activity, index) => (
-          <div key={index} className="py-1 text-sm text-gray-600">
-            <span className="font-medium">{activity.user}</span>
-            <span> {activity.action} </span>
-            {activity.item ? (
-              <span>
-                <span className="cursor-pointer pl-1 font-semibold text-[#5C9FAD] hover:text-blue-800">
-                  {activity.item}
-                </span>
-                <span className="text-primary cursor-pointer pl-1 font-semibold">
-                  {activity.comment}
-                </span>
-              </span>
-            ) : (
-              <span>{activity.item}</span>
-            )}
+
+      <CardContent className="h-24 overflow-y-auto space-y-1">
+        {isLoading && <div className="text-sm text-gray-400">Loading...</div>}
+
+        {!isLoading && comments.length === 0 && (
+          <div className="text-sm text-gray-400">No recent comments</div>
+        )}
+
+        {comments.map((c) => (
+          <div key={c.id} className="py-1 text-sm text-gray-600">
+            <span className="font-medium">{c.author.name}</span>
+            <span> commented on </span>
+
+            <span className="cursor-pointer font-semibold text-[#5C9FAD] hover:text-blue-800">
+              {c.resourceName}
+            </span>
+
+            <span className="text-primary cursor-pointer pl-1 font-semibold">
+              {c.text}
+            </span>
           </div>
         ))}
       </CardContent>
@@ -96,36 +102,55 @@ export const RecentCommentWidget = () => {
   )
 }
 
+// =========================
+// PREVIEW / MINI WIDGET
+// =========================
 export const PreviewRecentCommentWidget = () => {
+  const [comments, setComments] = useState<RecentComment[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true)
+      const data = await fetchRecentComments(10) 
+      setComments(data)
+      setIsLoading(false)
+    }
+    load()
+  }, [])
+
   return (
     <Card className="group relative w-full border-gray-300 overflow-hidden">
+      {/* Hover Overlay */}
       <div className="absolute inset-0 z-10 hidden items-center justify-center bg-[#5C9FAD]/25 text-[#5C9FAD] transition-opacity group-hover:flex">
         <Plus className="h-8 w-8 text-primary" />
       </div>
 
       <CardHeader>
-        <CardTitle className="text-secondary h-2 text-sm font-semibold">
+        <CardTitle className="text-secondary text-sm font-semibold">
           Recent Comments
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="h-20 space-y-1 overflow-y-auto">
-        {recentComment.map((activity, index) => (
-          <div key={index} className="text-[12px] text-gray-600">
-            <span className="font-medium">{activity.user}</span>
-            <span> {activity.action} </span>
-            {activity.item ? (
-              <span>
-                <span className="cursor-pointer pl-1 font-semibold text-[#5C9FAD] hover:text-blue-800">
-                  {activity.item}
-                </span>
-                <span className="text-primary cursor-pointer pl-1 font-semibold">
-                  {activity.comment}
-                </span>
-              </span>
-            ) : (
-              <span>{activity.item}</span>
-            )}
+      <CardContent className="h-20 overflow-y-auto space-y-1">
+        {isLoading && <div className="text-[12px] text-gray-400">Loading...</div>}
+
+        {!isLoading && comments.length === 0 && (
+          <div className="text-[12px] text-gray-400">No recent comments</div>
+        )}
+
+        {comments.map((c) => (
+          <div key={c.id} className="text-[12px] text-gray-600">
+            <span className="font-medium">{c.author.name}</span>
+            <span> commented on </span>
+
+            <span className="cursor-pointer font-semibold text-[#5C9FAD] hover:text-blue-800">
+              {c.resourceName}
+            </span>
+
+            <span className="text-primary cursor-pointer pl-1 font-semibold">
+              {c.text}
+            </span>
           </div>
         ))}
       </CardContent>

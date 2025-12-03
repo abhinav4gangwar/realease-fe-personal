@@ -9,7 +9,6 @@ import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { PreviewAssetsAnalyticsWidget } from './widgets/assets-analytics-widget'
 import { PreviewAssetsLitigationWidget } from './widgets/assets-litigation-widget'
-import { PreviewHearingDateWidget } from './widgets/hearing-date-widget'
 import { PreviewMiniMapWidget } from './widgets/mini-map-widget'
 import { PreviewRecentCommentWidget } from './widgets/recent-comments-widget'
 import { PreviewTotalAssetsWidget } from './widgets/total-assets-widget'
@@ -36,11 +35,11 @@ const AddWidgetButton = ({ onAddWidget }: AddWidgetDropdownProps) => {
       title: 'Mini Map View',
       component: <PreviewMiniMapWidget />,
     },
-    {
-      type: 'upcoming-dates',
-      title: 'Upcoming Dates',
-      component: <PreviewHearingDateWidget />,
-    },
+    // {
+    //   type: 'upcoming-dates',
+    //   title: 'Upcoming Dates',
+    //   component: <PreviewHearingDateWidget />,
+    // },
     {
       type: 'analytics',
       title: 'Analytics Chart',
@@ -72,7 +71,7 @@ const AddWidgetButton = ({ onAddWidget }: AddWidgetDropdownProps) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="end"
-          className="max-h-[500px] lg:w-[450px] w-[300px] overflow-y-auto border-none p-0"
+          className="max-h-[500px] lg:w-[450px] w-[300px] overflow-y-auto border-none p-0 z-[9999999]"
         >
           <div>
             {widgetPreviews.map((widget) => (
