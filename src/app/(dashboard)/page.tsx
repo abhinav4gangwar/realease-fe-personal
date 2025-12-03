@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { QUICK_ACTIONS_HOME } from '@/lib/constants'
 import { GripVertical, Search, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import AddWidgetButton from './_components/add-widget-menu'
 import QuickActionMenu from './_components/quick-action-menu'
 import {
@@ -26,6 +26,27 @@ export interface Widget {
   x: number
   y: number
 }
+
+const WidgetContent = memo(({ type, cardData }: { type: string, cardData?: AnalyticsCard }) => {
+  switch (type) {
+    case 'recent-activity':
+      return <RecentACtivityWidget />
+    case 'recent-comments':
+      return <RecentCommentWidget />
+    case 'mini-map':
+      return <MiniMapWidget />
+    case 'upcoming-dates':
+      return <HearingDateWidget />
+    case 'analytics-basic':
+      return cardData ? <AnalyticsBasicWidget card={cardData} /> : null
+    case 'analytics-chart':
+      return cardData ? <AnalyticsChartWidget card={cardData} /> : null
+    default:
+      return null
+  }
+})
+
+WidgetContent.displayName = 'WidgetContent'
 
 export default function Home() {
   const [widgets, setWidgets] = useState<Widget[]>([
@@ -59,32 +80,20 @@ export default function Home() {
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 })
   const [resizeDirection, setResizeDirection] = useState<'horizontal' | 'vertical' | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const rafRef = useRef<number | null>(null)
 
-  // Check if there are unsaved changes
   useEffect(() => {
     const hasChanged = JSON.stringify(widgets) !== JSON.stringify(savedWidgets)
     setHasChanges(hasChanged)
   }, [widgets, savedWidgets])
 
-  const addWidget = (widgetType: string, cardData?: AnalyticsCard) => {
+  const addWidget = useCallback((widgetType: string, cardData?: AnalyticsCard) => {
     const widgetConfig = {
       'recent-comments': { title: 'Recent Comments', width: 700, height: 200 },
-      'mini-map': { title: 'Mini Map View', width: 600, height: 500 },
-      'upcoming-dates': {
-        title: 'Upcoming Hearing Dates',
-        width: 400,
-        height: 300,
-      },
-      'analytics-basic': {
-        title: cardData?.title || 'Analytics Card',
-        width: 350,
-        height: 200,
-      },
-      'analytics-chart': {
-        title: cardData?.title || 'Analytics Chart',
-        width: 500,
-        height: 400,
-      },
+      'mini-map': { title: 'Mini Map View', width: 0, height: 600 },
+      'upcoming-dates': { title: 'Upcoming Hearing Dates', width: 400, height: 300 },
+      'analytics-basic': { title: cardData?.title || 'Analytics Card', width: 350, height: 170 },
+      'analytics-chart': { title: cardData?.title || 'Analytics Chart', width: 500, height: 400 },
     }[widgetType]
 
     if (widgetConfig) {
@@ -98,16 +107,16 @@ export default function Home() {
         x: 0,
         y: widgets.length * 320,
       }
-      setWidgets([...widgets, newWidget])
+      setWidgets(prev => [...prev, newWidget])
     }
-  }
+  }, [widgets.length])
 
-  const removeWidget = (widgetId: string) => {
+  const removeWidget = useCallback((widgetId: string) => {
     if (widgetId === '1') return
-    setWidgets(widgets.filter((w) => w.id !== widgetId))
-  }
+    setWidgets(prev => prev.filter((w) => w.id !== widgetId))
+  }, [])
 
-  const handleMouseDown = (e: React.MouseEvent, widgetId: string) => {
+  const handleMouseDown = useCallback((e: React.MouseEvent, widgetId: string) => {
     const widget = widgets.find(w => w.id === widgetId)
     if (!widget) return
 
@@ -120,9 +129,9 @@ export default function Home() {
       y: e.clientY - rect.top,
     })
     e.stopPropagation()
-  }
+  }, [widgets])
 
-  const handleResizeMouseDown = (e: React.MouseEvent, widgetId: string, direction: 'horizontal' | 'vertical') => {
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent, widgetId: string, direction: 'horizontal' | 'vertical') => {
     const widget = widgets.find(w => w.id === widgetId)
     if (!widget) return
     
@@ -135,57 +144,70 @@ export default function Home() {
       height: widget.height,
     })
     e.stopPropagation()
-  }
+  }, [widgets])
 
   const canResizeHeight = (widgetType: string) => {
-    return widgetType === 'mini-map' || widgetType === 'analytics-chart'
+    return widgetType === 'analytics-chart'
   }
 
-  const handleMouseMove = (e: MouseEvent) => {
-    if (draggingWidget && containerRef.current) {
-      const containerRect = containerRef.current.getBoundingClientRect()
-      const newX = e.clientX - containerRect.left - dragOffset.x
-      const newY = e.clientY - containerRect.top - dragOffset.y
+  const canResize = (widgetType: string) => {
+    return widgetType !== 'mini-map'
+  }
 
-      setWidgets(prevWidgets => prevWidgets.map(w => 
-        w.id === draggingWidget 
-          ? { 
-              ...w, 
-              x: Math.max(0, Math.min(newX, containerRect.width - w.width)),
-              y: Math.max(0, newY)
-            }
-          : w
-      ))
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current)
     }
 
-    if (resizingWidget && resizeDirection) {
-      const deltaX = e.clientX - resizeStart.x
-      const deltaY = e.clientY - resizeStart.y
+    rafRef.current = requestAnimationFrame(() => {
+      if (draggingWidget && containerRef.current) {
+        const containerRect = containerRef.current.getBoundingClientRect()
+        const newX = e.clientX - containerRect.left - dragOffset.x
+        const newY = e.clientY - containerRect.top - dragOffset.y
 
-      setWidgets(prevWidgets => prevWidgets.map(w => {
-        if (w.id === resizingWidget) {
-          if (resizeDirection === 'horizontal') {
-            return {
-              ...w,
-              width: Math.max(200, resizeStart.width + deltaX)
-            }
-          } else if (resizeDirection === 'vertical') {
-            return {
-              ...w,
-              height: Math.max(150, resizeStart.height + deltaY)
+        setWidgets(prevWidgets => prevWidgets.map(w => 
+          w.id === draggingWidget 
+            ? { 
+                ...w, 
+                x: Math.max(0, Math.min(newX, containerRect.width - w.width)),
+                y: Math.max(0, newY)
+              }
+            : w
+        ))
+      }
+
+      if (resizingWidget && resizeDirection) {
+        const deltaX = e.clientX - resizeStart.x
+        const deltaY = e.clientY - resizeStart.y
+
+        setWidgets(prevWidgets => prevWidgets.map(w => {
+          if (w.id === resizingWidget) {
+            if (resizeDirection === 'horizontal') {
+              return {
+                ...w,
+                width: Math.max(200, resizeStart.width + deltaX)
+              }
+            } else if (resizeDirection === 'vertical') {
+              return {
+                ...w,
+                height: Math.max(150, resizeStart.height + deltaY)
+              }
             }
           }
-        }
-        return w
-      }))
-    }
-  }
+          return w
+        }))
+      }
+    })
+  }, [draggingWidget, resizingWidget, dragOffset, resizeStart, resizeDirection])
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current)
+    }
     setDraggingWidget(null)
     setResizingWidget(null)
     setResizeDirection(null)
-  }
+  }, [])
 
   useEffect(() => {
     if (draggingWidget || resizingWidget) {
@@ -194,11 +216,14 @@ export default function Home() {
       return () => {
         document.removeEventListener('mousemove', handleMouseMove)
         document.removeEventListener('mouseup', handleMouseUp)
+        if (rafRef.current) {
+          cancelAnimationFrame(rafRef.current)
+        }
       }
     }
-  }, [draggingWidget, resizingWidget, dragOffset, resizeStart, widgets])
+  }, [draggingWidget, resizingWidget, handleMouseMove, handleMouseUp])
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     const dashboardData = {
       widgets: widgets.map(w => ({
         id: w.id,
@@ -215,43 +240,43 @@ export default function Home() {
 
     console.log('Saving dashboard configuration:', dashboardData)
     
-    // TODO: Replace with actual API call
-    // await apiClient.post('/dashboard/save', dashboardData)
-    
     setSavedWidgets([...widgets])
     setHasChanges(false)
-  }
+  }, [widgets])
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     setWidgets([...savedWidgets])
     setHasChanges(false)
-  }
+  }, [savedWidgets])
 
-  const renderWidget = (widget: Widget) => {
+  const renderWidget = useCallback((widget: Widget) => {
     const isDragging = draggingWidget === widget.id
     const isResizing = resizingWidget === widget.id
+    const isInteracting = isDragging || isResizing
+    const isMapWidget = widget.type === 'mini-map'
+    const widgetWidth = isMapWidget ? '100%' : `${widget.width}px`
 
-    const WidgetWrapper = ({ children }: { children: React.ReactNode }) => (
+    return (
       <div
+        key={widget.id}
         style={{
           position: 'absolute',
-          left: `${widget.x}px`,
+          left: isMapWidget ? '0' : `${widget.x}px`,
           top: `${widget.y}px`,
-          width: `${widget.width}px`,
+          width: widgetWidth,
           height: `${widget.height}px`,
           cursor: isDragging ? 'grabbing' : 'default',
+          willChange: isInteracting ? 'transform' : 'auto',
         }}
-        className={`group ${isDragging || isResizing ? 'z-50' : 'z-10'} transition-shadow hover:shadow-lg`}
+        className={`group ${isInteracting ? 'z-50' : 'z-10'} transition-shadow hover:shadow-lg`}
       >
-        {/* Drag Handle */}
         <div
           onMouseDown={(e) => handleMouseDown(e, widget.id)}
-          className="absolute top-2 left-2 z-20 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded p-1 shadow-md"
+          className="drag-handle absolute top-2 left-2 z-20 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded p-1 shadow-md"
         >
           <GripVertical className="h-5 w-5 text-gray-600" />
         </div>
 
-        {/* Remove Button */}
         {widget.id !== '1' && (
           <Button
             variant="ghost"
@@ -263,13 +288,13 @@ export default function Home() {
           </Button>
         )}
 
-        {/* Resize Handle - Right Edge (Width) - All widgets */}
-        <div
-          onMouseDown={(e) => handleResizeMouseDown(e, widget.id, 'horizontal')}
-          className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize opacity-0 group-hover:opacity-100 hover:bg-blue-400 transition-all z-20"
-        />
+        {canResize(widget.type) && (
+          <div
+            onMouseDown={(e) => handleResizeMouseDown(e, widget.id, 'horizontal')}
+            className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize opacity-0 group-hover:opacity-100 hover:bg-blue-400 transition-all z-20"
+          />
+        )}
         
-        {/* Resize Handle - Bottom Edge (Height) - Only for map and charts */}
         {canResizeHeight(widget.type) && (
           <div
             onMouseDown={(e) => handleResizeMouseDown(e, widget.id, 'vertical')}
@@ -277,57 +302,18 @@ export default function Home() {
           />
         )}
 
-        <div className="w-full h-full overflow-auto">
-          {children}
+        <div 
+          className="w-full h-full overflow-auto"
+          style={{ pointerEvents: isInteracting ? 'none' : 'auto' }}
+        >
+          <WidgetContent type={widget.type} cardData={widget.cardData} />
         </div>
       </div>
     )
-
-    switch (widget.type) {
-      case 'recent-activity':
-        return (
-          <WidgetWrapper key={widget.id}>
-            <RecentACtivityWidget />
-          </WidgetWrapper>
-        )
-      case 'recent-comments':
-        return (
-          <WidgetWrapper key={widget.id}>
-            <RecentCommentWidget />
-          </WidgetWrapper>
-        )
-      case 'mini-map':
-        return (
-          <WidgetWrapper key={widget.id}>
-            <MiniMapWidget />
-          </WidgetWrapper>
-        )
-      case 'upcoming-dates':
-        return (
-          <WidgetWrapper key={widget.id}>
-            <HearingDateWidget />
-          </WidgetWrapper>
-        )
-      case 'analytics-basic':
-        return widget.cardData ? (
-          <WidgetWrapper key={widget.id}>
-            <AnalyticsBasicWidget card={widget.cardData} />
-          </WidgetWrapper>
-        ) : null
-      case 'analytics-chart':
-        return widget.cardData ? (
-          <WidgetWrapper key={widget.id}>
-            <AnalyticsChartWidget card={widget.cardData} />
-          </WidgetWrapper>
-        ) : null
-      default:
-        return null
-    }
-  }
+  }, [draggingWidget, resizingWidget, handleMouseDown, handleResizeMouseDown, removeWidget, canResizeHeight, canResize])
 
   return (
     <div>
-      {/* for desktop */}
       <div className="hidden lg:block">
         <div className="flex justify-between pb-4">
           <div className="text-secondary text-2xl font-semibold lg:text-3xl">
@@ -366,9 +352,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* for mobile */}
       <div className="block pt-14 lg:hidden">
-        {/* Search Bar */}
         <div className="flex justify-center">
           <div className="relative w-full">
             <Search className="text-secondary absolute top-1/2 left-3 h-6 w-6 -translate-y-1/2 transform" />
