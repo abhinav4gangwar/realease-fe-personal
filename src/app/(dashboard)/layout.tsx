@@ -2,7 +2,6 @@
 import ChangePasswordModal, {
   useDefaultPasswordCheck,
 } from '@/components/permission-control/change-password-model'
-import { IncompletePersonalDetailsModal } from '@/components/permission-control/incomplete-personal-details-model'
 import Loader from '@/components/shared/Loader'
 import { useAuth } from '@/hooks/useAuth'
 import { useGlobalContextProvider } from '@/providers/global-context'
@@ -75,7 +74,7 @@ export default function DashboardLayout({
   return (
     <div className="flex h-screen bg-gray-100">
       {!isPricingPage && <SubscriptionPopup />}
-      <IncompletePersonalDetailsModal />
+      {/* <IncompletePersonalDetailsModal /> */}
       <ChangePasswordModal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
