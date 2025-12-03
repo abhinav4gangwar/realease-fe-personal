@@ -11,7 +11,7 @@ import AnalyticsSidebar from '../_components/analytics-components/analytics-side
 import AnalyticsStateToggle from '../_components/analytics-state-toggle'
 
 
-interface AnalyticsCard {
+export interface AnalyticsCard {
   id: string
   type: 'basic' | 'chart'
   title: string

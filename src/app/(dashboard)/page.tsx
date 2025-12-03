@@ -6,19 +6,22 @@ import { Search, X } from 'lucide-react'
 import { useState } from 'react'
 import AddWidgetButton from './_components/add-widget-menu'
 import QuickActionMenu from './_components/quick-action-menu'
-import { AssetsAnalyticsWidget } from './_components/widgets/assets-analytics-widget'
-import { AssetsLitigationWidget } from './_components/widgets/assets-litigation-widget'
+import {
+  AnalyticsBasicWidget,
+  AnalyticsChartWidget,
+} from './_components/widgets/analytics-widgets/analytics-dashboard-widgets'
 import { HearingDateWidget } from './_components/widgets/hearing-date-widget'
 import { MiniMapWidget } from './_components/widgets/mini-map-widget'
 import RecentACtivityWidget from './_components/widgets/recent-activity-widget'
 import { RecentCommentWidget } from './_components/widgets/recent-comments-widget'
-import { TotalAssetsWidget } from './_components/widgets/total-assets-widget'
+import { AnalyticsCard } from './analytics/_tabs/analytics-tab'
 
 export interface Widget {
   id: string
   type: string
   title: string
   size: 'half' | 'full'
+  cardData?: AnalyticsCard
 }
 
 export default function Home() {
@@ -31,7 +34,7 @@ export default function Home() {
     },
   ])
 
-  const addWidget = (widgetType: string) => {
+  const addWidget = (widgetType: string, cardData?: AnalyticsCard) => {
     const widgetConfig = {
       'recent-comments': { title: 'Recent Comments', size: 'half' as const },
       'mini-map': { title: 'Mini Map View', size: 'full' as const },
@@ -39,9 +42,14 @@ export default function Home() {
         title: 'Upcoming Hearing Dates',
         size: 'half' as const,
       },
-      analytics: { title: 'Analytics Chart', size: 'half' as const },
-      'asset-value': { title: 'Total Asset Value', size: 'half' as const },
-      litigation: { title: 'Assets in Litigation', size: 'half' as const },
+      'analytics-basic': {
+        title: cardData?.title || 'Analytics Card',
+        size: 'half' as const,
+      },
+      'analytics-chart': {
+        title: cardData?.title || 'Analytics Chart',
+        size: 'half' as const,
+      },
     }[widgetType]
 
     if (widgetConfig) {
@@ -50,6 +58,7 @@ export default function Home() {
         type: widgetType,
         title: widgetConfig.title,
         size: widgetConfig.size,
+        cardData: cardData,
       }
       setWidgets([...widgets, newWidget])
     }
@@ -104,24 +113,18 @@ export default function Home() {
             <HearingDateWidget />
           </WidgetWrapper>
         )
-      case 'analytics':
-        return (
+      case 'analytics-basic':
+        return widget.cardData ? (
           <WidgetWrapper key={widget.id}>
-            <AssetsAnalyticsWidget />
+            <AnalyticsBasicWidget card={widget.cardData} />
           </WidgetWrapper>
-        )
-      case 'asset-value':
-        return (
+        ) : null
+      case 'analytics-chart':
+        return widget.cardData ? (
           <WidgetWrapper key={widget.id}>
-            <TotalAssetsWidget />
+            <AnalyticsChartWidget card={widget.cardData} />
           </WidgetWrapper>
-        )
-      case 'litigation':
-        return (
-          <WidgetWrapper key={widget.id}>
-            <AssetsLitigationWidget />
-          </WidgetWrapper>
-        )
+        ) : null
       default:
         return null
     }
