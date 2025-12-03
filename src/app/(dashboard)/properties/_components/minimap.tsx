@@ -32,7 +32,7 @@ interface MiniMapProps {
   propertyName?: string
   propertyType?: string
   isDisputed?: boolean
-  onClick: () => void
+  onClick?: () => void
 }
 
 const MiniMap = ({
