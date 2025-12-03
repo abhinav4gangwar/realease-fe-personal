@@ -16,17 +16,21 @@ const OTPForm = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [isResending, setIsResending] = useState(false)
   const [userEmail, setUserEmail] = useState("")
+  const [otpFlow, setOtpFlow] = useState<'register' | 'login'>('register')
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
   const router = useRouter()
 
   useEffect(() => {
-    // Get email from localStorage
     const email = localStorage.getItem('signupEmail')
+    const flow = localStorage.getItem('otpFlow') || 'register'
+    
     if (!email) {
       router.push('/register')
       return
     }
+    
     setUserEmail(email)
+    setOtpFlow(flow as 'register' | 'login')
   }, [router])
 
   useEffect(() => {
@@ -111,8 +115,6 @@ const OTPForm = () => {
 
     setIsLoading(true)
     try {
-      // const captchaToken = await getCaptchaToken('VERIFY_OTP')
-      
       const response = await apiClient.post('/auth/verify-otp', {
         email: userEmail,
         otp: otpValue,
@@ -121,13 +123,34 @@ const OTPForm = () => {
 
       if (response.data.message) {
         toast.success(response.data.message)
-        router.push('/password')
+        
+        // If token is present in response, store it and redirect to dashboard
+        if (response.data.token) {
+          localStorage.setItem('authToken', response.data.token)
+          
+          // Clean up temporary storage
+          localStorage.removeItem('otpFlow')
+          localStorage.removeItem('loginEmail')
+          localStorage.removeItem('signupEmail')
+          localStorage.removeItem('signupName')
+          
+          // Redirect based on backend response
+          if (response.data.redirectTo === '/dashboard') {
+            router.push('/')
+          } else {
+            router.push(response.data.redirectTo || '/')
+          }
+        } 
+        // If no token (register flow), redirect to password setup
+        else {
+          localStorage.removeItem('otpFlow')
+          router.push('/password')
+        }
       }
     } catch (error: any) {
       console.error('OTP verification error:', error)
       const errorMessage = error.response?.data?.message || 'OTP verification failed. Please try again.'
       toast.error(errorMessage)
-      // Clear OTP on error
       setOtp(["", "", "", "", "", ""])
       inputRefs.current[0]?.focus()
     } finally {

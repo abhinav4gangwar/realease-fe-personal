@@ -123,6 +123,23 @@ const LoginForm = () => {
       }
     } catch (error: any) {
       console.error('Login error:', error)
+      
+      // Handle email verification case
+      if (error.response?.status === 403 || 
+          error.response?.data?.error === 'Email not verified.' ||
+          error.response?.data?.redirectTo?.includes('login-step-2')) {
+        
+        localStorage.setItem('signupEmail', values.email)
+        localStorage.setItem('loginEmail', values.email)
+        localStorage.setItem('otpFlow', 'login')
+        
+        toast.info(error.response?.data?.message || 'Please verify your email to continue.')
+        
+        router.push('/otp-validation')
+        return
+      }
+      
+      // Handle other errors
       const errorMessage =
         error.response?.data?.message || 'Login failed. Please try again.'
       toast.error(errorMessage)
