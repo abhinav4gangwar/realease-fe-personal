@@ -114,48 +114,55 @@ const TrashPropertiesViewer = ({
     })
   }, [allProperties, activeFilters])
 
-  // sorting logic - memoized to prevent infinite re-renders
   const sortProperties = useCallback(
     (properties: Properties[]) => {
       return properties.sort((a, b) => {
         let comparison = 0
+
         switch (sortField) {
           case 'dateAdded':
             if (a.dateAdded && b.dateAdded) {
-              const dateA = new Date(a.dateAdded)
-              const dateB = new Date(b.dateAdded)
-              comparison = dateA.getTime() - dateB.getTime()
+              const dateA = new Date(a.dateAdded).getTime()
+              const dateB = new Date(b.dateAdded).getTime()
+              comparison = dateA - dateB
             } else {
               comparison = a.dateAdded ? -1 : b.dateAdded ? 1 : 0
             }
             break
-          case 'value':
-            const extentA = parseFloat(
-              a.extent?.replace(/[^0-9.-]+/g, '') || '0'
-            )
-            const extentB = parseFloat(
-              b.extent?.replace(/[^0-9.-]+/g, '') || '0'
-            )
-            const valuePerSQA = parseFloat(
-              a.valuePerSQ?.replace(/[^0-9.-]+/g, '') || '0'
-            )
-            const valuePerSQB = parseFloat(
-              b.valuePerSQ?.replace(/[^0-9.-]+/g, '') || '0'
-            )
 
-            const totalValueA = extentA * valuePerSQA
-            const totalValueB = extentB * valuePerSQB
-            comparison = totalValueA - totalValueB
+          case 'value':
+            const parseNum = (str: any) =>
+              Number(String(str).replace(/[^0-9.-]+/g, '')) || 0
+
+            let valA = parseNum(a.value)
+            let valB = parseNum(b.value)
+
+            if (!valA) {
+              const extentA = parseNum(a.extent)
+              const vpsA = parseNum(a.valuePerSQ)
+              valA = extentA && vpsA ? extentA * vpsA : extentA
+            }
+
+            if (!valB) {
+              const extentB = parseNum(b.extent)
+              const vpsB = parseNum(b.valuePerSQ)
+              valB = extentB && vpsB ? extentB * vpsB : extentB
+            }
+
+            comparison = valA - valB
             break
+
           case 'name':
           case 'owner':
-            const aValue = a[sortField] || ''
-            const bValue = b[sortField] || ''
+            const aValue = (a[sortField] || '').toString()
+            const bValue = (b[sortField] || '').toString()
             comparison = aValue.localeCompare(bValue)
             break
+
           default:
             comparison = 0
         }
+
         return sortOrder === 'asc' ? comparison : -comparison
       })
     },
