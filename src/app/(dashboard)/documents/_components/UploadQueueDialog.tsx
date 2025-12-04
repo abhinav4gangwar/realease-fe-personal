@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button'
 
 import { FileItem } from '@/lib/fileUploadUtils'
-import { X } from 'lucide-react'
+import { ArrowLeft, X } from 'lucide-react'
 import { FileIcon } from './file-icon'
 
 interface UploadQueueDialogProps {
@@ -14,6 +14,7 @@ interface UploadQueueDialogProps {
   totalFiles: number
   onContinue: () => void
   onUploadMore: () => void
+  onBack: () => void
 }
 
 const formatFileSize = (bytes: number) => {
@@ -36,6 +37,7 @@ export function UploadQueueDialog({
   totalFolders,
   onContinue,
   onUploadMore,
+  onBack,
 }: UploadQueueDialogProps) {
   if (!isOpen) return null
 
@@ -47,9 +49,14 @@ export function UploadQueueDialog({
       <div className="fixed inset-0 z-50 flex items-center justify-center">
         <div className="bg-background mx-4 flex max-h-[80vh] w-full max-w-4xl flex-col rounded-lg border border-gray-400 shadow-lg">
           <div className="flex items-center justify-between p-6">
-            <h2 className="text-xl font-semibold">
-              Upload Queue ({totalFolders} Folders, {totalFiles} Files)
-            </h2>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={onBack}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <h2 className="text-xl font-semibold">
+                Upload Queue ({totalFolders} Folders, {totalFiles} Files)
+              </h2>
+            </div>
             <Button
               variant="ghost"
               size="icon"
