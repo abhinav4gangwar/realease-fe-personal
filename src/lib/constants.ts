@@ -151,11 +151,10 @@ export const navigationItemSection = [
 ]
 
 export const QUICK_ACTIONS_HOME: QuickAction[] = [
-  { id: '1', label: 'Bulk Upload', value: 'bulk_upload' },
-  { id: '2', label: 'Share Docs', value: 'share_docs' },
-  { id: '3', label: 'Add Members', value: 'add_members' },
-  { id: '4', label: 'Access Controls', value: 'access_controls' },
-  { id: '5', label: 'Create Report', value: 'create_report' },
+  { id: '1', label: 'Upload Docs', value: 'bulk_upload' ,href:"/documents"},
+  { id: '2', label: 'Add Members', value: 'add_members' , href:"/settings/access-control"},
+  { id: '3', label: 'Access Controls', value: 'access_controls' ,href:"/settings/access-control"},
+  { id: '4', label: 'Create Report', value: 'create_report' ,href:"/analytics"},
 ]
 
 export const QUICK_ACTIONS_DOCS: QuickAction[] = [

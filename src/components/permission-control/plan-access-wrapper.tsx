@@ -1,6 +1,5 @@
 'use client'
 import { useGlobalContextProvider } from '@/providers/global-context'
-import { Crown, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import React, { useState } from 'react'
 
@@ -62,27 +61,28 @@ export const PlanAccessWrapper: React.FC<PlanAccessWrapperProps> = ({
     <>
       <div className={`relative inline-block ${className}`}>
         {/* Overlay to block interaction */}
-        <div
+        {/* <div
           className="absolute inset-0 z-20 cursor-not-allowed"
           onClick={handleRestrictedClick}
           onMouseDown={handleRestrictedClick}
           onMouseUp={handleRestrictedClick}
-        />
+        /> */}
 
         {/* Original content with reduced opacity */}
-        <div className="pointer-events-none opacity-60">{children}</div>
+        {/* <div className="pointer-events-none opacity-60">{children}</div> */}
+        <div className="">{children}</div>
 
-        {showCrown && (
+        {/* {showCrown && (
           <div
             className={`absolute ${getCrownPositionClasses()} pointer-events-none z-30`}
           >
             <Crown className="h-2 w-2 fill-yellow-400 text-yellow-500 drop-shadow-md" />
           </div>
-        )}
+        )} */}
       </div>
 
       {/* Upgrade/Access Modal */}
-      {showModal && (
+      {/* {showModal && (
         <div
           className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/50 p-4"
           onClick={() => setShowModal(false)}
@@ -128,7 +128,7 @@ export const PlanAccessWrapper: React.FC<PlanAccessWrapperProps> = ({
             </div>
           </div>
         </div>
-      )}
+      )} */}
     </>
   )
 }
