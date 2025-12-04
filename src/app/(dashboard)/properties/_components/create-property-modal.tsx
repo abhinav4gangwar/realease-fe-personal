@@ -15,6 +15,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { useAddressGeocoding } from '@/hooks/useAddressGeocoding'
 import { useLocationAutoFill } from '@/hooks/useLocationAutoFill'
 import { cn } from '@/lib/utils'
 import { CountryType, Properties } from '@/types/property.types'
@@ -35,7 +36,7 @@ import {
   X,
 } from 'lucide-react'
 import Image from 'next/image'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import {
   clearPersistedData,
@@ -75,6 +76,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
   const [countries, setCountries] = useState<CountryType[]>([])
 
   const [partyA, setPartyA] = useState('')
+  const [lastAutoFilledAddress, setLastAutoFilledAddress] = useState('')
   const [partyB, setPartyB] = useState('')
 
   const [selectedUnit, setSelectedUnit] = useState<string>('acres')
@@ -103,6 +105,42 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     valuePerSQ: '',
     value: '',
   })
+
+  const handleCoordinatesFound = useCallback(
+    (result) => {
+      const fullAddressKey = `${formData.address}|${formData.city}|${formData.state}|${formData.zipcode}`
+      if (lastAutoFilledAddress === fullAddressKey) return
+
+      const currentLat = parseFloat(formData.latitude || '0')
+      const currentLng = parseFloat(formData.longitude || '0')
+
+      const latDiff = Math.abs(currentLat - result.latitude)
+      const lngDiff = Math.abs(currentLng - result.longitude)
+
+      if (
+        isNaN(currentLat) ||
+        isNaN(currentLng) ||
+        latDiff > 0.001 ||
+        lngDiff > 0.001
+      ) {
+        updateFormData('latitude', result.latitude.toString())
+        updateFormData('longitude', result.longitude.toString())
+        updateFormData('coordinates', `${result.latitude}, ${result.longitude}`)
+
+        setLastAutoFilledAddress(fullAddressKey)
+        toast.success('Coordinates auto-filled from address')
+      }
+    },
+    [
+      formData.address,
+      formData.city,
+      formData.state,
+      formData.zipcode,
+      formData.latitude,
+      formData.longitude,
+      lastAutoFilledAddress,
+    ]
+  )
 
   useEffect(() => {
     if (isOpen) {
@@ -286,6 +324,40 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
       updateFormData('country', selectedCountry.name)
     }
   }, [selectedCountry])
+
+  const addressComponents = useMemo(
+    () => ({
+      addressLine1: formData.address,
+      locality: formData.location,
+      district: formData.district,
+      city: formData.city,
+      state: formData.state,
+      country: selectedCountry?.name,
+      zipcode: formData.zipcode,
+    }),
+    [
+      formData.address,
+      formData.location,
+      formData.district,
+      formData.city,
+      formData.state,
+      selectedCountry?.name,
+      formData.zipcode,
+    ]
+  )
+
+  const handleGeocodingError = useCallback((error) => {
+    console.warn('Geocoding error:', error)
+  }, [])
+
+  const { isLoading: isGeocodingLoading, coordinates } = useAddressGeocoding({
+    addressComponents,
+    onCoordinatesFound: handleCoordinatesFound,
+    onError: handleGeocodingError,
+    autoTrigger: true,
+    enabled: true,
+    debounceMs: 2000,
+  })
 
   // Track if we're currently auto-filling to prevent infinite loops
   const [isAutoFilling, setIsAutoFilling] = useState(false)
@@ -491,6 +563,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     setSelectedUnit('acres')
     setSelectedCountry(null)
     setLastAutoFilledZipcode('')
+    setLastAutoFilledAddress('')
   }
 
   const createProperty = async () => {
@@ -946,6 +1019,18 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
 
             {/* coordinates */}
             <div className="flex flex-col space-y-3">
+              {isGeocodingLoading && (
+                <div className="flex items-center gap-2 text-sm text-blue-600">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Finding coordinates...</span>
+                </div>
+              )}
+              {coordinates && !isGeocodingLoading && (
+                <div className="flex items-center gap-2 text-sm text-green-600">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Auto-filled from address</span>
+                </div>
+              )}
               <label className="text-md text-secondary block font-semibold">
                 Co-ordinates
               </label>
@@ -1214,7 +1299,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
                 </div>
               ))}
 
-              <PlanAccessWrapper featureId='ASSET_CUSTOM_FIELD_CONFIG'>
+              <PlanAccessWrapper featureId="ASSET_CUSTOM_FIELD_CONFIG">
                 <div
                   className="flex cursor-pointer justify-between rounded-md bg-[#F2F2F2] p-3 transition-colors hover:bg-[#E8E8E8]"
                   onClick={addCustomField}
