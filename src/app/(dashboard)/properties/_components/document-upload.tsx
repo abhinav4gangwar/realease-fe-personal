@@ -97,6 +97,15 @@ export function PropertyUploadDropzone({
 
   return (
     <div className="py-6">
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        onChange={handleFilesFromInput}
+        style={{ display: 'none' }}
+        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
+      />
+
       {selectedFiles.length === 0 && (
         <div
           onDrop={handleDrop}
@@ -129,35 +138,25 @@ export function PropertyUploadDropzone({
       )}
 
       {selectedFiles.length === 0 && (
-        <div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            onChange={handleFilesFromInput}
-            style={{ display: 'none' }}
-            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
-          />
-
-          <div className="mt-4 flex gap-3">
-            <Button
-              variant="outline"
-              onClick={openFileDialog}
-              className="hover:bg-secondary h-11 flex-1 cursor-pointer transition ease-in-out hover:text-white"
-              disabled={isLoading}
-            >
-              <File className="mr-2 h-4 w-4" />
-              Select Files
-            </Button>
-          </div>
+        <div className="mt-4 flex gap-3">
+          <Button
+            variant="outline"
+            onClick={openFileDialog}
+            className="hover:bg-secondary h-11 flex-1 cursor-pointer transition ease-in-out hover:text-white"
+            disabled={isLoading}
+          >
+            <File className="mr-2 h-4 w-4" />
+            Select Files
+          </Button>
         </div>
       )}
 
       {selectedFiles.length > 0 && (
-        <div className="">
+        <div>
           <h3 className="mb-3 text-lg font-semibold">
             Selected Files ({selectedFiles.length})
           </h3>
+
           <div className="max-h-80 overflow-auto rounded-md border border-gray-300 p-3">
             {selectedFiles.map((fileItem, index) => (
               <div
@@ -171,6 +170,7 @@ export function PropertyUploadDropzone({
                     ({formatFileSize(fileItem.size)})
                   </span>
                 </div>
+
                 <Button
                   variant="ghost"
                   size="sm"
