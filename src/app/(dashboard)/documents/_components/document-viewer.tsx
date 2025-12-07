@@ -1,4 +1,5 @@
 'use client'
+
 import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import { Button } from '@/components/ui/button'
 import { useEscapeKey } from '@/hooks/useEscHook'
@@ -907,22 +908,23 @@ export function DocumentViewer({
             viewMode={viewMode}
             onViewModeChange={handleViewModeChange}
           />
+
           <PlanAccessWrapper featureId="DOCUMENT_TAGGING_FILTERING">
             <FilterButton onFilterSelect={handleFilterSelect} />
           </PlanAccessWrapper>
+
           <SortButton onSortChange={handleSortChange} />
           {isSelectMode && selectedDocuments.length > 0 && (
             <div className="text-sm text-gray-600">
               {selectedDocuments.length} selected
             </div>
           )}
-          <PlanAccessWrapper featureId="DOCUMENT_BULK_UPLOAD_MGMT">
-            <ActionsButton
-              onActionSelect={handleActionSelect}
-              isSelectMode={isSelectMode}
-              selectedCount={selectedDocuments.length}
-            />
-          </PlanAccessWrapper>
+
+          <ActionsButton
+            onActionSelect={handleActionSelect}
+            isSelectMode={isSelectMode}
+            selectedCount={selectedDocuments.length}
+          />
 
           <AddButton onAddSelect={handleAddSelect} />
         </div>
@@ -960,27 +962,8 @@ export function DocumentViewer({
                   className={`${viewMode === 'list' ? 'mt-5 rounded-lg bg-white p-6' : 'mt-4'}`}
                 >
                   {viewMode === 'list' ? (
-                    <DocumentListView
-                      documents={paginatedDocuments}
-                      onDocumentInfo={handleDocumentInfo}
-                      onDocumentPreview={handleDocumentPreview}
-                      onFolderClick={handleFolderClick}
-                      selectedDocumentId={selectedDocument?.id}
-                      isShareMode={isSelectMode}
-                      selectedDocuments={selectedDocuments}
-                      onDocumentSelect={handleDocumentSelect}
-                      onEditClick={handleEditClick}
-                      loadingFolders={loadingFolders}
-                      onDeleteClick={handleDeleteClick}
-                      onMoveClick={handleMoveClick}
-                      onShareClick={handleShareClick}
-                      onDownloadClick={handleDownloadClick}
-                      onSelectAll={handleSelectAll}
-                      selectAllState={getSelectAllState()}
-                    />
-                  ) : (
-                    <div>
-                      <DocumentGridView
+                    <PlanAccessWrapper featureId="PERM_DOC_VIEW">
+                      <DocumentListView
                         documents={paginatedDocuments}
                         onDocumentInfo={handleDocumentInfo}
                         onDocumentPreview={handleDocumentPreview}
@@ -995,8 +978,31 @@ export function DocumentViewer({
                         onMoveClick={handleMoveClick}
                         onShareClick={handleShareClick}
                         onDownloadClick={handleDownloadClick}
-                        isModelOpen={isModalOpen}
+                        onSelectAll={handleSelectAll}
+                        selectAllState={getSelectAllState()}
                       />
+                    </PlanAccessWrapper>
+                  ) : (
+                    <div>
+                      <PlanAccessWrapper featureId="PERM_DOC_VIEW">
+                        <DocumentGridView
+                          documents={paginatedDocuments}
+                          onDocumentInfo={handleDocumentInfo}
+                          onDocumentPreview={handleDocumentPreview}
+                          onFolderClick={handleFolderClick}
+                          selectedDocumentId={selectedDocument?.id}
+                          isShareMode={isSelectMode}
+                          selectedDocuments={selectedDocuments}
+                          onDocumentSelect={handleDocumentSelect}
+                          onEditClick={handleEditClick}
+                          loadingFolders={loadingFolders}
+                          onDeleteClick={handleDeleteClick}
+                          onMoveClick={handleMoveClick}
+                          onShareClick={handleShareClick}
+                          onDownloadClick={handleDownloadClick}
+                          isModelOpen={isModalOpen}
+                        />
+                      </PlanAccessWrapper>
                     </div>
                   )}
                   {hasMore && (

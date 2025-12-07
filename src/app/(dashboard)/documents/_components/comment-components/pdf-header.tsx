@@ -81,23 +81,23 @@ export const PDFHeader: FC<PDFHeaderProps> = ({
             <MessageSquare className="h-3 w-3" />
           </Button>
         </PlanAccessWrapper>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className="hover:text-primary hidden h-6 w-6 cursor-pointer items-center justify-center text-white lg:flex"
-          onClick={(e) => {
-            e.stopPropagation()
-            if (onEditClick) {
-              onEditClick()
-            }
-          }}
-          title="Edit document details"
-        >
-          <Pencil className="h-3 w-3" />
-        </Button>
-
-        <PlanAccessWrapper featureId="DOCUMENT_SHARE_TEAM_PERMISSIONS">
+        <PlanAccessWrapper featureId="PERM_DOC_EDIT">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hover:text-primary hidden h-6 w-6 cursor-pointer items-center justify-center text-white lg:flex"
+            onClick={(e) => {
+              e.stopPropagation()
+              if (onEditClick) {
+                onEditClick()
+              }
+            }}
+            title="Edit document details"
+          >
+            <Pencil className="h-3 w-3" />
+          </Button>
+        </PlanAccessWrapper>
+        <PlanAccessWrapper featureId="DOCUMENT_SHARE_SECURE_EXPIRY">
           <Button
             variant="ghost"
             size="icon"
@@ -113,19 +113,21 @@ export const PDFHeader: FC<PDFHeaderProps> = ({
           </Button>
         </PlanAccessWrapper>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="hover:text-primary h-6 w-6 cursor-pointer text-white"
-          onClick={(e) => {
-            e.stopPropagation()
-            if (onDownloadClick) {
-              onDownloadClick(document)
-            }
-          }}
-        >
-          <Download className="h-3 w-3" />
-        </Button>
+        <PlanAccessWrapper featureId="PERM_DOC_DOWNLOAD">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hover:text-primary h-6 w-6 cursor-pointer text-white"
+            onClick={(e) => {
+              e.stopPropagation()
+              if (onDownloadClick) {
+                onDownloadClick(document)
+              }
+            }}
+          >
+            <Download className="h-3 w-3" />
+          </Button>
+        </PlanAccessWrapper>
 
         <Button
           variant="ghost"

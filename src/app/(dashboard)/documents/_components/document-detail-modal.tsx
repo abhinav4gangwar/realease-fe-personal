@@ -283,13 +283,16 @@ export function DocumentDetailModal({
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
+
                 <DropdownMenuContent align="end" className="border-none">
-                  <DropdownMenuItem
-                    onClick={handleEdit}
-                    className="cursor-pointer font-semibold hover:bg-[#A2CFE333]"
-                  >
-                    Edit
-                  </DropdownMenuItem>
+                  <PlanAccessWrapper featureId="PERM_DOC_EDIT">
+                    <DropdownMenuItem
+                      onClick={handleEdit}
+                      className="cursor-pointer font-semibold hover:bg-[#A2CFE333]"
+                    >
+                      Edit
+                    </DropdownMenuItem>
+                  </PlanAccessWrapper>
                   <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation()
@@ -301,17 +304,20 @@ export function DocumentDetailModal({
                   >
                     Move
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="cursor-pointer font-semibold hover:bg-[#A2CFE333]"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      if (onDownloadClick) {
-                        onDownloadClick(document)
-                      }
-                    }}
-                  >
-                    Download
-                  </DropdownMenuItem>
+                  <PlanAccessWrapper featureId="PERM_DOC_DOWNLOAD">
+                    <DropdownMenuItem
+                      className="cursor-pointer font-semibold hover:bg-[#A2CFE333]"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (onDownloadClick) {
+                          onDownloadClick(document)
+                        }
+                      }}
+                    >
+                      Download
+                    </DropdownMenuItem>
+                  </PlanAccessWrapper>
+
                   {/* <PlanAccessWrapper featureId="DOCUMENT_SHARE_TEAM_PERMISSIONS">
                     <DropdownMenuItem
                       onClick={(e) => {

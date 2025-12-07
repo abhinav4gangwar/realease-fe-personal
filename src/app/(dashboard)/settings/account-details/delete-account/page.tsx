@@ -1,5 +1,6 @@
 'use client'
 
+import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import { Button } from '@/components/ui/button'
 import { useEscapeKey } from '@/hooks/useEscHook'
 import { ArrowRight, Trash2 } from 'lucide-react'
@@ -33,13 +34,14 @@ const DeleteAccountPage = () => {
           the RealEase App and servers. This action is irreversible, so please
           continue with caution.
         </p>
-
-        <Button
-          className="h-11 cursor-pointer bg-[#E2364D]"
-          onClick={() => setIsConfirmDeleteOpen(true)}
-        >
-          Delete Account <ArrowRight />
-        </Button>
+        <PlanAccessWrapper featureId="PERM_ACCOUNT_DELETE">
+          <Button
+            className="h-11 cursor-pointer bg-[#E2364D]"
+            onClick={() => setIsConfirmDeleteOpen(true)}
+          >
+            Delete Account <ArrowRight />
+          </Button>
+        </PlanAccessWrapper>
       </div>
 
       <div>

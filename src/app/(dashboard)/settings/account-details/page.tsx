@@ -1,4 +1,5 @@
 'use client'
+import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import { Button } from '@/components/ui/button'
 import { useEscapeKey } from '@/hooks/useEscHook'
 import { useGlobalContextProvider } from '@/providers/global-context'
@@ -50,12 +51,14 @@ const AccountDetailsPage = () => {
           <p className="flex-1 text-left font-normal text-gray-400">
             {accountDetails.name || 'Not Provided'}
           </p>
-          <Button
-            className="text-secondary hover:bg-secondary size-13 cursor-pointer bg-[#F2F2F2] shadow-md hover:text-white"
-            onClick={() => setIsNameModelOpen(true)}
-          >
-            <ArrowRight />
-          </Button>
+          <PlanAccessWrapper featureId="PERM_SETTINGS_EDIT">
+            <Button
+              className="text-secondary hover:bg-secondary size-13 cursor-pointer bg-[#F2F2F2] shadow-md hover:text-white"
+              onClick={() => setIsNameModelOpen(true)}
+            >
+              <ArrowRight />
+            </Button>
+          </PlanAccessWrapper>
         </div>
 
         <div className="flex items-center justify-between">
@@ -83,12 +86,14 @@ const AccountDetailsPage = () => {
           <p className="flex-1 text-left font-normal text-gray-400">
             {accountDetails.phone || 'Not Provided'}
           </p>
-          <Button
-            className="text-secondary hover:bg-secondary size-13 cursor-pointer bg-[#F2F2F2] shadow-md hover:text-white"
-            onClick={() => setIsPhoneModelOpen(true)}
-          >
-            <ArrowRight />
-          </Button>
+          <PlanAccessWrapper featureId="PERM_SETTINGS_EDIT">
+            <Button
+              className="text-secondary hover:bg-secondary size-13 cursor-pointer bg-[#F2F2F2] shadow-md hover:text-white"
+              onClick={() => setIsPhoneModelOpen(true)}
+            >
+              <ArrowRight />
+            </Button>
+          </PlanAccessWrapper>
         </div>
 
         <div className="flex items-center justify-between">
@@ -96,12 +101,14 @@ const AccountDetailsPage = () => {
           <p className="flex-1 text-left font-normal text-gray-400">
             {accountDetails.email || 'Not Provided'}
           </p>
-          <Button
-            className="text-secondary hover:bg-secondary size-13 cursor-pointer bg-[#F2F2F2] shadow-md hover:text-white"
-            onClick={() => setIsEmailModelOpen(true)}
-          >
-            <ArrowRight />
-          </Button>
+          <PlanAccessWrapper featureId="PERM_SETTINGS_EDIT">
+            <Button
+              className="text-secondary hover:bg-secondary size-13 cursor-pointer bg-[#F2F2F2] shadow-md hover:text-white"
+              onClick={() => setIsEmailModelOpen(true)}
+            >
+              <ArrowRight />
+            </Button>
+          </PlanAccessWrapper>
         </div>
       </div>
 

@@ -1,4 +1,5 @@
 'use client'
+
 import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import {
   AlertDialog,
@@ -631,23 +632,18 @@ const PropertiesDetailsModel = ({
 
               {/* Map + Property Info */}
               <div className="flex justify-between gap-3">
-                <PlanAccessWrapper
-                  featureId="MAP_VIEW_PROPERTY_LEVEL"
-                  className="w-full"
-                >
-                  <div className="w-full rounded-md bg-[#F2F2F2] p-3">
-                    <h3 className="mb-2 text-sm font-medium text-gray-500">
-                      Mini Map View
-                    </h3>
-                    <div className="h-40">
-                      <MiniMap
-                        coordinates={getCoordinatesForMap()}
-                        propertyName={property?.name}
-                        onClick={handleMiniMapClick}
-                      />
-                    </div>
+                <div className="w-full rounded-md bg-[#F2F2F2] p-3">
+                  <h3 className="mb-2 text-sm font-medium text-gray-500">
+                    Mini Map View
+                  </h3>
+                  <div className="h-40">
+                    <MiniMap
+                      coordinates={getCoordinatesForMap()}
+                      propertyName={property?.name}
+                      onClick={handleMiniMapClick}
+                    />
                   </div>
-                </PlanAccessWrapper>
+                </div>
 
                 <div className="flex w-full flex-col space-y-5 rounded-md bg-[#F2F2F2] px-3 py-2">
                   {['name', 'type', 'owner'].map((field) => (
@@ -816,19 +812,22 @@ const PropertiesDetailsModel = ({
                       filteredUsers['main']?.length > 0 && (
                         <div className="absolute z-10 mt-1 max-h-48 w-full overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
                           {filteredUsers['main'].map((user) => (
-                            <div
-                              key={user.id}
-                              onClick={() => selectMention(user, 'main')}
-                              className="cursor-pointer px-3 py-2 hover:bg-gray-100"
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className="text-secondary font-medium">
-                                  @{extractUsername(user.email)}
-                                </span>
-                                <span className="text-sm text-gray-500">
-                                  ({user.email})
-                                </span>
-                              </div>
+                            <div key={user.id}>
+                              <PlanAccessWrapper featureId="ASSET_CUSTOM_FIELD_CONFIG">
+                                <div
+                                  onClick={() => selectMention(user, 'main')}
+                                  className="cursor-pointer px-3 py-2 hover:bg-gray-100"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-secondary font-medium">
+                                      @{extractUsername(user.email)}
+                                    </span>
+                                    <span className="text-sm text-gray-500">
+                                      ({user.email})
+                                    </span>
+                                  </div>
+                                </div>
+                              </PlanAccessWrapper>
                             </div>
                           ))}
                         </div>

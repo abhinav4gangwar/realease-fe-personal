@@ -21,7 +21,7 @@ export default function DashboardLayout({
   const pathname = usePathname()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const { isAuthenticated } = useAuth()
-  const { setPlanAccessValues, setAccountDetails, setUserType } =
+  const { setPlanAccessValues, setAccountDetails, setUserType, userType } =
     useGlobalContextProvider()
   const { showModal, setShowModal } = useDefaultPasswordCheck()
 
@@ -32,7 +32,9 @@ export default function DashboardLayout({
 
         if (response.data.success && response.data.data.features) {
           setPlanAccessValues(response.data.data.features)
-          setUserType(response.data.data.userType)
+          if(response.data.data.isSubUser === false) {
+            setUserType("USER")
+          }
         }
       } catch (error) {
         console.error('Failed to fetch features:', error)
@@ -61,6 +63,7 @@ export default function DashboardLayout({
       fetchAccountDetails()
     }
   }, [isAuthenticated, setAccountDetails])
+
 
   if (isAuthenticated == false) {
     return <Loader />

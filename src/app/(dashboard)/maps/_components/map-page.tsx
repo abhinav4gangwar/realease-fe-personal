@@ -8,8 +8,8 @@ import { toast } from 'sonner'
 
 import { apiClient } from '@/utils/api'
 import { propertiesApi } from '../../properties/_property_utils/property.services'
-import MapPropertiesSidebar from './map-sidebar'
 import { LayerSelector, LayerType, getLayerConfig } from './layer-selector'
+import MapPropertiesSidebar from './map-sidebar'
 
 const MapContainer = dynamic(
   () => import('react-leaflet').then((mod) => mod.MapContainer),
@@ -277,11 +277,13 @@ const MapPage = () => {
         )}
 
         {/* Layer Selector - positioned below zoom controls */}
-        <LayerSelector
-          selectedLayer={selectedLayer}
-          onLayerChange={setSelectedLayer}
-          className="top-20 left-4"
-        />
+       
+          <LayerSelector
+            selectedLayer={selectedLayer}
+            onLayerChange={setSelectedLayer}
+            className="top-20 left-4"
+          />
+
 
         <MapContainer
           center={mapCenter}
