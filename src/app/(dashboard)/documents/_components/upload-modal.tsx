@@ -47,15 +47,20 @@ export function UploadModal({
 
   const handleQueueClose = (isOpen: boolean) => {
     if (!isOpen) {
-      handleClose()
+      setShowUploadQueue(false)
     } else {
       setShowUploadQueue(isOpen)
     }
   }
 
+  const handleQueueBack = () => {
+    setShowUploadQueue(false)
+  }
+
   const handleDetailsClose = (isOpen: boolean) => {
     if (!isOpen) {
-      handleClose()
+      setShowDetailsDialog(false)
+      setShowUploadQueue(true)
     } else {
       setShowDetailsDialog(isOpen)
     }
@@ -80,6 +85,7 @@ export function UploadModal({
           setShowUploadQueue(false)
           setShowDetailsDialog(true)
         }}
+        onBack={handleQueueBack}
       />
     )
   }

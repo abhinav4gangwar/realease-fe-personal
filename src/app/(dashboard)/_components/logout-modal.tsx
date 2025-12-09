@@ -16,7 +16,7 @@ const LogoutModel = ({
 
   if (!isOpen) return
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/40 p-4">
       <div className="w-full lg:max-w-md rounded-lg border border-gray-500 bg-white shadow-lg">
         {/* Content */}
         <div className="p-6 text-secondary">

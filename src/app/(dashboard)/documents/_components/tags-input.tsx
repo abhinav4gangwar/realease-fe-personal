@@ -8,6 +8,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 
+import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import { Plus, Trash2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Tag, tagsApi } from '../doc_utils/tags.services'
@@ -101,112 +102,117 @@ export function TagInput({
   }
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <div className="w-full">
-          <div
-            className="border-input flex min-h-11 w-full cursor-pointer flex-wrap items-center gap-2 rounded-md border bg-transparent px-3 py-2 text-sm shadow-sm"
-            onClick={() => setIsOpen(true)}
-          >
-            {selectedTags.map((tag) => (
-              <div
-                key={tag}
-                className="bg-muted text-foreground flex items-center gap-1 rounded px-2 py-1 text-sm"
-              >
-                {tag}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleTagRemove(tag)
-                  }}
-                  className="text-muted-foreground hover:text-destructive"
+    <PlanAccessWrapper featureId="DOCUMENT_TAGGING_FILTERING">
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
+        <PopoverTrigger asChild>
+          <div className="w-full">
+            <div
+              className="border-input flex min-h-11 w-full cursor-pointer flex-wrap items-center gap-2 rounded-md border bg-transparent px-3 py-2 text-sm shadow-sm"
+              onClick={() => setIsOpen(true)}
+            >
+              {selectedTags.map((tag) => (
+                <div
+                  key={tag}
+                  className="bg-muted text-foreground flex items-center gap-1 rounded px-2 py-1 text-sm"
                 >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            ))}
-            <span className="text-muted-foreground text-sm">
-              {selectedTags.length === 0 && placeholder}
-            </span>
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleTagRemove(tag)
+                    }}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              <span className="text-muted-foreground text-sm">
+                {selectedTags.length === 0 && placeholder}
+              </span>
+            </div>
           </div>
-        </div>
-      </PopoverTrigger>
-      <PopoverContent className="w-full border border-gray-300 p-0" align="start">
-        <div className="p-2">
-          <Input
-            placeholder="Search or type new tag..."
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && searchValue.trim()) {
-                e.preventDefault()
-                if (shouldShowCreateOption) {
-                  handleCreateTag()
-                } else {
-                  const exactMatch = filteredTags.find(
-                    (tag) =>
-                      tag.name.toLowerCase() === searchValue.toLowerCase()
-                  )
-                  if (exactMatch) {
-                    handleTagSelect(exactMatch.name)
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-full border border-gray-300 p-0"
+          align="start"
+        >
+          <div className="p-2">
+            <Input
+              placeholder="Search or type new tag..."
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && searchValue.trim()) {
+                  e.preventDefault()
+                  if (shouldShowCreateOption) {
+                    handleCreateTag()
+                  } else {
+                    const exactMatch = filteredTags.find(
+                      (tag) =>
+                        tag.name.toLowerCase() === searchValue.toLowerCase()
+                    )
+                    if (exactMatch) {
+                      handleTagSelect(exactMatch.name)
+                    }
                   }
                 }
-              }
-            }}
-            className="mb-2 h-11"
-          />
+              }}
+              className="mb-2 h-11"
+            />
 
-          <div className="max-h-48 overflow-auto">
-            {filteredTags.length > 0 && (
-              <div className="space-y-1">
-                {filteredTags.map((tag) => (
-                  <div
-                    key={tag.id}
-                    className="group flex items-center justify-between"
-                  >
-                    <Button
-                      variant="ghost"
-                      className="flex-1 justify-start cursor-pointer"
-                      onClick={() => handleTagSelect(tag.name)}
+            <div className="max-h-48 overflow-auto">
+              {filteredTags.length > 0 && (
+                <div className="space-y-1">
+                  {filteredTags.map((tag) => (
+                    <div
+                      key={tag.id}
+                      className="group flex items-center justify-between"
                     >
-                      {tag.name}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-gray-400 cursor-pointer hover:text-primary h-8 w-8 p-0"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDeleteTag(tag.id, tag.name)
-                      }}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
+                      <Button
+                        variant="ghost"
+                        className="flex-1 cursor-pointer justify-start"
+                        onClick={() => handleTagSelect(tag.name)}
+                      >
+                        {tag.name}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="hover:text-primary h-8 w-8 cursor-pointer p-0 text-gray-400"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteTag(tag.id, tag.name)
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-            {filteredTags.length === 0 && !shouldShowCreateOption && (
-              <div className="text-muted-foreground p-2 text-center text-sm">
-                No tags found. Type to create a new one.
-              </div>
+              {filteredTags.length === 0 && !shouldShowCreateOption && (
+                <div className="text-muted-foreground p-2 text-center text-sm">
+                  No tags found. Type to create a new one.
+                </div>
+              )}
+            </div>
+            {shouldShowCreateOption && (
+              <Button
+                variant="ghost"
+                className="hover:text-primary mb-1 w-full cursor-pointer justify-start text-gray-500"
+                onClick={handleCreateTag}
+                disabled={isLoading}
+              >
+                <Plus className="h-4 w-4" />
+                Create New Tag "{searchValue}"
+              </Button>
             )}
           </div>
-          {shouldShowCreateOption && (
-            <Button
-              variant="ghost"
-              className="text-gray-500 cursor-pointer hover:text-primary mb-1 w-full justify-start"
-              onClick={handleCreateTag}
-              disabled={isLoading}
-            >
-              <Plus className="h-4 w-4" />
-              Create New Tag "{searchValue}"
-            </Button>
-          )}
-        </div>
-      </PopoverContent>
-    </Popover>
+        </PopoverContent>
+      </Popover>
+    </PlanAccessWrapper>
   )
 }

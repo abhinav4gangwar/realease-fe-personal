@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
+import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import { Download, Pencil, Send, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { HiShare } from 'react-icons/hi2'
@@ -49,14 +50,16 @@ const ReportListView = ({
   onDeleteClick,
 }: ReportListViewProps) => {
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
-  const [selectedReportForShare, setSelectedReportForShare] = useState<any>(null)
+  const [selectedReportForShare, setSelectedReportForShare] =
+    useState<any>(null)
   const [shareEmail, setShareEmail] = useState('')
   const [shareExpiry, setShareExpiry] = useState<string>('null')
   const [sharing, setSharing] = useState(false)
-  
+
   // Delete confirmation dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [selectedReportForDelete, setSelectedReportForDelete] = useState<any>(null)
+  const [selectedReportForDelete, setSelectedReportForDelete] =
+    useState<any>(null)
 
   const handleShareClick = (report: any) => {
     setSelectedReportForShare(report)
@@ -85,9 +88,9 @@ const ReportListView = ({
 
     try {
       setSharing(true)
-      
+
       const expiryValue = shareExpiry === 'null' ? null : parseInt(shareExpiry)
-      
+
       const response = await shareReport({
         email: shareEmail,
         reports: [{ id: selectedReportForShare.id }],
@@ -96,7 +99,7 @@ const ReportListView = ({
 
       if (response.results && response.results.length > 0) {
         const result = response.results[0]
-        
+
         if (result.status === 'shared') {
           toast.success(`Report shared successfully with ${shareEmail}`)
         } else if (result.status === 'extended') {
@@ -120,7 +123,10 @@ const ReportListView = ({
       setShareExpiry('null')
     } catch (error: any) {
       console.error('Failed to share report:', error)
-      const errorMessage = error?.response?.data?.error || error?.response?.data?.message || 'Failed to share report'
+      const errorMessage =
+        error?.response?.data?.error ||
+        error?.response?.data?.message ||
+        'Failed to share report'
       toast.error(errorMessage)
     } finally {
       setSharing(false)
@@ -143,10 +149,10 @@ const ReportListView = ({
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString)
-      return date.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric' 
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
       })
     } catch {
       return 'Invalid date'
@@ -156,9 +162,9 @@ const ReportListView = ({
   const formatTime = (dateString: string) => {
     try {
       const date = new Date(dateString)
-      return date.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
       })
     } catch {
       return '--:--'
@@ -180,15 +186,21 @@ const ReportListView = ({
         {/* Report list */}
         {reports.length === 0 ? (
           <div className="py-12 text-center">
-            <p className="text-lg font-medium text-gray-600">No reports found</p>
-            <p className="mt-2 text-sm text-gray-500">Create your first report to get started</p>
+            <p className="text-lg font-medium text-gray-600">
+              No reports found
+            </p>
+            <p className="mt-2 text-sm text-gray-500">
+              Create your first report to get started
+            </p>
           </div>
         ) : (
           reports.map((report) => (
             <div
               key={report.id}
               className={`grid cursor-pointer grid-cols-16 items-center px-4 py-3 hover:rounded-md hover:bg-[#A2CFE333] ${
-                selectedReportId === report.id ? 'border-blue-200 bg-blue-50 rounded-md' : ''
+                selectedReportId === report.id
+                  ? 'rounded-md border-blue-200 bg-blue-50'
+                  : ''
               }`}
             >
               <div className="col-span-6 flex items-center gap-3">
@@ -206,6 +218,7 @@ const ReportListView = ({
 
               <div className="col-span-4 truncate text-left text-sm text-[#9B9B9D]">
                 <div className="flex gap-1 pl-3">
+                  <PlanAccessWrapper featureId="PERM_ANALYTICS_EDIT">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -218,19 +231,21 @@ const ReportListView = ({
                   >
                     <Pencil className="h-3 w-3" />
                   </Button>
-
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="hover:text-primary h-6 w-6 cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onDownloadClick?.(report)
-                    }}
-                    title="Preview/Download report"
-                  >
-                    <Download className="h-3 w-3" />
-                  </Button>
+                  </PlanAccessWrapper>
+                  <PlanAccessWrapper featureId="PERM_ANALYTICS_DOWNLOAD">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="hover:text-primary h-6 w-6 cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onDownloadClick?.(report)
+                      }}
+                      title="Preview/Download report"
+                    >
+                      <Download className="h-3 w-3" />
+                    </Button>
+                  </PlanAccessWrapper>
 
                   <Button
                     variant="ghost"
@@ -258,7 +273,7 @@ const ReportListView = ({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="hover:text-red-600 h-6 w-6 cursor-pointer"
+                    className="h-6 w-6 cursor-pointer hover:text-red-600"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleDeleteClick(report)
@@ -298,7 +313,11 @@ const ReportListView = ({
             </div>
             <div className="grid gap-2">
               <Label htmlFor="expiry">Access Expiration</Label>
-              <Select value={shareExpiry} onValueChange={setShareExpiry} disabled={sharing}>
+              <Select
+                value={shareExpiry}
+                onValueChange={setShareExpiry}
+                disabled={sharing}
+              >
                 <SelectTrigger id="expiry">
                   <SelectValue placeholder="Select expiration" />
                 </SelectTrigger>
@@ -332,8 +351,9 @@ const ReportListView = ({
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the report {selectedReportForDelete?.data?.name || 'Untitled Report'}.
-              This action cannot be undone.
+              This will permanently delete the report{' '}
+              {selectedReportForDelete?.data?.name || 'Untitled Report'}. This
+              action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

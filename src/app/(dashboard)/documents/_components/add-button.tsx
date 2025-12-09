@@ -1,5 +1,6 @@
 'use client'
 
+import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -32,36 +33,38 @@ export function AddButton({ onAddSelect }: AddButtonProps) {
   }
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button
-          className={`flex h-11 cursor-pointer items-center space-x-1 font-semibold ${
-            open
-              ? 'text-primary bg-white'
-              : 'bg-primary hover:bg-secondary text-white'
-          }`}
-        >
-          <span>Add</span>
-          {open ? (
-            <ChevronUp className="text-primary h-6 w-4" />
-          ) : (
-            <ChevronDown className="h-6 w-4" />
-          )}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="border-none">
-        {addOptions.map(({ label, value }) => (
-          <DropdownMenuItem
-            key={value}
-            onClick={() => handleSelect(value)}
-            className={`cursor-pointer font-semibold hover:bg-[#A2CFE33D] ${
-              selected === value ? 'text-primary' : ''
+    <PlanAccessWrapper featureId="PERM_DOC_UPLOAD">
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            className={`flex h-11 cursor-pointer items-center space-x-1 font-semibold ${
+              open
+                ? 'text-primary bg-white'
+                : 'bg-primary hover:bg-secondary text-white'
             }`}
           >
-            {label}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+            <span>Add</span>
+            {open ? (
+              <ChevronUp className="text-primary h-6 w-4" />
+            ) : (
+              <ChevronDown className="h-6 w-4" />
+            )}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="border-none">
+          {addOptions.map(({ label, value }) => (
+            <DropdownMenuItem
+              key={value}
+              onClick={() => handleSelect(value)}
+              className={`cursor-pointer font-semibold hover:bg-[#A2CFE33D] ${
+                selected === value ? 'text-primary' : ''
+              }`}
+            >
+              {label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </PlanAccessWrapper>
   )
 }

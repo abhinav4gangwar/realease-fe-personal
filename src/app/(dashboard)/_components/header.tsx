@@ -31,7 +31,7 @@ export function Header() {
     <header className="z-40 hidden bg-white px-6 py-4 shadow-sm lg:block">
       <div className="flex items-center justify-between">
         <PlanAccessWrapper
-          featureId="SEARCH_KEYWORD"
+          featureId="SEARCH_SYNONYMS"
           className="w-full"
           crownPosition="top-left"
         >

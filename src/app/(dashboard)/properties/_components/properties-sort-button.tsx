@@ -23,8 +23,8 @@ const sortOptions: {
 }[] = [
   { label: 'Owner (A-Z)', field: 'owner', order: 'asc' },
   { label: 'Owner (Z-A)', field: 'owner', order: 'desc' },
-  { label: 'Value High-Low', field: 'value', order: 'asc' },
-  { label: 'Value Low-High', field: 'value', order: 'desc' },
+  { label: 'Value High-Low', field: 'value', order: 'desc' },
+  { label: 'Value Low-High', field: 'value', order: 'asc' },
   { label: 'Newest to Oldest', field: 'dateAdded', order: 'desc' },
   { label: 'Oldest to Newest', field: 'dateAdded', order: 'asc' },
   { label: 'A to Z', field: 'name', order: 'asc' },

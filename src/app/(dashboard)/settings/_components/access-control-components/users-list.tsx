@@ -29,9 +29,11 @@ const UsersList = () => {
       const response = await apiClient.get('/users')
       if (response.data.success && response.data.data) {
         setUsers(response.data.data)
-        
+
         // Extract unique roles from users data
-        const uniqueRoles = [...new Set(response.data.data.map(user => user.role.name))]
+        const uniqueRoles = [
+          ...new Set(response.data.data.map((user) => user.role.name)),
+        ]
         setRoles(['All', ...uniqueRoles])
       }
     } catch (error) {
@@ -191,6 +193,7 @@ const UsersList = () => {
           setSelectedUser(undefined)
         }}
         user={selectedUser}
+        onUserUpdated={fetchUsers}
       />
 
       <CreateUserModal

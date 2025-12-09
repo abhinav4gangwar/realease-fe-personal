@@ -16,7 +16,7 @@ import { DayPicker } from 'react-day-picker'
 import 'react-day-picker/dist/style.css'
 import { toast } from 'sonner'
 
-interface Activity {
+export interface Activity {
   id: number
   time: string
   name: string
@@ -28,12 +28,12 @@ interface Activity {
   metadata: any
 }
 
-interface DayLog {
+export interface DayLog {
   date: string
   activities: Activity[]
 }
 
-interface ActivityLogsResponse {
+export interface ActivityLogsResponse {
   success: boolean
   data: {
     logs: DayLog[]

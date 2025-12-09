@@ -2,7 +2,6 @@
 import ChangePasswordModal, {
   useDefaultPasswordCheck,
 } from '@/components/permission-control/change-password-model'
-import { IncompletePersonalDetailsModal } from '@/components/permission-control/incomplete-personal-details-model'
 import Loader from '@/components/shared/Loader'
 import { useAuth } from '@/hooks/useAuth'
 import { useGlobalContextProvider } from '@/providers/global-context'
@@ -22,7 +21,7 @@ export default function DashboardLayout({
   const pathname = usePathname()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const { isAuthenticated } = useAuth()
-  const { setPlanAccessValues, setAccountDetails, setUserType } =
+  const { setPlanAccessValues, setAccountDetails, setUserType, userType } =
     useGlobalContextProvider()
   const { showModal, setShowModal } = useDefaultPasswordCheck()
 
@@ -33,7 +32,9 @@ export default function DashboardLayout({
 
         if (response.data.success && response.data.data.features) {
           setPlanAccessValues(response.data.data.features)
-          setUserType(response.data.data.userType)
+          if(response.data.data.isSubUser === false) {
+            setUserType("USER")
+          }
         }
       } catch (error) {
         console.error('Failed to fetch features:', error)
@@ -63,6 +64,7 @@ export default function DashboardLayout({
     }
   }, [isAuthenticated, setAccountDetails])
 
+
   if (isAuthenticated == false) {
     return <Loader />
   }
@@ -75,7 +77,7 @@ export default function DashboardLayout({
   return (
     <div className="flex h-screen bg-gray-100">
       {!isPricingPage && <SubscriptionPopup />}
-      <IncompletePersonalDetailsModal />
+      {/* <IncompletePersonalDetailsModal /> */}
       <ChangePasswordModal
         isOpen={showModal}
         onClose={() => setShowModal(false)}

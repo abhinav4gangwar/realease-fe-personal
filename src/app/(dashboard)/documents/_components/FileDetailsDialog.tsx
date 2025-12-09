@@ -44,6 +44,14 @@ export function FileDetailsDialog({
 
   const handleClose = () => onOpenChange(false)
 
+  const handleBackButtonClick = () => {
+    if (folderPath.length > 0) {
+      handleBackClick()
+    } else {
+      handleClose()
+    }
+  }
+
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/20" />
@@ -51,11 +59,9 @@ export function FileDetailsDialog({
         <div className="bg-background mx-4 flex max-h-[80vh] w-full max-w-4xl flex-col rounded-lg border border-gray-400 shadow-lg">
           <div className="flex items-center justify-between p-6">
             <h2 className="flex items-center gap-2 text-xl font-semibold">
-              {folderPath.length > 0 && (
-                <Button variant="ghost" size="sm" onClick={handleBackClick}>
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-              )}
+              <Button variant="ghost" size="sm" onClick={handleBackButtonClick}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
               Edit Details{' '}
               {folderPath.length > 0 && (
                 <span className="text-muted-foreground text-sm">

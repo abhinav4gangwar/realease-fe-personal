@@ -1,24 +1,22 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Plus } from 'lucide-react'
+import dynamic from 'next/dynamic'
 import Image from 'next/image'
+
+const MapView = dynamic(() => import('@/components/shared/map-view').then(m => m.MapView), {
+  ssr: false,
+})
 
 export const MiniMapWidget = () => {
   return (
-    <Card className="h-full border-none pb-0">
+     <Card className="h-full border-none pb-0">
       <CardHeader>
-        <CardTitle className="text-secondary h-2 pb-3 text-lg font-semibold">
+        <CardTitle className="text-secondary text-lg font-semibold">
           Mini Map View
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="relative h-[400px] w-full overflow-hidden">
-          <Image
-            src="/assets/map.png"
-            alt="Map view"
-            fill
-            className="object-cover"
-          />
-        </div>
+        <MapView height="500px" zoom={12} />
       </CardContent>
     </Card>
   )

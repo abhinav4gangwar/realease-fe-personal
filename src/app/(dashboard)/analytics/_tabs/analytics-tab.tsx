@@ -1,5 +1,6 @@
 'use client'
 
+import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import { Button } from '@/components/ui/button'
 import { apiClient } from '@/utils/api'
 import { Grid2x2Plus } from 'lucide-react'
@@ -10,8 +11,7 @@ import { AnalyticsChartCard } from '../_components/analytics-components/analytic
 import AnalyticsSidebar from '../_components/analytics-components/analytics-sidebar'
 import AnalyticsStateToggle from '../_components/analytics-state-toggle'
 
-
-interface AnalyticsCard {
+export interface AnalyticsCard {
   id: string
   type: 'basic' | 'chart'
   title: string
@@ -51,8 +51,8 @@ export const AnalyticsRenderer = ({
   if (!analytics || analytics.cards.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <div className="text-gray-500 text-lg">No analytics cards yet</div>
-        <div className="text-gray-400 text-sm mt-2">
+        <div className="text-lg text-gray-500">No analytics cards yet</div>
+        <div className="mt-2 text-sm text-gray-400">
           Click the + button to create your first analytics card
         </div>
       </div>
@@ -66,7 +66,7 @@ export const AnalyticsRenderer = ({
     <div className="flex flex-col space-y-6">
       {/* Basic Cards */}
       {basicCards.length > 0 && (
-        <div className="grid lg:grid-cols-3 gap-4">
+        <div className="grid gap-4 lg:grid-cols-3">
           {basicCards.map((card) => (
             <AnalyticsBasicCard
               key={card.id}
@@ -81,7 +81,7 @@ export const AnalyticsRenderer = ({
 
       {/* Chart Cards */}
       {chartCards.length > 0 && (
-        <div className="grid lg:grid-cols-2 gap-4">
+        <div className="grid gap-4 lg:grid-cols-2">
           {chartCards.map((card) => (
             <AnalyticsChartCard
               key={card.id}
@@ -110,10 +110,10 @@ const AnalyticsTab = () => {
       const response = await apiClient.get('/analytics')
       if (response.data) {
         setAnalytics(response.data)
-        toast.message("Analytics Fetched Successfully")
+        toast.message('Analytics Fetched Successfully')
       }
     } catch (err: any) {
-      toast.message("Failed to load Analytics")
+      toast.message('Failed to load Analytics')
       console.error('Failed to fetch analytics:', err)
       setError(err.response?.data?.message || 'Failed to load analytics')
     } finally {
@@ -146,19 +146,20 @@ const AnalyticsTab = () => {
 
         <div className="flex items-center gap-4">
           <AnalyticsStateToggle />
-
-          <Button
-            className="text-primary hover:bg-primary h-12 w-12 cursor-pointer rounded-full border border-gray-400 bg-white font-bold hover:text-white"
-            onClick={() => setIsSidebarOpen(true)}
-          >
-            <Grid2x2Plus className="size-6" />
-          </Button>
+          <PlanAccessWrapper featureId="PERM_ANALYTICS_CREATE">
+            <Button
+              className="text-primary hover:bg-primary h-12 w-12 cursor-pointer rounded-full border border-gray-400 bg-white font-bold hover:text-white"
+              onClick={() => setIsSidebarOpen(true)}
+            >
+              <Grid2x2Plus className="size-6" />
+            </Button>
+          </PlanAccessWrapper>
         </div>
       </div>
 
       {error && (
-        <div className="mb-4 rounded-md bg-red-50 border border-red-200 p-4">
-          <p className="text-red-600 text-sm">{error}</p>
+        <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-4">
+          <p className="text-sm text-red-600">{error}</p>
           <Button
             variant="outline"
             size="sm"

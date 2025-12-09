@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { QuickAction } from '@/types'
 import { ChevronDown, ChevronUp } from 'lucide-react'
+import Link from 'next/link'
 import { useState } from 'react'
 
 const QuickActionMenu = ({ quickActionOptions }: { quickActionOptions: QuickAction[] }) => {
@@ -17,9 +18,7 @@ const QuickActionMenu = ({ quickActionOptions }: { quickActionOptions: QuickActi
   const handleActionSelect = (action: QuickAction): void => {
     setSelectedAction(action)
     setOpen(false)
-    console.log('Selected action:', selectedAction)
   }
-
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -39,15 +38,20 @@ const QuickActionMenu = ({ quickActionOptions }: { quickActionOptions: QuickActi
           )}
         </Button>
       </DropdownMenuTrigger>
+
       <DropdownMenuContent align="center" className="border-none">
         {quickActionOptions.map((action) => (
-          <DropdownMenuItem
-            key={action.id}
-            onClick={() => handleActionSelect(action)}
-            className={`cursor-pointer hover:bg-[#A2CFE33D] font-semibold ${(action.id === selectedAction?.id)? "text-primary": "text-secondary"}`}
-          >
-            {action.label}
-          </DropdownMenuItem>
+          <Link key={action.id} href={action.href} passHref>
+            <DropdownMenuItem
+              asChild
+              onClick={() => handleActionSelect(action)}
+              className={`cursor-pointer hover:bg-[#A2CFE33D] font-semibold ${
+                action.id === selectedAction?.id ? 'text-primary' : 'text-secondary'
+              }`}
+            >
+              <span>{action.label}</span>
+            </DropdownMenuItem>
+          </Link>
         ))}
       </DropdownMenuContent>
     </DropdownMenu>

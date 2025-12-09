@@ -1,5 +1,6 @@
 'use client'
 
+import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -15,15 +16,21 @@ interface FilterButtonProps {
   onFilterSelect: (filterType: FilterType) => void
 }
 
-const filterOptions: { label: string; value: FilterType }[] = [
+const filterOptions: { label: string; value: FilterType; premium?: boolean; featureIds?: string | string[] }[] = [
   { label: 'No Filter', value: 'none' },
   { label: 'By Property', value: 'property' },
   { label: 'By File Type', value: 'type' },
+  { 
+    label: 'By File Tags', 
+    value: 'tags',
+    premium: true,
+    featureIds: 'SEARCH_FILTERING_CUSTOM_TAG'
+  },
   { label: 'By Recently Uploaded', value: 'recent' },
 ]
 
 export function FilterButton({ onFilterSelect }: FilterButtonProps) {
-  const [open, setOpen] = useState<boolean>(false)
+  const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState<FilterType | null>(null)
 
   const handleSelect = (value: FilterType) => {
@@ -36,27 +43,41 @@ export function FilterButton({ onFilterSelect }: FilterButtonProps) {
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="outline"
-          className={`flex lg:h-11 h-13 cursor-pointer items-center space-x-1 font-semibold ${
-            open ? 'text-primary bg-white border-none' : 'hover:bg-secondary hover:text-white'
-          }`}
+          variant="ghost"
+          className="hover:bg-primary/10 flex items-center gap-2"
         >
           <SlidersHorizontal className="h-4 w-4" />
-         <span className='hidden lg:block'>Filter</span> 
+          Filter
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="border-none">
-        {filterOptions.map(({ label, value }) => (
-          <DropdownMenuItem
-            key={value}
-            onClick={() => handleSelect(value)}
-            className={`cursor-pointer font-semibold hover:bg-[#A2CFE33D] ${
-              selected === value ? 'text-primary' : ''
-            }`}
-          >
-            {label}
-          </DropdownMenuItem>
-        ))}
+      <DropdownMenuContent align="end" className="w-56">
+        {filterOptions.map(({ label, value, premium, featureIds }) => {
+          const menuItem = (
+            <DropdownMenuItem
+              key={value}
+              onSelect={() => handleSelect(value)}
+              className={`cursor-pointer font-semibold hover:bg-[#A2CFE33D] ${
+                selected === value ? 'text-primary' : ''
+              }`}
+            >
+              {label}
+            </DropdownMenuItem>
+          )
+
+          return premium && featureIds ? (
+            <PlanAccessWrapper
+              key={value}
+              featureId={featureIds}
+              upgradeMessage="File Tags filtering is a premium feature. Upgrade to organize and filter your files by tags!"
+              showCrown={true}
+              crownPosition="top-right"
+            >
+              {menuItem}
+            </PlanAccessWrapper>
+          ) : (
+            menuItem
+          )
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   )

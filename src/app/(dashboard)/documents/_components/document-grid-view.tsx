@@ -1,5 +1,6 @@
 'use client'
 
+import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import type { Document } from '@/types/document.types'
@@ -65,7 +66,9 @@ export function DocumentGridView({
   }
 
   return (
-    <div className={`grid grid-cols-1 gap-4 md:grid-cols-2 ${isModelOpen ? "lg:grid-cols-2" : "lg:grid-cols-3"} transition-all duration-300 `}>
+    <div
+      className={`grid grid-cols-1 gap-4 md:grid-cols-2 ${isModelOpen ? 'lg:grid-cols-2' : 'lg:grid-cols-3'} transition-all duration-300`}
+    >
       {documents.map((document) => (
         <Card
           key={document.id}
@@ -99,17 +102,19 @@ export function DocumentGridView({
               <div className="flex items-center gap-1 text-[#9B9B9D]">
                 {hoveredCard === document.id && !isShareMode && (
                   <>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="hover:text-primary h-5 w-5 cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onEditClick?.(document)
-                      }}
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </Button>
+                    <PlanAccessWrapper featureId="PERM_DOC_EDIT">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="hover:text-primary h-5 w-5 cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onEditClick?.(document)
+                        }}
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                    </PlanAccessWrapper>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -121,28 +126,32 @@ export function DocumentGridView({
                     >
                       <FolderInput className="h-3 w-3" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="hover:text-primary h-5 w-5 cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onDownloadClick?.(document)
-                      }}
-                    >
-                      <Download className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="hover:text-primary h-5 w-5 cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onShareClick?.(document)
-                      }}
-                    >
-                      <HiShare className="h-3 w-3" />
-                    </Button>
+                    <PlanAccessWrapper featureId="PERM_DOC_DOWNLOAD">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="hover:text-primary h-5 w-5 cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onDownloadClick?.(document)
+                        }}
+                      >
+                        <Download className="h-3 w-3" />
+                      </Button>
+                    </PlanAccessWrapper>
+                    <PlanAccessWrapper featureId="DOCUMENT_SHARE_SECURE_EXPIRY">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="hover:text-primary h-5 w-5 cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onShareClick?.(document)
+                        }}
+                      >
+                        <HiShare className="h-3 w-3" />
+                      </Button>
+                    </PlanAccessWrapper>
                     <Button
                       variant="ghost"
                       size="icon"

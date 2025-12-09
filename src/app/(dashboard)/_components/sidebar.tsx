@@ -1,4 +1,5 @@
 'use client'
+import { PlanAccessWrapper } from '@/components/permission-control/plan-access-wrapper'
 import { Button } from '@/components/ui/button'
 import {
   Tooltip,
@@ -15,6 +16,7 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import LogoutModel from './logout-modal'
 
+
 interface SidebarProps {
   collapsed: boolean
   onToggle: () => void
@@ -24,6 +26,73 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const [isLogoutModelOpen, setIsLogoutModelOpen] = useState(false)
   const pathname = usePathname()
   const logout = useLogout()
+
+  // Configuration object for premium features
+  const premiumFeatures: Record<string, {
+    featureIds: string | string[]
+    upgradeMessage?: string
+  }> = {
+    '/analytics': {
+      featureIds: ['PERM_ANALYTICS_VIEW', 'ANALYTICS_VISUALISATION_BASIC'],
+    },
+    '/maps': {
+      featureIds: ['PERM_MAP_VIEW', 'MAP_VIEW_PORTFOLIO_WIDE']
+    }
+  }
+
+  
+  const requiresPremiumAccess = (href: string) => {
+    return href in premiumFeatures
+  }
+
+  
+  const getFeatureConfig = (href: string) => {
+    return premiumFeatures[href] || { featureIds: '', upgradeMessage: undefined }
+  }
+
+
+  const renderNavLink = (item: any, index: number, isActive: boolean) => {
+    const needsPremium = requiresPremiumAccess(item.href)
+
+    const linkContent = (
+      <Link
+        key={index}
+        href={item.href}
+        className={`flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+          isActive
+            ? 'text-primary bg-white'
+            : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+        }`}
+        prefetch
+      >
+        <item.icon className="ml-0.5 h-6 w-6 flex-shrink-0 text-center" />
+        {!collapsed && <span className="ml-3">{item.label}</span>}
+      </Link>
+    )
+
+    const wrappedLink = needsPremium ? (
+      <PlanAccessWrapper
+        featureId={getFeatureConfig(item.href).featureIds}
+        className="w-full"
+      >
+        {linkContent}
+      </PlanAccessWrapper>
+    ) : (
+      linkContent
+    )
+
+    return collapsed ? (
+      <Tooltip key={index}>
+        <TooltipTrigger asChild>{wrappedLink}</TooltipTrigger>
+        <TooltipContent side="right" className="text-secondary font-semibold max-w-sm border border-gray-400 bg-white shadow-lg">
+          <p>{item.label}</p>
+        </TooltipContent>
+      </Tooltip>
+    ) : (
+      wrappedLink
+    )
+  }
+
   return (
     <div
       className={`bg-secondary text-white transition-all duration-300 ${
@@ -73,33 +142,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           {navigationItems.map((item, index) => {
             const isActive =
               pathname === item.href || pathname.startsWith(`${item.href}/`)
-
-            const linkContent = (
-              <Link
-                key={index}
-                href={item.href}
-                className={`flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'text-primary bg-white'
-                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                }`}
-                prefetch
-              >
-                <item.icon className="ml-0.5 h-6 w-6 flex-shrink-0 text-center" />
-                {!collapsed && <span className="ml-3">{item.label}</span>}
-              </Link>
-            )
-
-            return collapsed ? (
-              <Tooltip key={index}>
-                <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-                <TooltipContent side="right" className="text-secondary font-semibold max-w-sm border border-gray-400 bg-white shadow-lg">
-                  <p>{item.label}</p>
-                </TooltipContent>
-              </Tooltip>
-            ) : (
-              linkContent
-            )
+            return renderNavLink(item, index, isActive)
           })}
 
           <div className="flex justify-center">
@@ -109,33 +152,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           {navigationItemSection.map((item, index) => {
             const isActive =
               pathname === item.href || pathname.startsWith(`${item.href}/`)
-
-            const linkContent = (
-              <Link
-                key={index}
-                href={item.href}
-                className={`flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'text-primary bg-white'
-                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                }`}
-                prefetch
-              >
-                <item.icon className="h-6 w-6 flex-shrink-0 text-center" />
-                {!collapsed && <span className="ml-3">{item.label}</span>}
-              </Link>
-            )
-
-            return collapsed ? (
-              <Tooltip key={index}>
-                <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-                <TooltipContent side="right" className="text-secondary font-semibold max-w-sm border border-gray-400 bg-white shadow-lg">
-                  <p>{item.label}</p>
-                </TooltipContent>
-              </Tooltip>
-            ) : (
-              linkContent
-            )
+            return renderNavLink(item, index, isActive)
           })}
 
           {collapsed ? (
