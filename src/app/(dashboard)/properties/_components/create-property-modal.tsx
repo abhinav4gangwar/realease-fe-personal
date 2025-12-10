@@ -57,11 +57,14 @@ interface CreatePropertyModalProps {
   onClose: () => void
 }
 
+// Legal status options: false = undisputed, true = disputed, null = "I'll do it later"
+type DisputeStatus = boolean | null
+
 const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
   const [currentStep, setCurrentStep] = useState(1)
   const totalSteps = 3
   const [isSubmitted, setIsSubmitted] = useState(false)
-  const [isDisputed, setIsDisputed] = useState(false)
+  const [isDisputed, setIsDisputed] = useState<DisputeStatus>(false)
   const [customFields, setCustomFields] = useState<CustomField[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [createdPropertyId, setCreatedPropertyId] = useState<string | null>(
@@ -69,6 +72,10 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
   )
   const [documentFiles, setDocumentFiles] = useState<FileItem[]>([])
   const [isDocumentUploading, setIsDocumentUploading] = useState(false)
+
+  // eCourt automation states
+  const [isAutomating, setIsAutomating] = useState(false)
+  const [automationStatus, setAutomationStatus] = useState<string>('')
 
   const [selectedCountry, setSelectedCountry] = useState<CountryType | null>(
     null
@@ -95,7 +102,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     coordinates: '',
     latitude: '',
     longitude: '',
-    isDisputed: isDisputed,
+    isDisputed: false,
     legalStatus: '',
     legalParties: '',
     caseNumber: '',
@@ -206,10 +213,12 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
       formData.valuePerSQ?.trim() !== '' &&
       formData.value?.trim() !== ''
 
-    if (isDisputed) {
-      return basicValidation && formData.legalStatus?.trim() !== ''
+    // For disputed cases, ensure CNR number was extracted
+    if (isDisputed === true) {
+      return basicValidation && formData.caseNumber?.trim() !== ''
     }
 
+    // For undisputed or "I'll do it later", just basic validation
     return basicValidation
   }
 
@@ -278,9 +287,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
       }
     }
 
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateFormData('nextHearing', e.target.value)
-  }
+  // handleDateChange removed - no longer needed after removing manual input fields
 
   useEffect(() => {
     // Set default unit based on property type
@@ -526,6 +533,100 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     setCustomFields((prev) => prev.filter((field) => field.id !== id))
   }
 
+  // eCourt automation function
+  const startEcourtAutomation = async () => {
+    console.log('[eCourt Form] ========================================')
+    console.log('[eCourt Form] Starting eCourt automation via API...')
+    console.log('[eCourt Form] ========================================')
+
+    setIsAutomating(true)
+    setAutomationStatus('Initializing browser automation...')
+
+    try {
+      console.log('[eCourt Form] Calling API endpoint: /api/ecourt-automation')
+      setAutomationStatus('Launching browser and navigating to eCourt website...')
+
+      const response = await fetch('/api/ecourt-automation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const data = await response.json()
+
+      console.log('[eCourt Form] API Response:', data)
+
+      if (data.success) {
+        if (data.cnrNumber) {
+          console.log('[eCourt Form] ========================================')
+          console.log('[eCourt Form] ✓✓✓ Case Details Received:')
+          console.log('[eCourt Form] CNR Number:', data.cnrNumber)
+          console.log('[eCourt Form] Case Type:', data.caseType || 'N/A')
+          console.log('[eCourt Form] Legal Status:', data.legalStatus || 'N/A')
+          console.log('[eCourt Form] Next Hearing:', data.nextHearing || 'N/A')
+          console.log('[eCourt Form] ========================================')
+
+          // Store all extracted details in form data
+          updateFormData('caseNumber', data.cnrNumber)
+
+          if (data.caseType) {
+            updateFormData('caseType', data.caseType)
+            console.log('[eCourt Form] caseType set to:', data.caseType)
+          }
+
+          if (data.legalStatus) {
+            updateFormData('legalStatus', data.legalStatus)
+            console.log('[eCourt Form] legalStatus set to:', data.legalStatus)
+          }
+
+          if (data.nextHearing) {
+            updateFormData('nextHearing', data.nextHearing)
+            console.log('[eCourt Form] nextHearing set to:', data.nextHearing)
+          }
+
+          setAutomationStatus('✓ Case details extracted successfully!')
+          toast.success(`Case details extracted successfully!`)
+        } else {
+          console.log('[eCourt Form] Automation completed but no CNR found.')
+          setAutomationStatus('Automation completed but no CNR number was found.')
+          toast.error('No CNR number was extracted. Please try again.')
+        }
+      } else {
+        console.error('[eCourt Form] API Error:', data.error)
+        setAutomationStatus(`Error: ${data.error}`)
+        toast.error(`Automation failed: ${data.error}`)
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      console.error('[eCourt Form] ========================================')
+      console.error('[eCourt Form] ✗ ERROR calling API:')
+      console.error('[eCourt Form]', errorMessage)
+      console.error('[eCourt Form] ========================================')
+      setAutomationStatus(`Error: ${errorMessage}`)
+      toast.error(`Automation error: ${errorMessage}`)
+    } finally {
+      setIsAutomating(false)
+    }
+  }
+
+  // Handle dispute status change with automation trigger
+  const handleDisputeStatusChange = async (status: DisputeStatus) => {
+    setIsDisputed(status)
+
+    // If user selects "Disputed", start the eCourt automation
+    if (status === true) {
+      await startEcourtAutomation()
+    } else {
+      // Clear automation status and case number when switching away from disputed
+      setAutomationStatus('')
+      if (status === null) {
+        // "I'll do it later" - clear case number
+        updateFormData('caseNumber', '')
+      }
+    }
+  }
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -564,6 +665,9 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
     setSelectedCountry(null)
     setLastAutoFilledZipcode('')
     setLastAutoFilledAddress('')
+    // Reset automation states
+    setIsAutomating(false)
+    setAutomationStatus('')
   }
 
   const createProperty = async () => {
@@ -1064,116 +1168,128 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
 
             {/* legal status */}
             <div className="flex flex-col space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col space-y-2">
                 <label className="text-md text-secondary block font-semibold">
                   Legal Status <span className="text-primary">*</span>
                 </label>
 
                 <div className="flex rounded-4xl bg-[#F2F2F2] text-sm">
                   <div
-                    className={`${!isDisputed ? 'bg-secondary text-white' : 'bg-transparent text-black'} cursor-pointer rounded-4xl px-4 py-2`}
-                    onClick={() => setIsDisputed(false)}
+                    className={`${isDisputed === false ? 'bg-secondary text-white' : 'bg-transparent text-black'} cursor-pointer rounded-4xl px-4 py-2`}
+                    onClick={() => handleDisputeStatusChange(false)}
                   >
                     Undisputed
                   </div>
                   <div
-                    className={`${isDisputed ? 'bg-secondary text-white' : 'bg-transparent text-black'} cursor-pointer rounded-4xl px-4 py-2`}
-                    onClick={() => setIsDisputed(true)}
+                    className={`${isDisputed === true ? 'bg-secondary text-white' : 'bg-transparent text-black'} cursor-pointer rounded-4xl px-4 py-2 ${isAutomating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    onClick={() => !isAutomating && handleDisputeStatusChange(true)}
                   >
-                    Disputed
+                    {isAutomating ? '🤖 Automating...' : 'Disputed'}
+                  </div>
+                  <div
+                    className={`${isDisputed === null ? 'bg-secondary text-white' : 'bg-transparent text-black'} cursor-pointer rounded-4xl px-4 py-2`}
+                    onClick={() => handleDisputeStatusChange(null)}
+                  >
+                    I&apos;ll do it later
                   </div>
                 </div>
               </div>
 
-              {isDisputed && (
+              {/* Automation status and CNR display */}
+              {isDisputed === true && (
                 <div className="rounded-lg bg-[#F2F2F2] p-4">
-                  <label className="text-md text-secondary block pb-5 font-semibold">
-                    Legal Details <span className="text-primary">*</span>
-                  </label>
-
-                  <div className="flex flex-col space-y-1 pb-3">
-                    <label className="text-md text-secondary block">
-                      Case Status <span className="text-primary">*</span>
-                    </label>
-                    <select
-                      value={formData.legalStatus}
-                      onChange={(e) =>
-                        updateFormData('legalStatus', e.target.value)
-                      }
-                      className="h-14 w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                    >
-                      <option value="-">Select Case Status</option>
-                      <option value="Disputed - Ongoing">Ongoing</option>
-                      <option value="Disputed - Disposed">Disposed</option>
-                    </select>
-
-                    <label className="text-md text-secondary block">
-                      Parties
-                    </label>
-
-                    <div className="flex gap-3">
-                      <Input
-                        type="text"
-                        value={partyA}
-                        onChange={(e) => setPartyA(e.target.value)}
-                        className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                        placeholder="Party A"
-                      />
-
-                      <Input
-                        type="text"
-                        value={partyB}
-                        onChange={(e) => setPartyB(e.target.value)}
-                        className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                        placeholder="Party B"
-                      />
+                  {isAutomating && (
+                    <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                      <div>
+                        <p className="font-semibold text-blue-900">
+                          🤖 eCourt Automation in Progress...
+                        </p>
+                        <p className="mt-1 text-sm text-blue-700">
+                          {automationStatus}
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex flex-col space-y-1">
-                      <label className="text-md text-secondary block">
-                        Case Number
-                      </label>
-                      <Input
-                        type="text"
-                        value={formData.caseNumber}
-                        onChange={(e) =>
-                          updateFormData('caseNumber', e.target.value)
-                        }
-                        className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                        placeholder="Enter details"
-                      />
+                  {!isAutomating && formData.caseNumber && (
+                    <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+                      <p className="mb-3 font-semibold text-green-900">
+                        ✓ Case Details Extracted Successfully
+                      </p>
+
+                      <div className="space-y-2">
+                        <div className="rounded bg-white p-2">
+                          <p className="text-xs text-gray-600">CNR Number</p>
+                          <p className="font-bold text-green-700">
+                            {formData.caseNumber}
+                          </p>
+                        </div>
+
+                        {formData.caseType && (
+                          <div className="rounded bg-white p-2">
+                            <p className="text-xs text-gray-600">Case Type</p>
+                            <p className="font-semibold text-gray-800">
+                              {formData.caseType}
+                            </p>
+                          </div>
+                        )}
+
+                        {formData.legalStatus && (
+                          <div className="rounded bg-white p-2">
+                            <p className="text-xs text-gray-600">Legal Status</p>
+                            <p className="font-semibold text-gray-800">
+                              {formData.legalStatus}
+                            </p>
+                          </div>
+                        )}
+
+                        {formData.nextHearing && (
+                          <div className="rounded bg-white p-2">
+                            <p className="text-xs text-gray-600">Next Hearing / Decision Date</p>
+                            <p className="font-semibold text-gray-800">
+                              {formData.nextHearing}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <p className="mt-3 text-xs text-green-600">
+                        These details will be saved with your property.
+                      </p>
                     </div>
+                  )}
 
-                    <div className="flex flex-col space-y-1">
-                      <label className="text-md text-secondary block">
-                        Next Hearing
-                      </label>
-                      <Input
-                        type="text"
-                        value={formData.nextHearing}
-                        onChange={handleDateChange}
-                        className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                        placeholder="e.g., 25-10-2025"
-                      />
+                  {!isAutomating && !formData.caseNumber && automationStatus && (
+                    <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+                      <p className="text-sm text-yellow-900">{automationStatus}</p>
+                      <button
+                        type="button"
+                        onClick={() => handleDisputeStatusChange(true)}
+                        className="mt-2 text-sm font-medium text-yellow-700 underline hover:text-yellow-900"
+                      >
+                        Try again
+                      </button>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="flex flex-col space-y-1 py-3">
-                    <label className="text-md text-secondary block">
-                      Case Type
-                    </label>
-                    <Input
-                      type="text"
-                      value={formData.caseType}
-                      onChange={(e) =>
-                        updateFormData('caseType', e.target.value)
-                      }
-                      className="w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                      placeholder="Enter details"
-                    />
-                  </div>
+                  {!isAutomating && !formData.caseNumber && !automationStatus && (
+                    <div className="rounded-lg border border-gray-200 bg-white p-4">
+                      <p className="text-sm text-gray-600">
+                        Click &quot;Disputed&quot; to start the eCourt automation and extract the CNR number.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Show message for "I'll do it later" option */}
+              {isDisputed === null && (
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <p className="text-sm text-gray-600">
+                    Legal status will be set later. You can update this information
+                    after the property is created.
+                  </p>
                 </div>
               )}
             </div>

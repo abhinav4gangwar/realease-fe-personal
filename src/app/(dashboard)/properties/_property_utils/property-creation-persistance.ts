@@ -6,7 +6,7 @@ const STORAGE_KEY = 'createPropertyFormData'
 export interface PersistedFormData {
   formData: Properties
   customFields: CustomField[]
-  isDisputed: boolean
+  isDisputed: boolean | null // null means "I'll do it later"
   partyA: string
   partyB: string
   selectedUnit: string

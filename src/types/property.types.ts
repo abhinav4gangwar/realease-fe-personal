@@ -13,7 +13,7 @@ export interface Properties {
   type: string
   owner: string
   dateAdded?: string
-  isDisputed?: boolean
+  isDisputed?: boolean | null // null means "I'll do it later"
   legalStatus?: string
   legalParties?: string
   caseNumber?: string
