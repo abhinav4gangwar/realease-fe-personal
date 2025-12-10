@@ -73,9 +73,9 @@ export const MapView = ({
   const [loaded, setLoaded] = useState(false)
   const [properties, setProperties] = useState([])
   const [kmlLayers, setKmlLayers] = useState<KmlShape[]>([])
-  const [selectedLayer, setSelectedLayer] = useState<LayerType>('normal')
+  const [selectedLayer, setSelectedLayer] = useState<LayerType>('minimal')
 
-  const [center, setCenter] = useState<[number, number]>([22.5726, 88.3639])
+  const [center, setCenter] = useState<[number, number] | null>(null)
 
   useEffect(() => {
     setLoaded(true)
@@ -100,7 +100,7 @@ export const MapView = ({
     return !isNaN(lat) && !isNaN(lng)
   })
 
-  if (!loaded)
+  if (!loaded || !center)
     return (
       <div className="flex h-full w-full items-center justify-center">
         Loading map…

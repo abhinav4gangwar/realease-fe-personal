@@ -19,7 +19,7 @@ const layerOptions: LayerOption[] = [
     id: 'normal',
     name: 'Normal',
     description: 'Standard OpenStreetMap view',
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png?lang=en',
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   },
   {

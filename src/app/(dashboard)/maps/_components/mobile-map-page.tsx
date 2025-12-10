@@ -76,16 +76,14 @@ const MobileMapPage = () => {
   const [isClient, setIsClient] = useState(false)
   const [properties, setProperties] = useState<Properties[]>([])
   const [loading, setLoading] = useState(true)
-  const [mapCenter, setMapCenter] = useState<[number, number]>([
-    22.5726, 88.3639,
-  ])
+  const [mapCenter, setMapCenter] = useState<[number, number] | null>(null)
   const [flyToCoordinates, setFlyToCoordinates] = useState<
     [number, number] | null
   >(null)
   const [kmlLayers, setKmlLayers] = useState<KmlShape[]>([])
   const [isLoadingKml, setIsLoadingKml] = useState(false)
   const [isListOpen, setIsListOpen] = useState(false)
-  const [selectedLayer, setSelectedLayer] = useState<LayerType>('normal')
+  const [selectedLayer, setSelectedLayer] = useState<LayerType>('minimal')
 
   useEffect(() => {
     setIsClient(true)
@@ -242,7 +240,7 @@ const MobileMapPage = () => {
     )
   }
 
-  if (loading) {
+  if (loading || !mapCenter) {
     return (
       <div className="flex h-screen w-screen items-center justify-center overflow-hidden bg-gray-100">
         <div className="text-center">
@@ -290,7 +288,7 @@ const MobileMapPage = () => {
       {/* Map Container */}
       <MapContainer
         center={mapCenter}
-        zoom={12}
+        zoom={16}
         style={{ height: '100%', width: '100%' }}
       >
         <MapController center={flyToCoordinates} zoom={16} />
