@@ -326,7 +326,7 @@ export default function PermissionsList() {
           {roles.map((role, idx) => (
             <HeaderCell key={role.id} className={cn(roleColWidth, 'relative')}>
               <div className="group flex items-center justify-between">
-                <span className="truncate">{role.name}</span>
+                <span className="break-words">{role.name}</span>
                 <div className="flex items-center">
                   {role.id !== 'super-admin' && (
                     <Button
