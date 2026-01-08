@@ -155,7 +155,12 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
       if (persistedData) {
         setFormData(persistedData.formData)
         setCustomFields(persistedData.customFields)
-        setIsDisputed(persistedData.isDisputed)
+        
+        // Only set isDisputed to true if CNR number exists
+        // Otherwise, always default to undisputed (false) to trigger automation on reselection
+        const hasCNR = persistedData.formData.caseNumber && persistedData.formData.caseNumber.trim() !== ''
+        setIsDisputed(hasCNR ? true : false)
+        
         setPartyA(persistedData.partyA)
         setPartyB(persistedData.partyB)
         setSelectedUnit(persistedData.selectedUnit)
@@ -589,22 +594,22 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
           toast.success(`Case details extracted successfully!`)
         } else {
           console.log('[eCourt Form] Automation completed but no CNR found.')
-          setAutomationStatus('Automation completed but no CNR number was found.')
-          toast.error('No CNR number was extracted. Please try again.')
+          // Only log to console, don't show to user
+          setAutomationStatus('')
         }
       } else {
+        // Only log error to console, don't show to user
         console.error('[eCourt Form] API Error:', data.error)
-        setAutomationStatus(`Error: ${data.error}`)
-        toast.error(`Automation failed: ${data.error}`)
+        setAutomationStatus('')
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      // Only log error to console, don't show to user
       console.error('[eCourt Form] ========================================')
       console.error('[eCourt Form] ✗ ERROR calling API:')
       console.error('[eCourt Form]', errorMessage)
       console.error('[eCourt Form] ========================================')
-      setAutomationStatus(`Error: ${errorMessage}`)
-      toast.error(`Automation error: ${errorMessage}`)
+      setAutomationStatus('')
     } finally {
       setIsAutomating(false)
     }

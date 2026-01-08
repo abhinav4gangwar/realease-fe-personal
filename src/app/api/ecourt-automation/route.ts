@@ -43,43 +43,82 @@ export async function POST(request: NextRequest) {
     await page.waitForTimeout(2000)
     console.log('[eCourt API] ✓ Page rendered')
 
-    // Step 1: Click the left pane menu with id 'leftPaneMenuCS'
+    // Step 1: Click the left pane menu with id 'leftPaneMenuCS' with robust handling
     console.log(
       '[eCourt API] Step 5: Looking for left pane menu button (id: leftPaneMenuCS)...'
     )
-    const leftPaneMenu = await page.locator('#leftPaneMenuCS')
-    const leftPaneExists = (await leftPaneMenu.count()) > 0
+    try {
+      const leftPaneMenu = page.locator('#leftPaneMenuCS')
+      const isLeftPaneVisible = await leftPaneMenu.isVisible({ timeout: 5000 }).catch(() => false)
 
-    if (leftPaneExists) {
-      console.log('[eCourt API] ✓ Found left pane menu button')
-      console.log('[eCourt API] Step 6: Clicking left pane menu button...')
-      await leftPaneMenu.click()
-      console.log('[eCourt API] ✓ Left pane menu clicked')
+      if (isLeftPaneVisible) {
+        console.log('[eCourt API] ✓ Found left pane menu button')
+        console.log('[eCourt API] Step 6: Clicking left pane menu button...')
+        await leftPaneMenu.click({ force: true })
+        console.log('[eCourt API] ✓ Left pane menu clicked')
 
-      // Wait for popup to appear
-      console.log(
-        '[eCourt API] Step 7: Waiting for popup to appear (2 seconds)...'
-      )
-      await page.waitForTimeout(2000)
-      console.log('[eCourt API] ✓ Popup should be visible now')
-    } else {
-      console.log('[eCourt API] ⚠ Left pane menu button not found')
+        // Wait for popup to appear
+        console.log(
+          '[eCourt API] Step 7: Waiting for popup to appear (2 seconds)...'
+        )
+        await page.waitForTimeout(2000)
+        console.log('[eCourt API] ✓ Popup should be visible now')
+      } else {
+        console.log('[eCourt API] ⚠ Left pane menu button not visible, trying scroll and click...')
+        // Try scrolling into view and clicking
+        await leftPaneMenu.scrollIntoViewIfNeeded().catch(() => {})
+        await page.waitForTimeout(500)
+        await leftPaneMenu.click({ force: true }).catch(() => {
+          console.log('[eCourt API] ⚠ Could not click left pane menu')
+        })
+      }
+    } catch (error) {
+      console.log('[eCourt API] ⚠ Error with left pane menu, continuing...')
     }
 
-    // Step 2: Close the first popup - it has a close button (X)
+    // Step 2: Close the first popup - try multiple approaches for robustness
     console.log('[eCourt API] Step 8: Looking for close button...')
-    const closeButton = page.locator(
-      '#validateError button.btn-close[data-bs-dismiss="modal"]'
-    )
-    const closeButtonExists = (await closeButton.count()) > 0
-
-    if (closeButtonExists) {
-      console.log('[eCourt API] ✓ Found close button')
-      console.log('[eCourt API] Step 9: Clicking close button...')
-      await closeButton.click({ force: true })
-      console.log('[eCourt API] ✓ First popup closed')
-    } else {
-      console.log('[eCourt API] ⚠ Close button not found')
+    try {
+      // Wait a moment for modal to be fully visible
+      await page.waitForTimeout(500)
+      
+      // Try different selectors for the close button
+      const closeSelectors = [
+        '#validateError button.btn-close',
+        '.modal.show button.btn-close',
+        'button.btn-close[data-bs-dismiss="modal"]',
+        '.modal-dialog button.btn-close',
+        '#validateError .btn-close'
+      ]
+      
+      let closeButtonClicked = false
+      
+      for (const selector of closeSelectors) {
+        try {
+          const closeButton = page.locator(selector)
+          const isVisible = await closeButton.isVisible({ timeout: 1000 }).catch(() => false)
+          
+          if (isVisible) {
+            console.log(`[eCourt API] ✓ Found close button with selector: ${selector}`)
+            console.log('[eCourt API] Step 9: Clicking close button...')
+            await closeButton.click({ force: true, timeout: 2000 })
+            console.log('[eCourt API] ✓ First popup closed')
+            closeButtonClicked = true
+            break
+          }
+        } catch {
+          // Continue to next selector
+        }
+      }
+      
+      // If no close button found, try pressing Escape key to close modal
+      if (!closeButtonClicked) {
+        console.log('[eCourt API] ⚠ Close button not visible, trying Escape key...')
+        await page.keyboard.press('Escape')
+        console.log('[eCourt API] ✓ Pressed Escape key')
+      }
+    } catch (error) {
+      console.log('[eCourt API] ⚠ Could not close popup, continuing anyway...')
     }
 
     // Wait after closing
@@ -88,26 +127,58 @@ export async function POST(request: NextRequest) {
     )
     await page.waitForTimeout(1000)
 
-    // Step 3: Click the case number tab menu
+    // Step 3: Click the case number tab menu with robust handling
     console.log(
       '[eCourt API] Step 11: Looking for case number tab (id: casenumber-tabMenu)...'
     )
-    const caseNumberTab = await page.locator('#casenumber-tabMenu')
-    const caseNumberTabExists = (await caseNumberTab.count()) > 0
+    try {
+      const caseNumberTab = page.locator('#casenumber-tabMenu')
+      const isTabVisible = await caseNumberTab.isVisible({ timeout: 3000 }).catch(() => false)
 
-    if (caseNumberTabExists) {
-      console.log('[eCourt API] ✓ Found case number tab')
-      console.log('[eCourt API] Step 12: Clicking case number tab...')
-      await caseNumberTab.click()
-      console.log('[eCourt API] ✓ Case number tab clicked')
+      if (isTabVisible) {
+        console.log('[eCourt API] ✓ Found case number tab')
+        console.log('[eCourt API] Step 12: Clicking case number tab...')
+        await caseNumberTab.click({ force: true })
+        console.log('[eCourt API] ✓ Case number tab clicked')
 
-      // Wait for page to load after clicking tab
-      console.log(
-        '[eCourt API] Step 13: Waiting for page to load (2 seconds)...'
-      )
-      await page.waitForTimeout(2000)
-    } else {
-      console.log('[eCourt API] ⚠ Case number tab not found')
+        // Wait for page to load after clicking tab
+        console.log(
+          '[eCourt API] Step 13: Waiting for page to load (2 seconds)...'
+        )
+        await page.waitForTimeout(2000)
+        
+        // Try to close any popup that appears after clicking the tab
+        console.log('[eCourt API] Step 14: Checking for any popup after tab click...')
+        await page.waitForTimeout(500)
+        
+        // Try to close any modal that might have appeared
+        try {
+          const modalCloseSelectors = [
+            '.modal.show button.btn-close',
+            '.modal.show .btn-secondary',
+            '.modal.show button:has-text("OK")',
+            '.modal.show button:has-text("Close")'
+          ]
+          
+          for (const selector of modalCloseSelectors) {
+            const modalClose = page.locator(selector).first()
+            const isModalVisible = await modalClose.isVisible({ timeout: 500 }).catch(() => false)
+            
+            if (isModalVisible) {
+              console.log(`[eCourt API] ✓ Found modal close with selector: ${selector}`)
+              await modalClose.click({ force: true, timeout: 2000 })
+              console.log('[eCourt API] ✓ Modal closed')
+              break
+            }
+          }
+        } catch {
+          // No modal to close, continue
+        }
+      } else {
+        console.log('[eCourt API] ⚠ Case number tab not visible')
+      }
+    } catch (error) {
+      console.log('[eCourt API] ⚠ Error with case number tab, continuing...')
     }
 
     console.log('[eCourt API] ========================================')
