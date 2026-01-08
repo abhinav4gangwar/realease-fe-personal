@@ -1,5 +1,6 @@
 'use client'
 
+import { usePreferences } from '@/hooks/usePreferences'
 import { useSearchContext } from '@/providers/doc-search-context'
 import { apiClient } from '@/utils/api'
 import { getFileTypeFromMime } from '@/utils/fileTypeUtils'
@@ -13,6 +14,7 @@ const Documentspage = () => {
   const [isLoading, setIsLoading] = useState(true)
   const { searchResults, searchQuery, isSearchActive, clearSearchResults } =
     useSearchContext()
+  const { preferences } = usePreferences()
 
   useEffect(() => {
     const fetchDocuments = async () => {
@@ -116,12 +118,22 @@ const Documentspage = () => {
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Unknown'
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    })
+    try {
+      const tz = preferences?.timezone
+      const d = new Date(dateString)
+      return new Intl.DateTimeFormat('en-US', {
+        timeZone: tz || undefined,
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }).format(d)
+    } catch {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+    }
   }
 
   const transformedDocuments = transformApiResponse(fetchedDocuments)

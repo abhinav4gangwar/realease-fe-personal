@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Preferences } from '@/hooks/usePreferences'
 import { X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
@@ -22,11 +23,17 @@ function getReadableTimeZoneName(timeZone: string) {
 const TimeZoneModel = ({
   isOpen,
   onClose,
+  currentTimezone,
+  onSave,
+  preferences,
 }: {
   isOpen: boolean
   onClose: () => void
+  currentTimezone: string
+  onSave: (preferences: Preferences) => Promise<boolean>
+  preferences: Preferences
 }) => {
-  const [selectedZone, setSelectedZone] = useState<string>('')
+  const [selectedZone, setSelectedZone] = useState<string>(currentTimezone)
   const [searchQuery, setSearchQuery] = useState('')
 
   // Precompute readable names
@@ -49,13 +56,16 @@ const TimeZoneModel = ({
     )
   }, [searchQuery, zonesWithNames])
 
-  const handleSave = () => {
-    console.log('Selected Timezone:', selectedZone)
+  const handleSave = async () => {
+    const newPreferences = { ...preferences }
+    newPreferences.timezone = selectedZone
+    await onSave(newPreferences)
     onClose()
   }
 
   const handleCancel = () => {
-    setSelectedZone('')
+    setSelectedZone(currentTimezone)
+    setSearchQuery('')
   }
 
   return (
@@ -105,7 +115,6 @@ const TimeZoneModel = ({
                     onClick={() => setSelectedZone(zone.id)}
                   >
                     <div className="font-semibold text-md">{zone.name}</div>
-                    {/* <div className="text-sm text-gray-500">{zone.id}</div> */}
                   </li>
                 ))}
                 {filteredZones.length === 0 && (

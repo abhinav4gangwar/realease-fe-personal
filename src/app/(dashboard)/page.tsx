@@ -131,9 +131,6 @@ export default function Home() {
         }
       } catch (error) {
         console.error('Failed to fetch initial data:', error)
-        toast.message(
-          'Failed to load dashboard configuration. Using default layout.'
-        )
         const defaultWidget = {
           id: '1',
           type: 'recent-activity',

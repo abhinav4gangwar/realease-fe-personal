@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Preferences } from '@/hooks/usePreferences'
 import { X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
@@ -24,11 +25,17 @@ function getReadableCurrencyName(currency: string) {
 const CurrencyModel = ({
   isOpen,
   onClose,
+  currentCurrency,
+  onSave,
+  preferences,
 }: {
   isOpen: boolean
   onClose: () => void
+  currentCurrency: string
+  onSave: (preferences: Preferences) => Promise<boolean>
+  preferences: Preferences
 }) => {
-  const [selectedCurrency, setSelectedCurrency] = useState<string>('')
+  const [selectedCurrency, setSelectedCurrency] = useState<string>(currentCurrency)
   const [searchQuery, setSearchQuery] = useState('')
 
   // Precompute readable currency names
@@ -51,13 +58,16 @@ const CurrencyModel = ({
     )
   }, [searchQuery, currenciesWithNames])
 
-  const handleSave = () => {
-    console.log('Selected Currency:', selectedCurrency)
+  const handleSave = async () => {
+    const newPreferences = { ...preferences }
+    newPreferences.defaultCurrency = selectedCurrency
+    await onSave(newPreferences)
     onClose()
   }
 
   const handleCancel = () => {
-    setSelectedCurrency('')
+    setSelectedCurrency(currentCurrency)
+    setSearchQuery('')
   }
 
   return (
@@ -109,7 +119,6 @@ const CurrencyModel = ({
                     <div className="font-semibold text-md">
                       {cur.name}
                     </div>
-                    {/* <div className="text-sm text-gray-500">{cur.id}</div> */}
                   </li>
                 ))}
                 {filteredCurrencies.length === 0 && (

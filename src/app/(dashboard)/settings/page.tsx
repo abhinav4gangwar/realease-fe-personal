@@ -7,14 +7,72 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { mapToApiUnit, mapToDisplayUnit, usePreferences } from '@/hooks/usePreferences'
 import { ArrowRight, Settings } from 'lucide-react'
 import { useState } from 'react'
 import CurrencyModel from './_components/currency-model'
 import TimeZoneModel from './_components/time-zone-model'
 
 const SettingsPage = () => {
+  const { preferences, loading, updatePreferences } = usePreferences()
   const [isTimeZoneModelOpen, setIsTimeZoneModelOpen] = useState(false)
   const [isCurrencyModelOpen, setIsCurrencyModelOpen] = useState(false)
+
+  const getDisplayCurrency = () => {
+    const currencyCode = preferences?.defaultCurrency || 'INR'
+    try {
+      // return currency symbol (e.g. ₹) and formatted sample amount
+      const symbol = new Intl.NumberFormat('en', {
+        style: 'currency',
+        currency: currencyCode,
+        currencyDisplay: 'symbol',
+      })
+        .formatToParts(1)
+        .find((p) => p.type === 'currency')?.value
+
+      const sample = new Intl.NumberFormat('en', {
+        style: 'currency',
+        currency: currencyCode,
+      }).format(12345.67)
+
+      return { symbol: symbol || currencyCode, sample }
+    } catch {
+      return { symbol: currencyCode, sample: `${currencyCode} 12,345.67` }
+    }
+  }
+
+  const getDisplayTimezone = () => {
+    const tz = preferences?.timezone || 'Asia/Kolkata'
+    try {
+      const formatter = new Intl.DateTimeFormat('en', {
+        timeZone: tz,
+        timeZoneName: 'long',
+      })
+      const parts = formatter.formatToParts(new Date())
+      return parts.find((p) => p.type === 'timeZoneName')?.value || tz
+    } catch {
+      return tz
+    }
+  }
+
+  const getDisplayDateTime = () => {
+    const tz = preferences?.timezone || 'Asia/Kolkata'
+    try {
+      const formatter = new Intl.DateTimeFormat('en', {
+        timeZone: tz,
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      })
+      return formatter.format(new Date())
+    } catch {
+      return new Date().toLocaleString()
+    }
+  }
+
+  if (loading) {
+    return <div className="p-4">Loading...</div>
+  }
+
   return (
     <div className="border border-gray-300 shadow-md">
       {/* header */}
@@ -29,10 +87,16 @@ const SettingsPage = () => {
         <div className="flex items-center justify-between">
           <h1 className="w-xs">Time-zone</h1>
           <p className="flex-1 text-left font-medium">
-            Indian Standard Time
-            <span className="pl-2 font-normal text-gray-400">
-              23 Aug, 2025 at 12:37PM
-            </span>
+            {preferences ? (
+              <>
+                {getDisplayTimezone()}
+                <span className="pl-2 font-normal text-gray-400">
+                  {getDisplayDateTime()}
+                </span>
+              </>
+            ) : (
+              '—'
+            )}
           </p>
           <Button
             className="text-secondary hover:bg-secondary size-13 cursor-pointer bg-[#F2F2F2] shadow-md hover:text-white"
@@ -46,8 +110,16 @@ const SettingsPage = () => {
         <div className="flex items-center justify-between">
           <h1 className="w-xs">Currency</h1>
           <p className="flex-1 text-left font-medium">
-            Indian Rupee
-            <span className="pl-2 font-normal text-gray-400">₹12,345.67</span>
+            {preferences ? (
+              <>
+                {getDisplayCurrency().symbol}
+                <span className="pl-2 font-normal text-gray-400">
+                  {getDisplayCurrency().sample}
+                </span>
+              </>
+            ) : (
+              '—'
+            )}
           </p>
           <Button
             className="text-secondary hover:bg-secondary size-13 cursor-pointer bg-[#F2F2F2] shadow-md hover:text-white"
@@ -68,13 +140,21 @@ const SettingsPage = () => {
         <div className="flex items-center justify-between">
           <h1>Land</h1>
           <div>
-            <Select>
+            <Select
+              value={mapToDisplayUnit(preferences?.areaPreferences.land.unit ?? 'sq_ft')}
+              onValueChange={async (value: string) => {
+                if (!preferences) return
+                const newPrefs = JSON.parse(JSON.stringify(preferences)) as typeof preferences
+                newPrefs.areaPreferences.land.unit = mapToApiUnit(value)
+                await updatePreferences(newPrefs)
+              }}
+            >
               <SelectTrigger className="w-[230px] font-semibold shadow-md">
                 <SelectValue placeholder="Value" />
               </SelectTrigger>
               <SelectContent className="border-none">
-                <SelectItem value="acre">Acre</SelectItem>
-                <SelectItem value="hectare">Hectare</SelectItem>
+                <SelectItem value="Acre">Acre</SelectItem>
+                <SelectItem value="Hectare">Hectare</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -83,12 +163,20 @@ const SettingsPage = () => {
         <div className="flex items-center justify-between">
           <h1>Plot</h1>
           <div>
-            <Select>
+            <Select
+              value={mapToDisplayUnit(preferences?.areaPreferences.plot.unit ?? 'sq_ft')}
+              onValueChange={async (value: string) => {
+                if (!preferences) return
+                const newPrefs = JSON.parse(JSON.stringify(preferences)) as typeof preferences
+                newPrefs.areaPreferences.plot.unit = mapToApiUnit(value)
+                await updatePreferences(newPrefs)
+              }}
+            >
               <SelectTrigger className="w-[230px] font-semibold shadow-md">
                 <SelectValue placeholder="Value" />
               </SelectTrigger>
               <SelectContent className="border-none">
-                <SelectItem value="square-yard">Square yard</SelectItem>
+                <SelectItem value="Square feet">Square feet</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -97,13 +185,21 @@ const SettingsPage = () => {
         <div className="flex items-center justify-between">
           <h1>Residential</h1>
           <div>
-            <Select>
+            <Select
+              value={mapToDisplayUnit(preferences?.areaPreferences.residential.unit ?? 'sq_ft')}
+              onValueChange={async (value: string) => {
+                if (!preferences) return
+                const newPrefs = JSON.parse(JSON.stringify(preferences)) as typeof preferences
+                newPrefs.areaPreferences.residential.unit = mapToApiUnit(value)
+                await updatePreferences(newPrefs)
+              }}
+            >
               <SelectTrigger className="w-[230px] font-semibold shadow-md">
                 <SelectValue placeholder="Value" />
               </SelectTrigger>
               <SelectContent className="border-none">
-                <SelectItem value="square-feet">Square feet</SelectItem>
-                <SelectItem value="square-meter">Square meter</SelectItem>
+                <SelectItem value="Square feet">Square feet</SelectItem>
+                <SelectItem value="Square meter">Square meter</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -112,13 +208,21 @@ const SettingsPage = () => {
         <div className="flex items-center justify-between">
           <h1>Commercial</h1>
           <div>
-            <Select>
+            <Select
+              value={mapToDisplayUnit(preferences?.areaPreferences.commercial.unit ?? 'sq_ft')}
+              onValueChange={async (value: string) => {
+                if (!preferences) return
+                const newPrefs = JSON.parse(JSON.stringify(preferences)) as typeof preferences
+                newPrefs.areaPreferences.commercial.unit = mapToApiUnit(value)
+                await updatePreferences(newPrefs)
+              }}
+            >
               <SelectTrigger className="w-[230px] font-semibold shadow-md">
                 <SelectValue placeholder="Value" />
               </SelectTrigger>
               <SelectContent className="border-none">
-                <SelectItem value="square-feet">Square feet</SelectItem>
-                <SelectItem value="square-meter">Square meter</SelectItem>
+                <SelectItem value="Square feet">Square feet</SelectItem>
+                <SelectItem value="Square meter">Square meter</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -128,10 +232,16 @@ const SettingsPage = () => {
       <TimeZoneModel
         isOpen={isTimeZoneModelOpen}
         onClose={() => setIsTimeZoneModelOpen(false)}
+        currentTimezone={preferences?.timezone || ''}
+        onSave={updatePreferences}
+        preferences={preferences!}
       />
       <CurrencyModel
         isOpen={isCurrencyModelOpen}
         onClose={() => setIsCurrencyModelOpen(false)}
+        currentCurrency={preferences?.defaultCurrency || ''}
+        onSave={updatePreferences}
+        preferences={preferences!}
       />
     </div>
   )

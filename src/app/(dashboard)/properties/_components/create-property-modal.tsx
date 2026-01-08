@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/popover'
 import { useAddressGeocoding } from '@/hooks/useAddressGeocoding'
 import { useLocationAutoFill } from '@/hooks/useLocationAutoFill'
+import { usePreferences } from '@/hooks/usePreferences'
 import { cn } from '@/lib/utils'
 import { CountryType, Properties } from '@/types/property.types'
 import { apiClient } from '@/utils/api'
@@ -87,6 +88,17 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
   const [partyB, setPartyB] = useState('')
 
   const [selectedUnit, setSelectedUnit] = useState<string>('acres')
+  const { preferences } = usePreferences()
+
+  const apiUnitToKey = (apiUnit: string) => {
+    const a = (apiUnit || '').toLowerCase()
+    if (a.includes('acre')) return 'acres'
+    if (a.includes('hectare')) return 'hectares'
+    if (a.includes('sq_yard') || a.includes('sq_yards') || a === 'sqyd') return 'sqyd'
+    if (a.includes('sq_m') || a.includes('sqm') || a.includes('square meter')) return 'sqm'
+    if (a.includes('sq_ft') || a.includes('sqft') || a.includes('square feet')) return 'sqft'
+    return 'sqft'
+  }
 
   const [formData, setFormData] = useState<Properties>({
     name: '',
@@ -296,21 +308,35 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
 
   useEffect(() => {
     // Set default unit based on property type
+    // prefer units from preferences (if available), fall back to previous logic
     let defaultUnit = 'acres'
-    switch (formData.type) {
-      case 'Plot':
-        defaultUnit = 'sqyd'
-        break
-      case 'Land':
-        defaultUnit = 'acres'
-        break
-      case 'Residential':
-      case 'Commercial':
-        defaultUnit = 'sqft'
-        break
+    const pref = preferences?.areaPreferences
+    if (pref) {
+      if (formData.type === 'Land') {
+        defaultUnit = apiUnitToKey(pref.land.unit)
+      } else if (formData.type === 'Plot') {
+        defaultUnit = apiUnitToKey(pref.plot.unit)
+      } else if (formData.type === 'Residential') {
+        defaultUnit = apiUnitToKey(pref.residential.unit)
+      } else if (formData.type === 'Commercial') {
+        defaultUnit = apiUnitToKey(pref.commercial.unit)
+      }
+    } else {
+      switch (formData.type) {
+        case 'Plot':
+          defaultUnit = 'sqyd'
+          break
+        case 'Land':
+          defaultUnit = 'acres'
+          break
+        case 'Residential':
+        case 'Commercial':
+          defaultUnit = 'sqft'
+          break
+      }
     }
     setSelectedUnit(defaultUnit)
-  }, [formData.type])
+  }, [formData.type, preferences])
 
   // Auto-calculate total value
   useEffect(() => {
@@ -1304,19 +1330,10 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
               <label className="text-md text-secondary block font-semibold">
                 Extent <span className="text-primary">*</span>
               </label>
-              {unitsForType(formData.type).length > 0 && (
-                <select
-                  value={selectedUnit}
-                  onChange={(e) => setSelectedUnit(e.target.value)}
-                  className="h-10 w-full rounded-md border border-gray-400 bg-white px-3 py-2"
-                >
-                  {unitsForType(formData.type).map((u) => (
-                    <option key={u.value} value={u.value}>
-                      {u.label}
-                    </option>
-                  ))}
-                </select>
-              )}
+              {/* Unit is enforced from user preferences (read-only) */}
+              <div className="h-10 w-full rounded-md border border-gray-400 bg-white px-3 py-2 flex items-center">
+                <span className="text-sm">{getUnitLabel(formData.type === 'Plot' ? 'sqyd' : selectedUnit, true)}</span>
+              </div>
               <Input
                 type="text"
                 value={formData.extent}
@@ -1335,10 +1352,7 @@ const CreatePropertyModal = ({ isOpen, onClose }: CreatePropertyModalProps) => {
               <div className="flex flex-col space-y-3">
                 <label className="text-md text-secondary block font-semibold">
                   Value per{' '}
-                  {getUnitLabel(
-                    formData.type === 'Plot' ? 'sqyd' : selectedUnit,
-                    false
-                  )}{' '}
+                  {getUnitLabel(formData.type === 'Plot' ? 'sqyd' : selectedUnit, false)}{' '}
                   <span className="text-primary">*</span>
                 </label>
                 <Input
