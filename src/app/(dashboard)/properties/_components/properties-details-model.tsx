@@ -12,6 +12,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { usePreferences } from '@/hooks/usePreferences'
 import { Comment, Properties, SharedUser } from '@/types/property.types'
 import { apiClient } from '@/utils/api'
 import {
@@ -27,7 +28,6 @@ import {
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { FileIcon } from '../../documents/_components/file-icon'
-import { formatCurrency } from '../_property_utils'
 import FullMapModal from './map-model'
 import MiniMap from './minimap'
 import { CustomField } from './properties-edit-model'
@@ -188,6 +188,42 @@ const PropertiesDetailsModel = ({
     return mappings[lower] || unit
   }
 
+  // use preferences for currency display
+  const { preferences } = usePreferences()
+  const preferredCurrency = preferences?.defaultCurrency || 'INR'
+  const formatWithPreferredCurrency = (val: any) => {
+    const num = Number(val ?? 0)
+    try {
+      return new Intl.NumberFormat('en', {
+        style: 'currency',
+        currency: preferredCurrency,
+      }).format(isNaN(num) ? 0 : num)
+    } catch {
+      return `${preferredCurrency} ${isNaN(num) ? 0 : num.toFixed(2)}`
+    }
+  }
+
+  // format dates using preferred timezone
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'Unknown'
+    try {
+      const tz = preferences?.timezone
+      const d = new Date(dateString)
+      return new Intl.DateTimeFormat('en-US', {
+        timeZone: tz || undefined,
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }).format(d)
+    } catch {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+    }
+  }
+
   const getUnitFromExtent = () => {
     if (!property?.extent) return 'unit'
     const match = property.extent.match(/(\d+(?:\.\d+)?)\s*(.*)$/)
@@ -322,16 +358,6 @@ const PropertiesDetailsModel = ({
   const cancelEditing = () => {
     setEditingCommentId(null)
     setEditingText('')
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
   }
 
   const renderTextWithMentions = (text: string) => {
@@ -625,7 +651,7 @@ const PropertiesDetailsModel = ({
                     Total Property Value
                   </h3>
                   <h2 className="truncate text-lg font-semibold">
-                    ₹ {formatCurrency(property?.value)}
+                    {formatWithPreferredCurrency(property?.value)}
                   </h2>
                 </div>
               </div>
@@ -713,7 +739,7 @@ const PropertiesDetailsModel = ({
                   </h3>
                   <div className="flex justify-between">
                     <h2 className="truncate text-lg font-semibold">
-                      ₹ {formatCurrency(property?.valuePerSQ)}
+                      {formatWithPreferredCurrency(property?.valuePerSQ)}
                     </h2>
                     <h3 className="mb-1 text-sm font-medium text-gray-500">
                       /{getUnitFromExtent()}
